@@ -394,19 +394,37 @@
   function applyClearFlags(s, list) {
     (list || []).forEach(function (f) { delete s.flags[f]; if (f === 'hospitalized') delete s.flags.hospitalizedNow; });
   }
-  function applyRehab(s, score, out) {
+  function applyRehab(s, score, out, opt) {
+    opt = opt || {};
     var rec = D.fps && D.fps.health && D.fps.health.medevacRecovery;
     if (!rec) return { tier: mgTier(score) };
     var tier = score >= rec.great ? 'great' : score >= rec.pass ? 'pass' : 'fail';
     var pack = tier === 'great' ? rec.onGreat : tier === 'pass' ? rec.onPass : rec.onFail;
+    var mul = opt.rewardMul != null ? opt.rewardMul : 1;
     if (pack) {
       applyClearFlags(s, pack.clearFlags);
       (pack.flags || []).forEach(function (f) { s.flags[f] = 1; });
       var b = {};
-      ATTRS.forEach(function (k) { if (pack[k]) b[k] = pack[k]; });
+      ATTRS.forEach(function (k) { if (pack[k]) b[k] = Math.round(pack[k] * mul); });
       applyBundle(s, b, out);
     }
     return { tier: tier };
+  }
+  function rehabRetrySpec() {
+    return (D.fps && D.fps.health && D.fps.health.medevacRecovery && D.fps.health.medevacRecovery.retry) || null;
+  }
+  function canRehabRetry(s, qid) {
+    var rec = rehabRetrySpec(), st = s.quests[qid];
+    if (!rec || !st) return false;
+    return (st.rehabTries || 0) < (rec.maxRetries || 1);
+  }
+  function offerRehabRetry(s, qid, out) {
+    var rec = rehabRetrySpec(), st = s.quests[qid];
+    if (!rec || !st || !canRehabRetry(s, qid)) return { retry: false };
+    st.rehabTries = (st.rehabTries || 0) + 1;
+    if (rec.fatigueCost) addFatigue(s, rec.fatigueCost, out, false);
+    if (rec.cooldownDays) skipDays(s, rec.cooldownDays, out);
+    return { retry: true, fatigue: rec.fatigueCost || 0, days: rec.cooldownDays || 0 };
   }
   function minigameResult(s, qid, id, raw, out) {
     var m = mgDef(id) || {}, score = mgFinal(s, id, raw), tier = mgTier(score);
@@ -414,7 +432,10 @@
     if (tier === 'great') s.stats.mgGreat++;
     var mult = qid ? repMult(s, qid) : 1;
     if (id === 'rehab' && qid === 'ch5_beach_rehab') {
-      var rh = applyRehab(s, score, out);
+      var rec = D.fps && D.fps.health && D.fps.health.medevacRecovery;
+      var tries = (s.quests[qid] && s.quests[qid].rehabTries) || 0;
+      var mul = (tries > 0 && rec && rec.retry && rec.retry.rewardMul != null) ? rec.retry.rewardMul : 1;
+      var rh = applyRehab(s, score, out, { rewardMul: mul });
       tier = rh.tier;
     } else if (tier === 'great' && m.greatReward) applyBundle(s, m.greatReward, out, qid, mult);
     else if (tier !== 'fail' && m.passReward) applyBundle(s, m.passReward, out, qid, mult);
@@ -841,11 +862,30 @@
     });
     return out;
   }
+  function beachHeroExtraOk(s) {
+    var extra = (D.fps && D.fps.rewards && D.fps.rewards.beachHeroExtraConditions) || [];
+    var i;
+    for (i = 0; i < extra.length; i++) {
+      var expr = String(extra[i]).replace(/\bhospitalized\b/g, 'flag hospitalized');
+      if (!evalCond(s, expr)) return false;
+    }
+    return true;
+  }
   function evalEnding(s) {
-    var list = endingList('conscript').filter(function (e) { return e.bad; }).concat(beachEndings());
+    var route = s.flags.vol ? 'volunteer' : 'conscript';
+    var seen = {}, bads = [];
+    function addBad(e) { if (e.bad && !seen[e.id]) { seen[e.id] = 1; bads.push(e); } }
+    endingList('conscript').forEach(addBad);
+    endingList('volunteer').forEach(addBad);
+    var list = bads.concat(beachEndings());
     var i, e;
-    for (i = 0; i < list.length; i++) if (evalCond(s, list[i].cond)) return list[i].id;
-    list = endingList(s.flags.vol ? 'volunteer' : 'conscript').filter(function (e) { return !e.bad; });
+    for (i = 0; i < list.length; i++) {
+      e = list[i];
+      if (!evalCond(s, e.cond)) continue;
+      if (e.id === 'beach_hero' && !beachHeroExtraOk(s)) continue;
+      return e.id;
+    }
+    list = endingList(route).filter(function (e) { return !e.bad; });
     for (i = 0; i < list.length; i++) { e = list[i]; if (evalCond(s, e.cond)) return e.id; }
     return 'phew';
   }
@@ -953,7 +993,7 @@
     var cr = D.fps.rewards.chapterClear, tier = D.rpg.questRewards.tiers[cr.tier] || {};
     applyBundle(s, { xp: tier.xp || 0, honor: cr.honor }, out);
     s.flags.beach_survived = 1;
-    if (s.flags.saved_civilian && s.flags.radio_fixed && !s.flags.beach_fallback && !s.flags.beach_medevac && wavesNoRetry(s) >= 3) s.flags.beach_hero = 1;
+    if (s.flags.saved_civilian && s.flags.radio_fixed && !s.flags.beach_fallback && !s.flags.beach_medevac && wavesNoRetry(s) >= 3 && beachHeroExtraOk(s)) s.flags.beach_hero = 1;
     removeItem(s, 'it_t91', 1);
   }
   function giverOf(s, q) {
@@ -1057,6 +1097,7 @@
     waveClear: waveClear, waveEnemies: waveEnemies, retryWave: retryWave, medevac: medevac, wavesNoRetry: wavesNoRetry, akaiFate: akaiFate, wangFate: wangFate,
     wangChance: wangChance, civilianStay: civilianStay, beachFinish: beachFinish, giverOf: giverOf, npcVariantLine: npcVariantLine, npcPresent: npcPresent, beachXpMul: beachXpMul,
     flagExpr: flagExpr, questTitle: questTitle, questStart: questStart, applyClearFlags: applyClearFlags, applyRehab: applyRehab,
+    canRehabRetry: canRehabRetry, offerRehabRetry: offerRehabRetry, beachHeroExtraOk: beachHeroExtraOk,
     packContraband: packContraband, bagCheck: bagCheck, takeContraband: takeContraband, deliverCheck: deliverCheck,
     serialize: serialize, deserialize: deserialize, periodsOf: periodsOf, costKeyOf: costKeyOf, fatiguePenalty: fatiguePenalty
   };

@@ -321,6 +321,11 @@
       case 'reach': break;
       case 'talk':
         R.pts.forEach(function (p, i) {
+          if (R.q.id === 'ch5_beach_rehab' && R.q.objectives[R.idx] && R.q.objectives[R.idx].target === 'visitor') {
+            var vis = G.flags.akai_kia ? 'npc_signal_lin' : 'npc_akai';
+            p.tempNpc = { preset: vis === 'npc_akai' ? 'kai' : 'rec', name: npcName(vis) };
+            delete p.npc;
+          }
           if (p.tempNpc) {
             W.tempNpc('t' + i, p.tempNpc.preset, p.x, p.z, p.tempNpc.name);
             R.inter.push({ x: p.x, z: p.z, r: 2.7, label: p.tempNpc.name, prompt: '交談', act: function () { talkStep(i); }, tmp: i });
@@ -460,8 +465,15 @@
     if (pid) W.faceNpc(pid);
     G.flagsTalk = null;
     var firstTalk = R.q.objectives.slice(0, R.idx).every(function (o) { return o.type !== 'talk'; });
+    var lines;
+    if (R.q.id === 'ch5_beach_memorial' && pid === 'npc_counselor_lee') lines = memorialLines();
+    else if (R.q.objectives[R.idx] && R.q.objectives[R.idx].target === 'visitor' && R.q.dialogueVariants) {
+      lines = [];
+      R.q.dialogueVariants.forEach(function (v) { if (variantOk(v.if) && v.line) lines.push(v.line); });
+      if (!lines.length) lines = talkLines(name, pid, true);
+    } else lines = talkLines(name, pid, !firstTalk || R.idx > 0 || true);
     UI.dialog({
-      name: name, lines: (R.q.id === 'ch5_beach_memorial' && pid === 'npc_counselor_lee') ? memorialLines() : talkLines(name, pid, !firstTalk || R.idx > 0 || true), btn: '好', done: function () {
+      name: name, lines: lines, btn: '好', done: function () {
         p.done = true; R.done++;
         if (pid) lastTalk = pid;
         var aff = pid ? E.talkNpc(G, pid, E.newOut()) : null;
@@ -641,14 +653,35 @@
       }
       var out = E.newOut(), res = E.minigameResult(G, q.id, def, raw, out), tn = { great: '優秀', pass: '及格', fail: '不及格' }[res.tier];
       var body = ['表現 ' + res.raw + ' 分' + (res.assist ? '，屬性與技能加成 ' + (res.assist > 0 ? '+' : '') + res.assist : '') + '，總分 ' + res.score + '（及格 60／優秀 85）。'];
+      var isRehab = q.id === 'ch5_beach_rehab' && id === 'rehab';
+      var rehabTries = isRehab && G.quests[q.id] ? (G.quests[q.id].rehabTries || 0) : 0;
       if (q.dialogue) {
-        if (res.tier === 'great' && q.dialogue.great) body.push(q.dialogue.great);
+        if (isRehab && res.tier === 'fail' && E.canRehabRetry(G, q.id) && q.dialogue.retryOffer) body.push(q.dialogue.retryOffer);
+        else if (isRehab && res.tier === 'fail' && q.dialogue.finalFail) body.push(q.dialogue.finalFail);
+        else if (isRehab && res.tier !== 'fail' && rehabTries > 0 && q.dialogue.retryPass) body.push(q.dialogue.retryPass);
+        else if (res.tier === 'great' && q.dialogue.great) body.push(q.dialogue.great);
         else if (res.tier === 'fail' && q.dialogue.fail) body.push(q.dialogue.fail);
         else if (res.tier !== 'fail' && q.dialogue.complete) body.push(q.dialogue.complete);
       }
       UI.card({
         kicker: '小遊戲', title: P.tl(id) + '：' + tn, body: body, fx: out.fx, sfx: res.tier === 'fail' ? 'fail' : 'success',
-        buttons: [{ t: '繼續', fn: function () { if (res.tier === 'fail') failQuest('「' + P.tl(id) + '」沒有達到及格分數。'); else { refreshHud(); stepSuccess(); } } }]
+        buttons: [{ t: '繼續', fn: function () {
+          if (res.tier !== 'fail') { refreshHud(); stepSuccess(); return; }
+          if (isRehab && E.canRehabRetry(G, q.id)) {
+            var skipOut = E.newOut();
+            E.offerRehabRetry(G, q.id, skipOut);
+            presentOut(skipOut, { noFx: true, day: true }, function () {
+              var st = G.quests[q.id];
+              if (!st || st.state !== 'active') { afterQuestEnd(); return; }
+              refreshHud();
+              W.setMode('world');
+              applyInteract();
+              updateTrack(true);
+            });
+            return;
+          }
+          failQuest('「' + P.tl(id) + '」沒有達到及格分數。');
+        } }]
       });
     });
   }

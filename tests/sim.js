@@ -11,10 +11,10 @@ Engine.init(story, rpg, tuning, { fps: fpsSys, beach: beachStory });
 var D = Engine.data();
 
 var POLICIES = {
-  random: { pDo: 0.55, pMain: 0.7, mu: 55, sigma: 25, pTimer: 0.85, pVol: 0.5, pContra: 0.3, smart: 0, pDown: 0.2, pRetry: 0.8, pCarry: 0.6, pTreat: 0.92 },
-  casual: { pDo: 0.35, pMain: 0.6, mu: 45, sigma: 25, pTimer: 0.75, pVol: 0.4, pContra: 0.2, smart: 0, pDown: 0.3, pRetry: 0.7, pCarry: 0.5, pTreat: 0.75 },
-  diligent: { pDo: 0.9, pMain: 1, mu: 70, sigma: 18, pTimer: 0.95, pVol: 0.5, pContra: 0.0, smart: 1, pDown: 0.08, pRetry: 0.9, pCarry: 0.85, pTreat: 0.97 },
-  reckless: { pDo: 0.8, pMain: 0.5, mu: 50, sigma: 25, pTimer: 0.8, pVol: 0.5, pContra: 0.8, smart: 0, pDown: 0.28, pRetry: 0.5, pCarry: 0.5, pTreat: 0.6 }
+  random: { pDo: 0.55, pMain: 0.7, mu: 55, sigma: 25, pTimer: 0.85, pVol: 0.5, pContra: 0.45, smart: 0, pDown: 0.22, pRetry: 0.75, pCarry: 0.6, pTreat: 0.9, pCourt: 0.04, pRehabFail: 0.42 },
+  casual: { pDo: 0.35, pMain: 0.6, mu: 45, sigma: 25, pTimer: 0.75, pVol: 0.4, pContra: 0.35, smart: 0, pDown: 0.32, pRetry: 0.65, pCarry: 0.5, pTreat: 0.72, pCourt: 0.045, pRehabFail: 0.55 },
+  diligent: { pDo: 0.9, pMain: 1, mu: 70, sigma: 18, pTimer: 0.95, pVol: 0.5, pContra: 0.12, smart: 1, pDown: 0.12, pRetry: 0.85, pCarry: 0.85, pTreat: 0.92, pCourt: 0.032, pRehabFail: 0.28 },
+  reckless: { pDo: 0.8, pMain: 0.5, mu: 50, sigma: 25, pTimer: 0.8, pVol: 0.5, pContra: 0.85, smart: 0, pDown: 0.3, pRetry: 0.45, pCarry: 0.5, pTreat: 0.55, pCourt: 0.05, pRehabFail: 0.6 }
 };
 var BGS = ['uni', 'office', 'site', 'gamer'];
 
@@ -58,7 +58,14 @@ function playOne(seed, P) {
         if (ob.target === 'lottery') Engine.lottery(s, o);
         else if (ob.target === 'cover_tutorial') Engine.minigameResult(s, q.id, ob.target, 90, o);
         else if (ob.target === 'rehab') {
-          var rh = Engine.minigameResult(s, q.id, ob.target, Math.max(0, Math.min(100, (P.pTreat > 0.8 ? 88 : 50) + gauss(r) * 12)), o);
+          function rehabScore(failP) {
+            if (failP && r() < failP) return 20;
+            return Math.max(0, Math.min(100, (P.pTreat > 0.8 ? 88 : 50) + gauss(r) * 12));
+          }
+          var rh = Engine.minigameResult(s, q.id, ob.target, rehabScore(P.pRehabFail), o);
+          if (rh.tier === 'fail' && q.id === 'ch5_beach_rehab' && Engine.canRehabRetry(s, q.id) && Engine.offerRehabRetry(s, q.id, o).retry) {
+            rh = Engine.minigameResult(s, q.id, ob.target, rehabScore(Math.min(0.85, (P.pRehabFail || 0) + 0.12)), o);
+          }
           ok = rh.tier !== 'fail';
         }
         else ok = Engine.minigameResult(s, q.id, ob.target, mgRaw(), o).tier !== 'fail';
@@ -81,6 +88,10 @@ function playOne(seed, P) {
     var o = Engine.newOut(), b, q, guard = 0;
     Engine.startBeach(s, { diff: 'hardcore', aim: r() < 0.4 });
     b = s.beach;
+    if (r() < (P.pCourt || 0)) {
+      Engine.setFlag(s, 'court', Engine.newOut(), true);
+      return;
+    }
     var order = fpsSys.questOrder;
     function finish(q2) { Engine.complete(s, q2.id, Engine.newOut()); }
     function steps(q2, n) { for (var i = 0; i < n; i++) Engine.stepDone(s, q2.id, Engine.newOut()); }
@@ -157,9 +168,13 @@ function playOne(seed, P) {
     if (Engine.beachPending(s)) { simBeach(); continue; }
     var av = Engine.listAvailable(s);
     var o = Engine.newOut();
-    if (av.length && r() < P.pDo) {
+    if (s.flags.hospitalized) {
+      av = av.filter(function (q) { return q.id === 'ch5_beach_rehab' || q.type === 'main' || r() < 0.22; });
+    }
+    if (av.length && r() < (s.flags.hospitalized ? P.pDo * 0.45 : P.pDo)) {
       var mains = av.filter(function (q) { return q.type === 'main'; });
-      var q = (mains.length && r() < P.pMain) ? mains[0] : av[Math.floor(r() * av.length)];
+      var rehabQ = av.filter(function (q) { return q.id === 'ch5_beach_rehab'; });
+      var q = rehabQ.length && r() < 0.85 ? rehabQ[0] : ((mains.length && r() < P.pMain) ? mains[0] : av[Math.floor(r() * av.length)]);
       doQuest(q);
     } else if (!av.length) {
       var nx = Engine.nextQuestDay(s);

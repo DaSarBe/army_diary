@@ -796,7 +796,7 @@
         "id": "beach_hero",
         "n": "海岸英雄",
         "new": true,
-        "if": "flag beach_hero 且 demerit<=2"
+        "if": "flag beach_hero 且 demerit<=2 且 !(flag hospitalized && b<40)"
       },
       {
         "id": "exemplar",
@@ -836,6 +836,18 @@
     ],
     "volunteer": [
       {
+        "id": "bad_court",
+        "n": "提前離營",
+        "new": true,
+        "if": "flag court"
+      },
+      {
+        "id": "bad_injury",
+        "n": "因傷提早退伍",
+        "new": true,
+        "if": "flag hospitalized 且 b < 35"
+      },
+      {
         "id": "survivor",
         "n": "倖存者",
         "new": true,
@@ -845,7 +857,7 @@
         "id": "beach_hero",
         "n": "海岸英雄",
         "new": true,
-        "if": "flag beach_hero 且 demerit<=2"
+        "if": "flag beach_hero 且 demerit<=2 且 !(flag hospitalized && b<40)"
       },
       {
         "id": "vstar",

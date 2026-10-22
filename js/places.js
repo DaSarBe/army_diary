@@ -258,17 +258,27 @@
     switch (o.type) {
       case 'talk':
       case 'report': {
-        if (t === 'visitor' && o.variants) {
-          var vis = o.variants[0].speaker;
-          o.variants.forEach(function (v) {
-            var ok = true, parts = String(v.if || '').split(/\s*&&\s*/);
-            parts.forEach(function (p) {
-              p = p.trim(); var neg = p.charAt(0) === '!'; var f = neg ? p.slice(1) : p;
-              if (neg ? ctx.S.flags[f] : !ctx.S.flags[f]) ok = false;
+        if (t === 'visitor') {
+          var vis = (ctx.S && ctx.S.flags && ctx.S.flags.akai_kia) ? 'npc_signal_lin' : 'npc_akai';
+          if (o.variants) {
+            vis = o.variants[0].speaker || vis;
+            o.variants.forEach(function (v) {
+              var ok = true, parts = String(v.if || '').split(/\s*&&\s*/);
+              parts.forEach(function (p) {
+                p = p.trim(); var neg = p.charAt(0) === '!'; var f = neg ? p.slice(1) : p;
+                if (neg ? ctx.S.flags[f] : !ctx.S.flags[f]) ok = false;
+              });
+              if (ok) vis = v.speaker;
             });
-            if (ok) vis = v.speaker;
-          });
-          t = vis;
+          }
+          a = placeOf('military_hospital_rehab', cm) || qloc;
+          var visNpc = vis === 'npc_akai'
+            ? { preset: 'kai', name: npcName(D, 'npc_akai') }
+            : { preset: 'rec', name: npcName(D, vis) };
+          S.kind = 'talk'; S.map = a.map; S.temp = true; S.visitor = vis;
+          S.pts = [pt(a.x + 1.6, a.z + 1.1, visNpc.name, { tempNpc: visNpc, free: true })];
+          S.text = '與「' + visNpc.name + '」交談';
+          break;
         }
         if (t.indexOf('npc_') === 0) {
           var sp = npcSpot(t, cm, unit);

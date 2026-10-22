@@ -34,6 +34,12 @@ ok(D.barks.triggers.on_sandbag_30pct && D.barks.triggers.on_first_rock_cover, 'b
 ok(D.barks.triggers.on_first_hit_while_peeking.fallback.length >= 2, '班長倒下後 fallback');
 ok(D.q.ch4_beach_prep.objectives.some(function (o) { return o.uiHint === 'hint_cover_peek'; }), 'hint_cover_peek');
 ok(D.q.ch5_beach_rehab && D.q.ch5_beach_rehab.dialogue.great, 'ch5_beach_rehab great');
+ok(D.q.ch5_beach_rehab.dialogue.retryOffer && D.q.ch5_beach_rehab.dialogue.retryPass && D.q.ch5_beach_rehab.dialogue.finalFail, '復健重試台詞');
+ok(fps.health.medevacRecovery.retry && fps.health.medevacRecovery.retry.maxRetries === 1, 'retry maxRetries 1');
+ok(fps.health.medevacRecovery.retry.cooldownDays === 1 && fps.health.medevacRecovery.retry.fatigueCost === 15, 'retry 隔天 +15 疲勞');
+ok(fps.health.medevacRecovery.retry.rewardMul === 0.5, 'retry 獎勵減半');
+ok(fps.rewards.beachHeroExtraConditions && fps.rewards.beachHeroExtraConditions.indexOf('!(hospitalized && b<40)') >= 0, 'beachHeroExtraConditions');
+ok(rpg.endings.volunteer.some(function (e) { return e.id === 'bad_injury'; }), '志願兵路線有 bad_injury');
 ok(D.q.ch5_beach_rehab.requirements.flags.indexOf('hospitalized') >= 0, 'rehab 需 hospitalized');
 ok(D.npc.npc_rehab_therapist, 'npc_rehab_therapist');
 ok(Places.PL.military_hospital_rehab, 'military_hospital_rehab');
@@ -76,6 +82,45 @@ ok(Engine.evalEnding(s) === 'bad_injury', 'hospitalized 且 b<40 → bad_injury'
 s.a.b = 40;
 ok(Engine.evalEnding(s) !== 'bad_injury', 'b>=40 不走 bad_injury');
 
+s = st(); s.flags.vol = 1; s.flags.hospitalized = 1; s.a.b = 39; s.flags.beach_hero = 1;
+ok(Engine.evalEnding(s) === 'bad_injury', '志願役 hospitalized 且 b<40 優先於 beach_hero');
+ok(!Engine.beachHeroExtraOk(s), 'b<40 住院不算海岸英雄 extra');
+s.a.b = 50;
+ok(Engine.evalEnding(s) === 'beach_hero', '志願役 b>=40 住院仍可海岸英雄（若有旗標）');
+
+s = st(); s.flags.hospitalized = 1; s.a.b = 39; s.flags.beach_hero = 1; s.demerit = 0;
+ok(Engine.evalEnding(s) === 'bad_injury', '義務役 b<40 住院拿不到海岸英雄');
+
+function rehabSt() {
+  var x = st();
+  x.day = 300; x.flags.hospitalized = 1; x.flags.beach_medevac = 1; x.a.b = 45; x.fatigue = 10;
+  x.quests.ch4_beach_prep = { state: 'done' };
+  x.quests.ch4_beach_relief = { state: 'done' };
+  x.quests.ch5_beach_rehab = { state: 'active', step: 2, start: 300, costs: {} };
+  return x;
+}
+s = rehabSt();
+out = Engine.newOut();
+rh = Engine.minigameResult(s, 'ch5_beach_rehab', 'rehab', 20, out);
+ok(rh.tier === 'fail' && Engine.canRehabRetry(s, 'ch5_beach_rehab'), '第一次不及格可重試');
+var day0 = s.day, skipOut = Engine.newOut();
+var rr = Engine.offerRehabRetry(s, 'ch5_beach_rehab', skipOut);
+ok(rr.retry && s.day === day0 + 1, '重試隔 1 天');
+ok(skipOut.fx.some(function (f) { return f.k === 'fatigue' && f.v >= 15; }), '重試疲勞 +15');
+ok(s.quests.ch5_beach_rehab.rehabTries === 1, 'rehabTries=1');
+ok(s.flags.hospitalized, '第一次失敗仍住院');
+out = Engine.newOut();
+rh = Engine.minigameResult(s, 'ch5_beach_rehab', 'rehab', 80, out);
+ok(rh.tier === 'pass' && s.flags.rehab_done && !s.flags.hospitalized, '重試及格清 hospitalized');
+ok(s.a.b === 46, '重試及格 b+1（2×0.5）');
+
+s = rehabSt();
+Engine.minigameResult(s, 'ch5_beach_rehab', 'rehab', 20, Engine.newOut());
+Engine.offerRehabRetry(s, 'ch5_beach_rehab', Engine.newOut());
+rh = Engine.minigameResult(s, 'ch5_beach_rehab', 'rehab', 20, Engine.newOut());
+ok(rh.tier === 'fail' && !Engine.canRehabRetry(s, 'ch5_beach_rehab'), '第二次不及格不能再試');
+ok(s.flags.hospitalized && !s.flags.rehab_done, '最終失敗保留 hospitalized');
+
 s = st(); Engine.startBeach(s, {}); s.beach.cmd = 'hold'; s.beach.hpZeroW4 = true;
 ok(Engine.wangChance(s, 'hold', true) === 40, 'wang hold 倒下 40');
 s.flags.radio_fixed = 1;
@@ -103,6 +148,11 @@ ok(Engine.availability(s, D.q.ch5_beach_rehab).ok, '住院中仍可接復健');
 
 s = st(); s.flags.akai_kia = 1;
 var pl = Places.plan(D.q.ch5_beach_rehab, 3, { D: D, S: s, map: 'unit', unit: 'infantry', prev: null });
-ok(pl.pts && pl.pts[0] && (pl.pts[0].npc === 'npc_signal_lin' || /小林|電話/.test(pl.text)), '阿凱不在時探病改小林');
+ok(pl.pts && pl.pts[0] && pl.pts[0].tempNpc && pl.pts[0].tempNpc.name === '小林', '阿凱陣亡時生成小林探病');
+ok(pl.visitor === 'npc_signal_lin' && !/電話/.test(pl.text), '陣亡探病不是打電話');
+s = st();
+pl = Places.plan(D.q.ch5_beach_rehab, 3, { D: D, S: s, map: 'unit', unit: 'infantry', prev: null });
+ok(pl.pts && pl.pts[0] && pl.pts[0].tempNpc && pl.pts[0].tempNpc.name === '阿凱', '阿凱活著時生成阿凱探病');
+ok(pl.visitor === 'npc_akai' && pl.pts[0].tempNpc.preset === 'kai', '活著探病是 npc_akai');
 
 console.log('unit-beach ok', n);

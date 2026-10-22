@@ -127,7 +127,7 @@
       {
         "id": "beach_hero",
         "n": "海岸英雄",
-        "if": "flag beach_hero 且 demerit<=2",
+        "if": "flag beach_hero 且 demerit<=2 且 !(flag hospitalized && b<40)",
         "title": "海岸英雄",
         "description": "漢光那天的海岸讓你記了大功。退伍時連長在全連面前公開表揚，阿伯帶著鄰居來營門口送你。你不覺得自己是英雄，只是那天沒有退。"
       }

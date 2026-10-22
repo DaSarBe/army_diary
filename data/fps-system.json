@@ -210,6 +210,13 @@
         ],
         "b": 3,
         "m": 2
+      },
+      "retry": {
+        "maxRetries": 1,
+        "cooldownDays": 1,
+        "fatigueCost": 15,
+        "rewardMul": 0.5,
+        "onFinalFail": "quest_failed"
       }
     }
   },
@@ -365,7 +372,10 @@
     "desertion": {
       "if": "wave 中玩家擅自離開戰區超過 10 秒且未選 fallback",
       "trigger": "event_court"
-    }
+    },
+    "beachHeroExtraConditions": [
+      "!(hospitalized && b<40)"
+    ]
   },
   "performance": {
     "pixelRatioMaxMobile": 1.5,

@@ -55,15 +55,19 @@ async function main() {
   const autoOk = await page.evaluate(() => ({ bot: __game.FPS && __game.FPS.bot, renderer: typeof __game.renderer === 'function' && !!__game.renderer() }));
   log('auto=1：', JSON.stringify(autoOk));
   if (autoOk.bot !== 'aim') throw new Error('?auto=1 沒有開啟 FPS.bot');
-  if (REHAB === 'fail') {
-    await page.evaluate(() => {
+  if (REHAB === 'fail' || REHAB === 'retry-fail' || REHAB === 'retry-pass') {
+    await page.evaluate((mode) => {
+      let n = 0;
       const orig = __game.MG.run.bind(__game.MG);
       __game.MG.run = function (id, opts, cb) {
-        __game.MG.forceScore = id === 'rehab' ? 20 : null;
+        if (id === 'rehab') {
+          n++;
+          __game.MG.forceScore = (mode === 'retry-pass' && n > 1) ? 85 : 20;
+        } else __game.MG.forceScore = null;
         return orig(id, opts, cb);
       };
-    });
-    log('復健小遊戲強制 20 分（不及格）');
+    }, REHAB);
+    log('復健小遊戲強制分數模式：' + REHAB);
   }
   await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-01-title.png`) });
 
@@ -112,7 +116,7 @@ async function main() {
       av, track: G && G.track, fps: !!(g.FPS && g.FPS.active()), fpsInfo: g.FPS && g.FPS.debug() ? { k: g.FPS.debug().kills, q: g.FPS.debug().queue, hp: G.hp } : null, beachFlags: G && { akai_kia: !!G.flags.akai_kia, akai_injured: !!G.flags.akai_injured, wang: !!G.flags.sgt_wang_kia, saved: !!G.flags.saved_civilian, radio: !!G.flags.radio_fixed, hero: !!G.flags.beach_hero, medevac: !!G.flags.beach_medevac, court: !!G.flags.court },
       R: R && {
         q: R.q.id, ready: !!R.ready, kind: R.plan && R.plan.kind, idx: R.idx, phase: R.phase, timer: R.timer && Math.round(R.timer.left), giver: R.q.giver,
-        pts: (R.pts || []).map(p => ({ x: p.x, z: p.z, done: p.done, npc: p.npc || null })),
+        pts: (R.pts || []).map(p => ({ x: p.x, z: p.z, done: p.done, npc: p.npc || null, temp: p.tempNpc && p.tempNpc.name })),
         inter: (R.inter || []).map(i => ({ x: i.x, z: i.z, label: i.label })), dst: R.plan && R.plan.dst && { x: R.plan.dst.x, z: R.plan.dst.z, npc: R.plan.dst.npc || null }, dstNpc: R.plan && R.plan.dstNpc,
         pickup: R.pickupPt || null, waveStarted: !!R.waveStarted, rescueCarry: !!R.rescueCarry, wave: R.plan && R.plan.wave, which: R.plan && R.plan.which, seq: R.plan && R.plan.seq, tmap: R.plan && R.plan.map
       },
@@ -227,9 +231,21 @@ async function main() {
     if (s.phase === 'end' && s.card) break;
     if (s.phase === 'end') { await sleep(500); continue; }
     if (s.mg) { await sleep(200); continue; }
+    if (s.R && s.R.q === 'ch5_beach_rehab' && s.R.kind === 'talk') {
+      const vis = (s.R.inter || []).map(i => i.label).concat((s.R.pts || []).map(p => p.temp)).filter(Boolean).join(',');
+      if (/阿凱|小林/.test(vis) && !global.__visitor) {
+        global.__visitor = vis;
+        log('探病 NPC：', vis);
+        await shot('30-visitor');
+      }
+    }
     if (s.card) {
       stats.cards++;
       const title = await page.$eval('#cIn h2', e => e.textContent).catch(() => '');
+      const body = await page.$eval('#cIn', e => e.innerText).catch(() => '');
+      if (/今天先休息，腳會記得/.test(body)) global.__retryOffer = true;
+      if (/睡一覺就不一樣了/.test(body)) global.__retryPass = true;
+      if (/這次先不勉強/.test(body)) global.__finalFail = true;
       if (/結局|第.*章|任務|升/.test(title)) { /* ok */ }
       if (s.level >= 3) await shot('05-card-sample');
       const r = await clickIn('#cIn', (b, i) => (/硬派/.test(b.t) ? DIFF === 'hardcore' : /^標準/.test(b.t) ? DIFF === 'standard' : /^劇情向/.test(b.t) ? DIFF === 'story' : true));
@@ -392,6 +408,28 @@ async function main() {
     if (STOP === 'rescue') {
       if (!fin.saved) throw new Error('沒有把阿伯背回碉堡');
       if (!(fin.hp > 0)) throw new Error('背阿伯時倒下了 hp=' + fin.hp);
+    }
+    if (STOP === 'rehab') {
+      fin.visitor = global.__visitor || null;
+      fin.retryOffer = !!global.__retryOffer;
+      fin.retryPass = !!global.__retryPass;
+      fin.finalFail = !!global.__finalFail;
+      fin.rehabTries = await page.evaluate(() => __game.G.quests.ch5_beach_rehab && __game.G.quests.ch5_beach_rehab.rehabTries);
+      if (REHAB === 'retry-pass') {
+        if (fin.rehab !== 'done') throw new Error('重試及格應完成復健：' + fin.rehab);
+        if (!fin.rehab_done || fin.hospitalized) throw new Error('重試及格應清 hospitalized');
+        if (!fin.retryOffer || !fin.retryPass) throw new Error('缺少 retryOffer/retryPass 台詞');
+      }
+      if (REHAB === 'retry-fail' || REHAB === 'fail') {
+        if (fin.rehab !== 'failed') throw new Error('重試失敗應任務失敗：' + fin.rehab);
+        if (!fin.hospitalized || fin.rehab_done) throw new Error('最終失敗應保留 hospitalized');
+        if (REHAB === 'retry-fail' && (!fin.retryOffer || !fin.finalFail)) throw new Error('缺少 retryOffer/finalFail 台詞');
+      }
+      if (FATE === 'kia') {
+        if (!/小林/.test(fin.visitor || '')) throw new Error('阿凱陣亡應生成小林探病，實際：' + fin.visitor);
+      } else if (FATE === 'live' || AID === 'treat') {
+        if (fin.visitor && !/阿凱/.test(fin.visitor) && /小林/.test(fin.visitor)) throw new Error('阿凱活著不應生成小林：' + fin.visitor);
+      }
     }
     const bad = errors.filter(e => !/favicon/.test(e));
     log('console error/warning 數：', bad.length); bad.slice(0, 10).forEach(e => log('  ', e));

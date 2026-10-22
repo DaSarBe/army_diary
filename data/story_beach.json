@@ -824,7 +824,8 @@
     {
      "type": "minigame",
      "target": "rehab",
-     "pass": "ref fps-system.json health.medevacRecovery"
+     "pass": "ref fps-system.json health.medevacRecovery",
+     "retry": "ref fps-system.json health.medevacRecovery.retry"
     },
     {
      "type": "talk",
@@ -861,6 +862,9 @@
     "progress": "治療師：「很好，再一步。你比昨天多走了三步喔。」",
     "complete": "治療師：「你看，你自己走過來了。回去好好退伍吧。」",
     "great": "治療師：「你這恢復速度，可以回去帶新兵了。」",
+    "retryOffer": "治療師：「今天先休息，腳會記得今天的努力。明天同一時間，我在這裡等你。」",
+    "retryPass": "治療師：「看吧，睡一覺就不一樣了。你昨天沒放棄，今天它就回報你。」",
+    "finalFail": "治療師：「這次先不勉強。你還在住院，我們就慢慢來，等身體準備好，這扇門一直開著。」",
     "fail": "治療師：「今天到這裡就好，身體會記得你努力過。明天再來。」"
    },
    "dialogueVariants": [
@@ -1052,7 +1056,7 @@
   "所有兵種（infantry/artillery/airforce/navy/logistics）皆強制參與本章，以「海岸支援任務」解釋；不變更 story.json。",
   "ch5_beach_memorial 新增 titleVariants / startVariants（格式同 dialogueVariants：if + title/line）；符合時取代 title 與 dialogue.start，未符合用預設。",
   "barks 格式：triggers.{trigger}={speaker(npc id), line, once, fpsRef, optional?, fallback[{if, speaker, channel?, line}]}；trigger 名稱：on_first_hit_while_peeking、on_sandbag_30pct、on_first_rock_cover（選用）。ch4_beach_prep 的 cover_tutorial 使用 UI 提示 key hint_cover_peek。",
-  "ch5_beach_rehab：需 beach_medevac + hospitalized；通過門檻、清除 hospitalized 與 b 獎勵皆引用 fps-system.json health.medevacRecovery，rehab_done 與 great 獎勵也由其發放，本檔不另給獎勵；dialogue.great 對應 great 等級。bad_injury 現為 flag hospitalized 且 b<40（定義於 tuning.json，由 Sam/Dai 維護）。",
+  "ch5_beach_rehab：需 beach_medevac + hospitalized；通過門檻、清除 hospitalized 與 b 獎勵皆引用 fps-system.json health.medevacRecovery，rehab_done 與 great 獎勵也由其發放，本檔不另給獎勵；dialogue.great 對應 great 等級；重試規則引用 health.medevacRecovery.retry，dialogue.retryOffer（首次失敗）、retryPass（重試通過）、finalFail（二次失敗，hospitalized 保留）。bad_injury 現為 flag hospitalized 且 b<40（定義於 tuning.json，由 Sam/Dai 維護）。",
   "地點 military_hospital_rehab（國軍醫院復健室）尚未在 fps-system.json locations 定義，需 Dai 補上。",
   "reward 單項屬性 ≤ +4，符合 rpg-system.json attrCapPerQuest。"
  ]
