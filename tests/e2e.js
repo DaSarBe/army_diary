@@ -301,7 +301,9 @@ async function main() {
         case 'phone': case 'inspect': case 'overlay': case 'rest': case 'decide': {
           const it = R.inter[0];
           if (!it) { await sleep(200); break; }
-          await near(it.x, it.z, 0.8); await interact(); await sleep(150);
+          if (R.kind === 'overlay') await tp(it.x, it.z);
+          else await near(it.x, it.z, 0.8);
+          await interact(); await sleep(150);
           break;
         }
         case 'wave': {

@@ -413,7 +413,7 @@
     s.stats.mg++;
     if (tier === 'great') s.stats.mgGreat++;
     var mult = qid ? repMult(s, qid) : 1;
-    if (id === 'rehab') {
+    if (id === 'rehab' && qid === 'ch5_beach_rehab') {
       var rh = applyRehab(s, score, out);
       tier = rh.tier;
     } else if (tier === 'great' && m.greatReward) applyBundle(s, m.greatReward, out, qid, mult);

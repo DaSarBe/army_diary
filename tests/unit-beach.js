@@ -63,6 +63,10 @@ s = st(); s.flags.hospitalized = 1; s.a.b = 45;
 rh = Engine.applyRehab(s, 20, Engine.newOut());
 ok(rh.tier === 'fail' && s.flags.hospitalized && !s.flags.rehab_done && s.a.b === 45, '不及格保留 hospitalized');
 
+s = st(); s.flags.hospitalized = 1; s.a.b = 45;
+Engine.minigameResult(s, 'ch5_side_06', 'rehab', 90, Engine.newOut());
+ok(s.flags.hospitalized && !s.flags.rehab_done, '舊復健任務不套用 medevacRecovery');
+
 s = st(); s.flags.hospitalized = 1; s.a.b = 39;
 ok(Engine.evalEnding(s) === 'bad_injury', 'hospitalized 且 b<40 → bad_injury');
 s.a.b = 40;

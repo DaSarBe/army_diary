@@ -139,7 +139,7 @@ function playOne(seed, P) {
           break;
         }
         case 'ch4_beach_command': {
-          var cm = ['hold', 'fallback', 'counter'][Math.floor(r() * 3)]; b.cmd = cm;
+          var u = r(), cm = u < 0.3 ? 'hold' : u < 0.7 ? 'fallback' : 'counter'; b.cmd = cm;
           if (cm === 'hold') { Engine.addAttr(s, 'd', 2, Engine.newOut(), q.id); s.honor = Math.min(10, s.honor + 1); }
           else if (cm === 'fallback') s.flags.beach_fallback = 1; else { Engine.addAttr(s, 'b', 2, Engine.newOut(), q.id); Engine.addAttr(s, 'o', 1, Engine.newOut(), q.id); }
           wave('wave4', q); Engine.wangFate(s, Engine.newOut()); steps(q, 3); break;

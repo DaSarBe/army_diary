@@ -212,6 +212,10 @@
         st = base({ kind: 'inspect', verb: '檢查', count: 6, text: '檢查：沙包線（6）' });
         st.pts = [-26, -20, -2, 4, 10, 16].map(function (x, k) { return pt(x, -3.2, '沙包線 ' + (k + 1)); });
         return st;
+      case 'ch4_beach_prep#4':
+        st = base({ kind: 'overlay', mg: 'cover_tutorial', text: '開始：掩體與探頭' });
+        st.pts = [pt(-18, -8.5, '掩體與探頭', { prop: 'board' })];
+        return st;
       case 'ch4_beach_alert#0':
         st = base({ kind: 'inspect', verb: '回報', special: 'radar', text: '回報：雷達上的不明光點' }); st.pts = [at('radar')]; return st;
       case 'ch4_beach_armory#2':
