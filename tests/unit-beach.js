@@ -24,6 +24,10 @@ ok(fps.cover.rusher.meleeNeedsHitRoll && fps.cover.rusher.accMulBehindCover === 
 ok(fps.difficulty.modes.hardcore.enemyAccMul === 1.15, '硬派 enemyAccMul 1.15');
 ok(fps.cover.feedback.blockedHint === '掩體擋下', '掩體擋下提示');
 ok(fps.health.medevacRecovery.pass === 60 && fps.health.medevacRecovery.great === 85, '復健門檻');
+var CR = fps.npcFate.civilian.carryRules;
+ok(CR && CR.enemyAccMul === 0.5 && CR.dmgTakenMul === 0.6, '背人命中 0.5／傷害 0.6');
+ok(CR.smokeOnStart && CR.smokeSec === 6, '煙霧彈 6 秒');
+ok(/4\s*秒/.test(CR.buddyCoverFire), '阿凱壓制 4 秒');
 
 ok(D.barks && D.barks.triggers.on_first_hit_while_peeking, 'bark peek');
 ok(D.barks.triggers.on_sandbag_30pct && D.barks.triggers.on_first_rock_cover, 'bark sandbag/rock');

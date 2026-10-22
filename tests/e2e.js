@@ -216,6 +216,10 @@ async function main() {
           if (rh && (rh.state === 'done' || rh.state === 'failed')) return true;
           if (G.day > 335) return true;
         }
+        if (stop === 'rescue') {
+          const R = __game.R;
+          return !!(G.flags.saved_civilian) && !(R && R.rescueCarry);
+        }
         return false;
       }, STOP);
       if (stopNow) { log('STOP_AFTER ' + STOP); await shot('90-stop'); break; }
@@ -308,7 +312,15 @@ async function main() {
         }
         case 'wave': {
           if (FATE && !rngSet) { rngSet = true; await page.evaluate((f) => __game.E.setRng(f === 'kia' ? () => 0.0 : () => 0.999), FATE); }
-          if (s.fps) { if (R.rescueCarry) await tp(-10, -5.95); await sleep(300); break; }
+          if (s.fps) {
+            if (R.rescueCarry && STOP !== 'rescue') await tp(-10, -5.95);
+            if (R.rescueCarry && STOP === 'rescue' && !global.__carryShot) {
+              global.__carryShot = true; await shot('20-carry-smoke');
+              const raise = await page.$('#bRaise');
+              if (raise) { await tap(raise); await sleep(400); await shot('21-carry-raise'); }
+            }
+            await sleep(300); break;
+          }
           if (!R.waveStarted) {
             attempts[R.wave] = (attempts[R.wave] || 0) + 1;
             const die = (DOWN.indexOf('retry') >= 0 && DOWN.indexOf('medevac') >= 0)
@@ -369,13 +381,18 @@ async function main() {
       flags: G ? Object.keys(G.flags) : [], demerit: G && G.demerit, title: titleEl ? titleEl.textContent : '',
       rehab: G && G.quests.ch5_beach_rehab && G.quests.ch5_beach_rehab.state,
       hospitalized: !!(G && G.flags.hospitalized), rehab_done: !!(G && G.flags.rehab_done), medevac: !!(G && G.flags.beach_medevac),
+      saved: !!(G && G.flags.saved_civilian), hp: G && G.hp,
       fps: !!(__game.FPS && __game.FPS.active())
     };
   });
   await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-99-ending.png`) });
   log(STOP ? 'STOP_AFTER 狀態：' : '抵達結局：', JSON.stringify(fin), '，完成的任務(經手)數 ', stats.quests.size, '，用時 ' + Math.round((Date.now() - t0) / 1000) + ' 秒');
   if (STOP) {
-    if (fin.fps) throw new Error('停止時 FPS 仍在進行');
+    if (STOP !== 'rescue' && fin.fps) throw new Error('停止時 FPS 仍在進行');
+    if (STOP === 'rescue') {
+      if (!fin.saved) throw new Error('沒有把阿伯背回碉堡');
+      if (!(fin.hp > 0)) throw new Error('背阿伯時倒下了 hp=' + fin.hp);
+    }
     const bad = errors.filter(e => !/favicon/.test(e));
     log('console error/warning 數：', bad.length); bad.slice(0, 10).forEach(e => log('  ', e));
     if (bad.length) process.exitCode = 2;

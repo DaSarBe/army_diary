@@ -8,7 +8,7 @@
   if (!T) { root.FPS = FPS; return; }
   var DEG = Math.PI / 180;
   var cfg = null, H = {}, A = null, dpool = null, enemyMats = {}, geoCache = {};
-  var scene = null, tracerPool = [], dustPool = [], flash = null, rc = new T.Raycaster();
+  var scene = null, tracerPool = [], dustPool = [], smokePool = [], flash = null, rc = new T.Raycaster();
   var hudCache = {};
 
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -102,6 +102,13 @@
     for (i = 0; i < 40; i++) {
       var sp = new T.Sprite(new T.SpriteMaterial({ map: dtex, transparent: true, depthWrite: false, fog: true })); sp.visible = false; scene.add(sp); dustPool.push({ s: sp, life: 0, vy: 0 });
     }
+    var sc = document.createElement('canvas'); sc.width = sc.height = 64; var sx = sc.getContext('2d');
+    var sg = sx.createRadialGradient(32, 32, 4, 32, 32, 30); sg.addColorStop(0, 'rgba(210,215,200,.85)'); sg.addColorStop(0.45, 'rgba(160,168,150,.45)'); sg.addColorStop(1, 'rgba(120,128,110,0)');
+    sx.fillStyle = sg; sx.fillRect(0, 0, 64, 64);
+    var stex = new T.CanvasTexture(sc);
+    for (i = 0; i < 28; i++) {
+      var sm = new T.Sprite(new T.SpriteMaterial({ map: stex, transparent: true, depthWrite: false, fog: true, opacity: 0.7 })); sm.visible = false; sm.scale.set(2.4, 2.4, 1); scene.add(sm); smokePool.push({ s: sm, life: 0, max: 1.4, vy: 0, vx: 0, vz: 0 });
+    }
     flash = new T.Mesh(new T.PlaneGeometry(0.16, 0.16), new T.MeshBasicMaterial({ color: '#ffd77a', transparent: true, opacity: 0.95, depthTest: false }));
     flash.position.set(0.17, -0.12, -0.84); flash.visible = false; W.camera().add(flash);
   };
@@ -145,6 +152,7 @@
     W.setCrouch(false); W.speed(1);
     tracerPool.forEach(function (t) { t.line.visible = false; });
     dustPool.forEach(function (d) { d.s.visible = false; });
+    smokePool.forEach(function (d) { d.s.visible = false; });
     $('#fps').hidden = true; $('#xhair').hidden = true; $('#dmgfx').style.opacity = 0;
     var keep = A; A = null;
     if (!silent && H.onStopped) H.onStopped(keep);
@@ -152,7 +160,57 @@
   FPS.session = function () { return A; };
   FPS.enterCover = function () { if (A) { snapCover(); refreshButtons(); } };
   FPS.active = function () { return !!(A && A.active); };
-  FPS.setCarrying = function (v) { if (A) { A.carrying = !!v; if (v) { leaveCover(); if (W.S.fps.on) FPS.lower(); } refreshButtons(); } };
+  function carryRules() { return (cfg.npcFate && cfg.npcFate.civilian && cfg.npcFate.civilian.carryRules) || {}; }
+  function carryAccMul() {
+    var r = carryRules(), m = r.enemyAccMul != null ? r.enemyAccMul : 0.5;
+    if (A && A.coverFireT > 0) m *= 0.5;
+    return m;
+  }
+  function carryDmgMul() {
+    var r = carryRules();
+    return r.dmgTakenMul != null ? r.dmgTakenMul : 0.6;
+  }
+  function akaiCovering() {
+    var g = G();
+    return !!(g && E.npcPresent(g, 'npc_akai') && W.hasNpc && W.hasNpc('npc_akai') && (!W.S.npcs.npc_akai || W.S.npcs.npc_akai.g.visible));
+  }
+  function puffSmoke(x, y, z) {
+    var d = smokePool.filter(function (q) { return !q.s.visible; })[0]; if (!d) return;
+    d.s.position.set(x, y, z); d.s.scale.set(1.6 + Math.random() * 1.4, 1.6 + Math.random() * 1.4, 1);
+    d.s.visible = true; d.max = 1.2 + Math.random() * 0.6; d.life = d.max;
+    d.vy = 0.55 + Math.random() * 0.45; d.vx = rnd(-0.35, 0.35); d.vz = rnd(-0.35, 0.35);
+    d.s.material.opacity = 0.72;
+  }
+  function startCarryFx() {
+    var r = carryRules();
+    if (r.smokeOnStart !== false) {
+      A.smokeT = r.smokeSec || 6; A.smokeSpawn = 0;
+      var p = W.pos(), n;
+      for (n = 0; n < 10; n++) puffSmoke(p.x + rnd(-1.1, 1.1), 0.3 + Math.random() * 1.1, p.z + rnd(-1.1, 1.1));
+    }
+    var m = String(r.buddyCoverFire || '').match(/(\d+)\s*秒/);
+    var coverSec = m ? +m[1] : 4;
+    if (coverSec > 0 && akaiCovering()) {
+      A.coverFireT = coverSec; A.coverShotT = 0;
+      FPS.msg('阿凱：「我壓制！你快走！」', 2800);
+      Sfx.sfx('shot');
+    } else {
+      A.coverFireT = 0;
+      if (A.smokeT > 0) FPS.msg('丟出煙霧彈！', 1800);
+    }
+  }
+  FPS.setCarrying = function (v) {
+    if (!A) return;
+    var on = !!v;
+    A.carrying = on;
+    if (on) { leaveCover(); if (W.S.fps.on) FPS.lower(); startCarryFx(); }
+    else { A.smokeT = 0; A.coverFireT = 0; }
+    refreshButtons();
+  };
+  function carryBlockedHint() {
+    FPS.msg('背著人不能舉槍', 1800);
+    if (root.UI && root.UI.toast) root.UI.toast('背著人不能舉槍', '', 1800);
+  }
   FPS.setZone = function (z) { if (A) { A.zone = z; A.awayT = 0; } };
 
   function snapCover() {
@@ -182,11 +240,11 @@
   }
   FPS.toggleRaise = function () {
     if (!A) return;
-    if (A.carrying) { FPS.msg('背著人不能舉槍', 1600); return; }
+    if (A.carrying) { carryBlockedHint(); return; }
     if (W.S.fps.on) FPS.lower(); else FPS.raise();
   };
   FPS.raise = function () {
-    if (A && A.carrying) { FPS.msg('背著人不能舉槍', 1600); return false; }
+    if (A && A.carrying) { carryBlockedHint(); return false; }
     if (!A || !A.active || W.S.fps.on) return false;
     var p = W.pos(), near = A.cover || W.nearestCover(p.x, p.z, 1.3);
     var za = A.startAnchor, nearPost = za && Math.hypot(p.x - za[0], p.z - za[1]) < 4;
@@ -204,7 +262,7 @@
   };
   FPS.coverKey = function () {
     if (!A || !A.active) return;
-    if (A.carrying) { FPS.msg('背著人不能舉槍', 1600); return; }
+    if (A.carrying) { carryBlockedHint(); return; }
     if (!A.cover) {
       var p = W.pos(), c = W.nearestCover(p.x, p.z, (cfg.cover.autoSnapM || 1.2) + 0.3);
       if (!c) { FPS.msg('附近沒有掩體', 1500); return; }
@@ -442,7 +500,7 @@
       Sfx.sfx('hit');
       return;
     }
-    if (A.carrying) acc *= 0.5;
+    if (A.carrying) acc *= carryAccMul();
     if (crouched) acc *= (C.crouched && C.crouched.enemyAccMul != null) ? C.crouched.enemyAccMul : 0.05;
     else if (peeking) acc *= (C.peeking && C.peeking.enemyAccMul != null) ? C.peeking.enemyAccMul : 0.7;
     if (playerMoving() && !A.carrying) acc *= 0.7;
@@ -463,6 +521,7 @@
   }
   function hurt(dmg, from) {
     var g = G(), mode = E.diffMode(g), hm = E.hpMax(g);
+    if (A.carrying) dmg *= carryDmgMul();
     g.hp = Math.max(mode.canDie ? 0 : 1, g.hp - dmg); A.hurtT = 0.35; A.noise++;
     Sfx.sfx('hurt'); if (navigator.vibrate && W.isMobileLike()) { try { navigator.vibrate(60); } catch (x) { /* ignore */ } }
     if (H.onHp) H.onHp();
@@ -509,7 +568,7 @@
           e.rushT = 1.4;
           var mode = E.diffMode(G()), C = cfg.cover || {}, covered = playerCovered();
           var macc = et.acc * mode.enemyAccMul;
-          if (A.carrying) macc *= 0.5;
+          if (A.carrying) macc *= carryAccMul();
           if (covered) macc *= (C.rusher && C.rusher.accMulBehindCover != null) ? C.rusher.accMulBehindCover : 0.5;
           if (C.rusher && C.rusher.meleeNeedsHitRoll && Math.random() >= macc) { Sfx.sfx('hit'); }
           else {
@@ -641,6 +700,36 @@
     for (var ei = 0; ei < A.enemies.length && !A.ended; ei++) updateEnemy(A.enemies[ei], dt);
     if (A.ended) return;
     A.enemies = A.enemies.filter(function (e) { return !e.gone; });
+    // 背人：煙霧與阿凱壓制
+    if (A.smokeT > 0) {
+      A.smokeT -= dt; A.smokeSpawn = (A.smokeSpawn || 0) - dt;
+      if (A.smokeSpawn <= 0) {
+        A.smokeSpawn = 0.08;
+        var sp = W.pos();
+        puffSmoke(sp.x + rnd(-1.0, 1.0), 0.25 + Math.random() * 1.3, sp.z + rnd(-1.0, 1.0));
+      }
+    }
+    if (A.coverFireT > 0) {
+      A.coverFireT -= dt; A.coverShotT = (A.coverShotT || 0) - dt;
+      if (A.coverShotT <= 0) {
+        A.coverShotT = 0.28;
+        var ap = W.npcPos && W.npcPos('npc_akai');
+        var live = A.enemies.filter(function (e) { return e.state !== 'dead'; });
+        if (ap && live.length) {
+          var te = live[Math.floor(Math.random() * live.length)];
+          tracer(ap.x, 1.45, ap.z, te.x + rnd(-0.5, 0.5), 1.05 + Math.random() * 0.4, te.z + rnd(-0.5, 0.5), '#ffe9a0');
+          Sfx.sfx('shot');
+        }
+      }
+    }
+    smokePool.forEach(function (q) {
+      if (!q.s.visible) return;
+      q.life -= dt;
+      q.s.position.x += q.vx * dt; q.s.position.y += q.vy * dt; q.s.position.z += q.vz * dt;
+      var k = 1 + dt * 0.9; q.s.scale.x *= k; q.s.scale.y *= k;
+      q.s.material.opacity = Math.max(0, 0.7 * (q.life / q.max));
+      if (q.life <= 0) q.s.visible = false;
+    });
     // 機器人（測試）
     if (FPS.bot) botStep(dt);
     // 戰區與擅自撤離

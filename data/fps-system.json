@@ -318,7 +318,15 @@
     "civilian": {
       "savedFlag": "saved_civilian",
       "rule": "wave2 期間把阿伯背回掩體（第三人稱搬運，移動速度減 40%）。放著不管則 50% 機率受傷，不寫陣亡。",
-      "npc": "npc_uncle_fisher"
+      "npc": "npc_uncle_fisher",
+      "carryRules": {
+        "enemyAccMul": 0.5,
+        "dmgTakenMul": 0.6,
+        "smokeOnStart": true,
+        "smokeSec": 6,
+        "buddyCoverFire": "阿凱壓制射擊，wave2 敵人 4 秒內命中率再乘 0.5",
+        "note": "背人時不能舉槍是設計（第三人稱），但要顯示『背著人不能舉槍』提示，不要讓按鈕看起來沒反應"
+      }
     },
     "signal": {
       "npc": "npc_signal_lin",

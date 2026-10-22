@@ -1198,7 +1198,7 @@
     var zone = ZONES[id];
     if (id === 'wave4' && b.cmd === 'fallback') zone = { x: 0, z: 14, r: 46 };
     beachMode(true); W.setMode('world');
-    FPS.startWave({ id: id, num: waveNum(id), name: w.name, enemies: info.enemies, holdSec: w.holdSec || 0, zone: zone, anchor: ANCHORS[id], lin: id === 'wave3', mag: b.ammo.mag, mags: b.ammo.mags, carrying: !!pl.rescue, grace: id === 'wave1' ? 5 : 4 });
+    FPS.startWave({ id: id, num: waveNum(id), name: w.name, enemies: info.enemies, holdSec: w.holdSec || 0, zone: zone, anchor: ANCHORS[id], lin: id === 'wave3', mag: b.ammo.mag, mags: b.ammo.mags, carrying: false, grace: id === 'wave1' ? 5 : 4 });
     if (pl.rescue) rescueStart();
   }
   function rescueStart() {
