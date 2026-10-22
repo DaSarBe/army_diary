@@ -894,7 +894,7 @@
     return n;
   }
   function akaiFate(s, score, tough, out) {
-    var A = (D.tune.beach || {}).akaiKia || { base: 60, perO: 1, perFirstAid: 20, min: 15, max: 70, tough: 15 };
+    var A = (D.tune.beach || {}).akaiKia || { base: 40, perO: 1, perFirstAid: 15, min: 8, max: 50, tough: 10 };
     var kia = false, p = 0;
     if (!(score != null && score >= 60)) {
       p = clamp(A.base - A.perO * (eff(s, 'o') - 50) - A.perFirstAid * skillRank(s, 'sk_firstaid'), A.min, A.max) + (tough ? A.tough : 0);
@@ -940,6 +940,36 @@
   function npcPresent(s, id) {
     if (id === 'npc_akai' && s.flags.akai_kia) return false;
     return true;
+  }
+  function flagExpr(s, expr) {
+    if (!expr || expr === 'true') return true;
+    function tok(t) {
+      t = String(t || '').trim();
+      if (!t) return true;
+      var neg = t.charAt(0) === '!';
+      var f = neg ? t.slice(1).trim() : t;
+      return neg ? !s.flags[f] : !!s.flags[f];
+    }
+    return String(expr).split(/\s*\|\|\s*/).some(function (orP) {
+      return orP.split(/\s*&&\s*/).every(tok);
+    });
+  }
+  function pickVariant(s, list, field) {
+    if (!list) return null;
+    var i, v;
+    for (i = 0; i < list.length; i++) {
+      v = list[i];
+      if (flagExpr(s, v.if)) return v[field] != null ? v[field] : (v.line || v.title || null);
+    }
+    return null;
+  }
+  function questTitle(s, q) {
+    if (!q) return '';
+    return pickVariant(s, q.titleVariants, 'title') || q.title;
+  }
+  function questStart(s, q) {
+    if (!q) return '';
+    return pickVariant(s, q.startVariants, 'line') || (q.dialogue && q.dialogue.start) || '';
   }
 
   /* ---------- 違禁品誘惑 ---------- */
@@ -996,6 +1026,7 @@
     beachActive: beachActive, beachPending: beachPending, startBeach: startBeach, beachNext: beachNext, diffMode: diffMode, beachKill: beachKill,
     waveClear: waveClear, waveEnemies: waveEnemies, retryWave: retryWave, medevac: medevac, wavesNoRetry: wavesNoRetry, akaiFate: akaiFate, wangFate: wangFate,
     wangChance: wangChance, civilianStay: civilianStay, beachFinish: beachFinish, giverOf: giverOf, npcVariantLine: npcVariantLine, npcPresent: npcPresent, beachXpMul: beachXpMul,
+    flagExpr: flagExpr, questTitle: questTitle, questStart: questStart,
     packContraband: packContraband, bagCheck: bagCheck, takeContraband: takeContraband, deliverCheck: deliverCheck,
     serialize: serialize, deserialize: deserialize, periodsOf: periodsOf, costKeyOf: costKeyOf, fatiguePenalty: fatiguePenalty
   };

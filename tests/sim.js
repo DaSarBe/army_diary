@@ -11,7 +11,7 @@ Engine.init(story, rpg, tuning, { fps: fpsSys, beach: beachStory });
 var D = Engine.data();
 
 var POLICIES = {
-  random: { pDo: 0.55, pMain: 0.7, mu: 55, sigma: 25, pTimer: 0.85, pVol: 0.5, pContra: 0.3, smart: 0, pDown: 0.2, pRetry: 0.8, pCarry: 0.6, pTreat: 0.85 },
+  random: { pDo: 0.55, pMain: 0.7, mu: 55, sigma: 25, pTimer: 0.85, pVol: 0.5, pContra: 0.3, smart: 0, pDown: 0.2, pRetry: 0.8, pCarry: 0.6, pTreat: 0.92 },
   casual: { pDo: 0.35, pMain: 0.6, mu: 45, sigma: 25, pTimer: 0.75, pVol: 0.4, pContra: 0.2, smart: 0, pDown: 0.3, pRetry: 0.7, pCarry: 0.5, pTreat: 0.75 },
   diligent: { pDo: 0.9, pMain: 1, mu: 70, sigma: 18, pTimer: 0.95, pVol: 0.5, pContra: 0.0, smart: 1, pDown: 0.08, pRetry: 0.9, pCarry: 0.85, pTreat: 0.97 },
   reckless: { pDo: 0.8, pMain: 0.5, mu: 50, sigma: 25, pTimer: 0.8, pVol: 0.5, pContra: 0.8, smart: 0, pDown: 0.28, pRetry: 0.5, pCarry: 0.5, pTreat: 0.6 }

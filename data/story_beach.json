@@ -725,6 +725,26 @@
     {
      "if": "beach_fallback",
      "line": "黃連長：「那時候退，是對的。活著的人才能守下一次。」"
+    },
+    {
+     "if": "!akai_kia && !akai_injured",
+     "line": "阿凱拍你肩膀：「欸，珍奶我請，這次不准推。」"
+    },
+    {
+     "if": "court",
+     "line": "幾個同梯別過頭，沒有人跟你對到眼。"
+    }
+   ],
+   "titleVariants": [
+    {
+     "if": "!akai_kia && !sgt_wang_kia",
+     "title": "海岸重聚"
+    }
+   ],
+   "startVariants": [
+    {
+     "if": "!akai_kia && !sgt_wang_kia",
+     "line": "李輔導長：「大家都還在，真好。今天不用撐。」"
     }
    ]
   }
@@ -885,6 +905,7 @@
   "寫實性：義務役是否部署海岸第一線、彈藥實彈領用程序（演習時通常空包彈）、交戰規則與撤退授權均為遊戲化處理，非真實程序。",
   "寫實性：記大功、公開表揚、軍法移送（event_court）程序簡化；實際依陸海空軍懲罰法與軍事審判法。",
   "所有兵種（infantry/artillery/airforce/navy/logistics）皆強制參與本章，以「海岸支援任務」解釋；不變更 story.json。",
+  "ch5_beach_memorial 新增 titleVariants / startVariants（格式同 dialogueVariants：if + title/line）；符合時取代 title 與 dialogue.start，未符合用預設。",
   "reward 單項屬性 ≤ +4，符合 rpg-system.json attrCapPerQuest。"
  ]
 }

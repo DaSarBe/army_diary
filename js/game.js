@@ -33,6 +33,7 @@
 
   function now() { return Date.now(); }
   function gv(q) { return G ? E.giverOf(G, q) : q.giver; }
+  function qTitle(q) { return G ? E.questTitle(G, q) : (q && q.title) || ''; }
   function npcName(id) { return D.npc[id] ? D.npc[id].name : id; }
   function curQ() { return R && R.q; }
   function overlays() { return UI.dialogOpen() || UI.cardOpen() || UI.panelOpen() || (MG && MG.active) || holdOn || busy > 0; }
@@ -216,10 +217,10 @@
   function trackTarget() {
     var q = R && R.q, txt = '', tgt = null;
     if (R && R.plan && !R.ready) {
-      txt = (q.type === 'main' ? '[主線] ' : '[支線] ') + q.title + '：' + (R.hint || R.plan.text);
+      txt = (q.type === 'main' ? '[主線] ' : '[支線] ') + qTitle(q) + '：' + (R.hint || R.plan.text);
       tgt = R.target || null;
     } else if (R && R.ready) {
-      txt = '[回報] ' + q.title + '：找「' + npcName(gv(q)) + '」';
+      txt = '[回報] ' + qTitle(q) + '：找「' + npcName(gv(q)) + '」';
       tgt = W.npcPos(gv(q));
     } else {
       var av = E.listAvailable(G), pres = av.filter(function (x) { return W.hasNpc(gv(x)); })[0];
@@ -402,7 +403,7 @@
     E.fail(G, q.id, out);
     resetRunner();
     var lines = [reason || '任務沒有完成。', (q.dialogue && q.dialogue.fail) || ''];
-    UI.card({ kicker: '任務失敗', title: q.title, body: lines.filter(Boolean), fx: out.fx, buttons: [{ t: '繼續', fn: function () { presentOut(out, { noFx: true, day: true }, function () { afterQuestEnd(); }); } }], sfx: 'fail' });
+    UI.card({ kicker: '任務失敗', title: qTitle(q), body: lines.filter(Boolean), fx: out.fx, buttons: [{ t: '繼續', fn: function () { presentOut(out, { noFx: true, day: true }, function () { afterQuestEnd(); }); } }], sfx: 'fail' });
   }
   function afterQuestEnd() {
     saveGame(0, true);
@@ -432,13 +433,13 @@
     (out.msgs || []).forEach(function (m) { body.push(m); });
     resetRunner();
     Sfx.sfx('success');
-    UI.card({ kicker: wasDecision ? '做出決定' : '任務完成', title: q.title, body: body, fx: out.fx, buttons: [{ t: '繼續', fn: function () { presentOut(out, { noFx: true, day: true }, function () { afterQuestEnd(); }); } }], sfx: 'success' });
+    UI.card({ kicker: wasDecision ? '做出決定' : '任務完成', title: qTitle(q), body: body, fx: out.fx, buttons: [{ t: '繼續', fn: function () { presentOut(out, { noFx: true, day: true }, function () { afterQuestEnd(); }); } }], sfx: 'success' });
   }
 
   /* 各步驟處理 */
-  function variantOk(cond) { var neg = cond.charAt(0) === '!', f = neg ? cond.slice(1) : cond; return neg ? !G.flags[f] : !!G.flags[f]; }
+  function variantOk(cond) { return E.flagExpr(G, cond); }
   function memorialLines() {
-    var q = R.q, lines = [q.dialogue.start];
+    var q = R.q, lines = [E.questStart(G, q)];
     (q.dialogueVariants || []).forEach(function (v) { if (variantOk(v.if)) lines.push(v.line); });
     return lines;
   }
@@ -579,7 +580,7 @@
   function decideStep() {
     var q = R.q;
     UI.dialog({
-      name: q.title, lines: ['這是一個重要的決定，沒有標準答案。', '簽下志願役，會繼續留在部隊；不簽，就按時退伍。'],
+      name: qTitle(q), lines: ['這是一個重要的決定，沒有標準答案。', '簽下志願役，會繼續留在部隊；不簽，就按時退伍。'],
       choices: q.decision.map(function (c, i) {
         return { t: c.label, cls: i === 0 ? '' : '', fn: function () { E.decide(G, q.id, i, E.newOut()); UI.toast('你選擇了：' + c.label); stepSuccess(); } };
       })
@@ -757,18 +758,18 @@
   }
 
   /* ---------- NPC 與接任務 ---------- */
-  function questDialogue(q) { return (q.dialogue && q.dialogue.start) || q.description; }
+  function questDialogue(q) { return E.questStart(G, q) || q.description; }
   function acceptDialog(q, npcId) {
     var name = npcId ? npcName(npcId) : npcName(gv(q));
     var objs = q.objectives.map(function (o, i) { return (i + 1) + '. ' + objText(o); }).join('\n');
     UI.dialog({
-      name: name, lines: [questDialogue(q), '【' + (q.type === 'main' ? '主線' : '支線') + '任務】' + q.title + '\n' + q.description, '目標：\n' + objs + '\n\n獎勵：' + rewardText(q)],
+      name: name, lines: [questDialogue(q), '【' + (q.type === 'main' ? '主線' : '支線') + '任務】' + qTitle(q) + '\n' + q.description, '目標：\n' + objs + '\n\n獎勵：' + rewardText(q)],
       choices: [{ t: '接受任務', cls: 'go', fn: function () { doAccept(q); } }, { t: '再想想', fn: function () { } }]
     });
   }
   function doAccept(q) {
     if (!E.accept(G, q.id)) { UI.toast('同時最多只能接 4 個任務，或條件不符。'); return; }
-    Sfx.sfx('confirm'); UI.toast('接受任務：' + q.title);
+    Sfx.sfx('confirm'); UI.toast('接受任務：' + qTitle(q));
     G.track = q.id;
     startTracked(); refreshHud();
   }
@@ -792,8 +793,8 @@
       return !a.ok && a.reason && /^(需要|薪餉不足|太累|冷卻|受傷|禁閉|住院)|不能/.test(a.reason);
     });
     var choices = [];
-    avail.forEach(function (q) { choices.push({ t: (q.type === 'main' ? '【主線】' : '【支線】') + q.title, cls: 'go', fn: function () { acceptDialog(q, id); } }); });
-    blocked.forEach(function (q) { choices.push({ t: '（' + E.availability(G, q).reason + '）' + q.title, cls: 'dim', keep: true, fn: function () { UI.toast(E.availability(G, q).reason); } }); });
+    avail.forEach(function (q) { choices.push({ t: (q.type === 'main' ? '【主線】' : '【支線】') + qTitle(q), cls: 'go', fn: function () { acceptDialog(q, id); } }); });
+    blocked.forEach(function (q) { choices.push({ t: '（' + E.availability(G, q).reason + '）' + qTitle(q), cls: 'dim', keep: true, fn: function () { UI.toast(E.availability(G, q).reason); } }); });
     if (id === 'npc_auntie') choices.push({ t: '買東西', fn: openShop });
     choices.push({
       t: '聊聊', fn: function () {
@@ -808,7 +809,7 @@
   }
   function boardMenu() {
     var qs = boardQuests();
-    var choices = qs.map(function (q) { return { t: '【' + (q.type === 'main' ? '主線' : '支線') + '】' + q.title + '（來自' + npcName(gv(q)) + '）', cls: 'go', fn: function () { acceptDialog(q, gv(q)); } }; });
+    var choices = qs.map(function (q) { return { t: '【' + (q.type === 'main' ? '主線' : '支線') + '】' + qTitle(q) + '（來自' + npcName(gv(q)) + '）', cls: 'go', fn: function () { acceptDialog(q, gv(q)); } }; });
     choices.push({ t: '離開', fn: function () { } });
     UI.dialog({ name: '布告欄', lines: [qs.length ? '貼著幾張通知與來信，有幾件事需要你去處理。' : '布告欄上目前沒有新的通知。'], choices: choices });
   }
@@ -823,7 +824,7 @@
   function bedMenu() {
     var nx = E.nextQuestDay(G), choices = [];
     choices.push({ t: '睡覺，結束今天（第 ' + G.day + ' 天 ' + E.PERIODS[G.period] + '）', cls: 'go', fn: function () { sleepFlow('night'); } });
-    if (nx) choices.push({ t: '快轉到第 ' + nx.day + ' 天（下一個任務：' + nx.q.title + '）', fn: function () { sleepFlow('skip', nx.day - G.day); } });
+    if (nx) choices.push({ t: '快轉到第 ' + nx.day + ' 天（下一個任務：' + qTitle(nx.q) + '）', fn: function () { sleepFlow('skip', nx.day - G.day); } });
     else choices.push({ t: '快轉到退伍日（第 365 天）', fn: function () { sleepFlow('skip', 365 - G.day); } });
     if (G.honor >= 1 && G.day >= 31) choices.push({ t: '請榮譽假回家放一天（剩 ' + G.honor + ' 天）', fn: function () { sleepFlow('leave'); } });
     choices.push({ t: '存檔', fn: function () { saveGame(1); } });
@@ -879,7 +880,7 @@
       if (!act.length) h = '<p class="note">目前沒有進行中的任務。到「可接」分頁看看哪裡可以接任務。</p>';
       act.forEach(function (q) {
         var st = G.quests[q.id], isTrack = G.track === q.id;
-        h += '<div class="qcard' + (isTrack ? ' tr' : '') + '"><h4><span class="tag ' + q.type + '">' + (q.type === 'main' ? '主線' : '支線') + '</span>' + esc(q.title) + (isTrack ? '（追蹤中）' : '') + '</h4>' +
+        h += '<div class="qcard' + (isTrack ? ' tr' : '') + '"><h4><span class="tag ' + q.type + '">' + (q.type === 'main' ? '主線' : '支線') + '</span>' + esc(qTitle(q)) + (isTrack ? '（追蹤中）' : '') + '</h4>' +
           '<div class="note">第 ' + q.chapter + ' 章 · 期限第 ' + q.dayRange[1] + ' 天 · 委託人：' + esc(npcName(gv(q))) + '</div><p>' + esc(q.description) + '</p><ul>' +
           q.objectives.map(function (o, i) { return '<li class="' + (i < st.step ? 'done' : i === st.step && st.state === 'active' ? 'cur' : '') + '">' + esc(objText(o)) + '</li>'; }).join('') + '</ul>' +
           (st.state === 'ready' ? '<p class="note">目標已完成，回去找「' + esc(npcName(gv(q))) + '」回報。</p>' : '') +
@@ -890,7 +891,7 @@
       if (!av.length) h += '<p class="note">現在沒有可接的任務。時間過去、章節推進，或抽到單位之後，會有新的任務出現。</p>';
       av.forEach(function (q) {
         var present = W.hasNpc(gv(q));
-        h += '<div class="qcard"><h4><span class="tag ' + q.type + '">' + (q.type === 'main' ? '主線' : '支線') + '</span>' + esc(q.title) + '</h4>' +
+        h += '<div class="qcard"><h4><span class="tag ' + q.type + '">' + (q.type === 'main' ? '主線' : '支線') + '</span>' + esc(qTitle(q)) + '</h4>' +
           '<div class="note">期限第 ' + q.dayRange[1] + ' 天 · ' + (present ? '在這裡找「' + esc(npcName(gv(q))) + '」' : (where(gv(q)) ? '到布告欄接取（來自' + esc(npcName(gv(q))) + '）' : '到布告欄接取')) + '</div>' +
           '<p>' + esc(q.description) + '</p><div class="note">獎勵：' + esc(rewardText(q)) + '</div></div>';
       });
@@ -900,14 +901,14 @@
       });
       if (blocked.length) {
         h += '<h3>暫時不能接</h3>';
-        blocked.forEach(function (q) { h += '<div class="qcard"><h4>' + esc(q.title) + '</h4><div class="note">' + esc(E.availability(G, q).reason) + '</div></div>'; });
+        blocked.forEach(function (q) { h += '<div class="qcard"><h4>' + esc(qTitle(q)) + '</h4><div class="note">' + esc(E.availability(G, q).reason) + '</div></div>'; });
       }
     } else {
       var rec = D.qList.filter(function (q) { var s = E.qstate(G, q.id); return s === 'done' || s === 'failed' || s === 'expired'; });
       if (!rec.length) h = '<p class="note">還沒有任何紀錄。</p>';
       rec.forEach(function (q) {
         var s = E.qstate(G, q.id);
-        h += '<div class="qcard"><h4>' + esc(q.title) + '</h4><div class="note">' + ({ done: '已完成', failed: '失敗', expired: '錯過' }[s]) + ' · 第 ' + q.chapter + ' 章</div></div>';
+        h += '<div class="qcard"><h4>' + esc(qTitle(q)) + '</h4><div class="note">' + ({ done: '已完成', failed: '失敗', expired: '錯過' }[s]) + ' · 第 ' + q.chapter + ' 章</div></div>';
       });
       var reps = Object.keys(G.rep);
       if (reps.length) h += '<h3>可重複任務</h3>' + reps.map(function (id) { return '<div class="note">' + esc(D.q[id].title) + '：已完成 ' + G.rep[id].n + ' 次，目前獎勵 ' + Math.round(E.repMult(G, id) * 100) + '%</div>'; }).join('');
@@ -1145,8 +1146,8 @@
     var q = E.beachNext(G);
     if (!q) { startTracked(); return; }
     E.accept(G, q.id); G.track = q.id;
-    var line = q.dialogue && q.dialogue.start;
-    if (line) UI.dialog({ name: '【' + q.title + '】', lines: [line], btn: '繼續', done: startTracked }); else startTracked();
+    var line = E.questStart(G, q);
+    if (line) UI.dialog({ name: '【' + qTitle(q) + '】', lines: [line], btn: '繼續', done: startTracked }); else startTracked();
   }
   function waveNum(id) { return +id.replace('wave', ''); }
   function setupWaveStep() {
@@ -1346,7 +1347,7 @@
   function memorialDecide() {
     var q = R.q, pl = R.plan;
     UI.dialog({
-      name: '追思', lines: [q.dialogue.progress],
+      name: qTitle(q), lines: [q.dialogue.progress],
       choices: [
         { t: '上台說幾句', cls: 'go', fn: function () { var out = E.newOut(); E.addAttr(G, 'm', 2, out, q.id); E.addAttr(G, 'o', 1, out, q.id); UI.toastFx(out.fx); if (R && R.plan === pl) stepSuccess(); } },
         { t: '默默敬禮', fn: function () { var out = E.newOut(); E.addAttr(G, 'm', 1, out, q.id); UI.toastFx(out.fx); if (R && R.plan === pl) stepSuccess(); } }

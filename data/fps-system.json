@@ -255,12 +255,12 @@
     "akai": {
       "injuredFlag": "akai_injured",
       "kiaFlag": "akai_kia",
-      "rule": "ch4_beach_aid 包紮小遊戲（minigame first_aid）分數 >= 60 則只受傷；< 60 時陣亡機率 = clamp(60 - (o-50) - 20*sk_firstaid, 15, 70)%；若玩家選擇『讓他自己硬撐』，陣亡機率再加 15%",
+      "rule": "ch4_beach_aid 包紮小遊戲分數 >= 60 則只受傷；< 60 時陣亡機率 = clamp(40 - (o-50) - 15*sk_firstaid, 8, 50)%；選『讓他自己硬撐』再加 10%",
       "npc": "npc_akai"
     },
     "sgtWang": {
       "kiaFlag": "sgt_wang_kia",
-      "rule": "ch4_beach_command 開場班長重傷倒下、指揮權交給玩家；wave4 結束時判定是否陣亡。選 hold：玩家 hp 曾歸零 50%，沒倒下 15%；counter 35%；fallback 10%。有 radio_fixed 時分別改為 25/8/18/5（取整數）。",
+      "rule": "ch4_beach_command 開場班長重傷倒下、指揮權交給玩家；wave4 結束時判定是否陣亡。hold：玩家 hp 曾歸零 40%，沒倒下 10%；counter 25%；fallback 5%。有 radio_fixed 時分別為 20/5/12/3。",
       "npc": "npc_sgt_wang"
     },
     "civilian": {
@@ -271,7 +271,8 @@
     "signal": {
       "npc": "npc_signal_lin",
       "rule": "wave3 期間 hp 歸零只算受傷，不寫陣亡；沒有 radio_fixed"
-    }
+    },
+    "balanceTarget": "survivor 10–12%，beach_hero 8–12%，其他結局各 >= 3%"
   },
   "minigames": {
     "first_aid": {

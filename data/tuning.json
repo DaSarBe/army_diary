@@ -134,29 +134,29 @@
     ],
     "wangKia": {
       "hold_zero": [
-        50,
-        25
+        40,
+        20
       ],
       "hold": [
-        15,
-        8
-      ],
-      "counter": [
-        35,
-        18
-      ],
-      "fallback": [
         10,
         5
+      ],
+      "counter": [
+        25,
+        12
+      ],
+      "fallback": [
+        5,
+        3
       ]
     },
     "akaiKia": {
-      "base": 60,
+      "base": 40,
       "perO": 1,
-      "perFirstAid": 20,
-      "min": 15,
-      "max": 70,
-      "tough": 15
+      "perFirstAid": 15,
+      "min": 8,
+      "max": 50,
+      "tough": 10
     },
     "uncleHurtChance": 50,
     "signalHp": 100,
