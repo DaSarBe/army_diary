@@ -522,7 +522,7 @@
   function hurt(dmg, from) {
     var g = G(), mode = E.diffMode(g), hm = E.hpMax(g);
     if (A.carrying) dmg *= carryDmgMul();
-    g.hp = Math.max(mode.canDie ? 0 : 1, g.hp - dmg); A.hurtT = 0.35; A.noise++;
+    g.hp = Math.max(mode.canDie ? 0 : 1, Math.round(g.hp - dmg)); A.hurtT = 0.35; A.noise++;
     Sfx.sfx('hurt'); if (navigator.vibrate && W.isMobileLike()) { try { navigator.vibrate(60); } catch (x) { /* ignore */ } }
     if (H.onHp) H.onHp();
     var pct = g.hp / hm * 100;
