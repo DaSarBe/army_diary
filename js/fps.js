@@ -113,7 +113,7 @@
       mag: o.mag != null ? o.mag : 30, mags: o.mags != null ? o.mags : Math.max(0, total - 1), fireMode: 'semi', ads: false, reload: 0, reloadTotal: 0, cd: 0, firing: false, rec: 0,
       swayT: 0, shakeT: 0, cover: null, peek: false, peekT: 0, buddyUsed: false, zone: o.zone, awayT: 0, lin: o.lin ? { hp: (E.data().tune.beach || {}).signalHp || 100, max: 100 } : null,
       raised: false, noise: 0, hurtT: 0, hpZero: false, ended: false, carrying: !!o.carrying, enemyTick: 0, firers: 0, suppress: false, botT: 0, botIdle: 0, lowT: 0, startAnchor: o.anchor, waveName: o.name,
-      aimAssist: !!b.aim, kills: 0, shots: 0, hits: 0, rushHit: 0, killedHeadshots: 0, grace: o.grace != null ? o.grace : 4
+      aimAssist: !!b.aim, kills: 0, shots: 0, hits: 0, rushHit: 0, killedHeadshots: 0, grace: o.grace != null ? o.grace : 4, barks: {}, warnedBag: false
     };
   }
 
@@ -122,6 +122,7 @@
     // o: {id, enemies:{type:n}, holdSec, zone, anchor:[x,z], lin, mag, mags, name, carrying}
     FPS.stop(true);
     var g = G();
+    if (g && g.beach && g.beach.medevac) return null;
     A = newSession(o);
     W.reviveCovers();
     var list = [];
@@ -130,7 +131,7 @@
     list.sort(function (a, b) { return (a === 'gunner' ? -1 : 0) - (b === 'gunner' ? -1 : 0) || Math.random() - 0.5; });
     A.queue = list; A.total = list.length;
     if (o.anchor && !o.carrying) { W.place(o.anchor[0], o.anchor[1]); }
-    snapCover();
+    if (!o.carrying) snapCover();
     $('#fps').hidden = false; refreshButtons();
     FPS.banner('第 ' + o.num + ' 波：' + o.name);
     if (g.beach.diff === 'story') FPS.msg('劇情向：不會倒下', 3000);
@@ -139,7 +140,7 @@
   FPS.stop = function (silent) {
     if (!A) return;
     A.enemies.forEach(function (e) { if (e.group.parent) e.group.parent.remove(e.group); });
-    A.enemies = []; A.active = false; A.ended = true;
+    A.enemies = []; A.queue = []; A.active = false; A.ended = true; A.firing = false;
     if (W.S.fps.on) W.fpsExit();
     W.setCrouch(false); W.speed(1);
     tracerPool.forEach(function (t) { t.line.visible = false; });
@@ -151,34 +152,46 @@
   FPS.session = function () { return A; };
   FPS.enterCover = function () { if (A) { snapCover(); refreshButtons(); } };
   FPS.active = function () { return !!(A && A.active); };
-  FPS.setCarrying = function (v) { if (A) { A.carrying = v; if (v) { leaveCover(); } } };
+  FPS.setCarrying = function (v) { if (A) { A.carrying = !!v; if (v) { leaveCover(); if (W.S.fps.on) FPS.lower(); } refreshButtons(); } };
   FPS.setZone = function (z) { if (A) { A.zone = z; A.awayT = 0; } };
 
   function snapCover() {
+    if (!A || A.carrying) return;
     var p = W.pos(), c = W.nearestCover(p.x, p.z, 1.3);
-    if (c) { A.cover = c; A.peek = false; W.place(c.ax, c.az); W.setCrouch(true); }
+    if (c) { takeCover(c); }
+  }
+  function takeCover(c) {
+    A.cover = c; A.peek = false; W.place(c.ax, c.az); W.setCrouch(true);
+    if (c.type === 'rock') bark('on_first_rock_cover');
   }
   function leaveCover() { if (!A) return; A.cover = null; A.peek = false; W.setCrouch(false); }
 
   /* ---------- 輸入 ---------- */
   function refreshButtons() {
-    var on = !!A, fp = W.S.fps.on, touch = W.isMobileLike();
+    var on = !!A, fp = W.S.fps.on, touch = W.isMobileLike(), carry = !!(A && A.carrying);
     $('#fpsBtns').classList.toggle('touch', touch);
     $('#bFire').hidden = !fp; $('#bReload').hidden = !fp; $('#bMode').hidden = !fp; $('#bAssist').hidden = !on;
     $('#bRaise').textContent = fp ? '放下' : '舉槍'; $('#bRaise').hidden = !on;
     $('#bCover').hidden = !on; $('#bCover').textContent = fp && A && A.cover ? (A.peek ? '蹲下' : '探頭') : '掩體';
+    $('#bRaise').classList.toggle('dim', carry);
+    $('#bCover').classList.toggle('dim', carry);
     $('#bMode').textContent = A && A.fireMode === 'semi' ? '單發' : '連發';
     $('#bAssist').textContent = '輔助瞄準：' + (A && A.aimAssist ? '開' : '關');
     $('#xhair').hidden = !fp;
     $('#fpsHint').hidden = touch || !on;
   }
-  FPS.toggleRaise = function () { if (!A || A.carrying) return; if (W.S.fps.on) FPS.lower(); else FPS.raise(); };
+  FPS.toggleRaise = function () {
+    if (!A) return;
+    if (A.carrying) { FPS.msg('背著人不能舉槍', 1600); return; }
+    if (W.S.fps.on) FPS.lower(); else FPS.raise();
+  };
   FPS.raise = function () {
-    if (!A || !A.active || A.carrying || W.S.fps.on) return false;
+    if (A && A.carrying) { FPS.msg('背著人不能舉槍', 1600); return false; }
+    if (!A || !A.active || W.S.fps.on) return false;
     var p = W.pos(), near = A.cover || W.nearestCover(p.x, p.z, 1.3);
     var za = A.startAnchor, nearPost = za && Math.hypot(p.x - za[0], p.z - za[1]) < 4;
     if (!near && !nearPost) { FPS.msg('靠近掩體或射擊位置才能舉槍', 1800); return false; }
-    if (near && !A.cover) { A.cover = near; W.place(near.ax, near.az); }
+    if (near && !A.cover) takeCover(near);
     A.peek = true; W.setCrouch(false); W.fpsEnter(); A.peekT = 0; A.raised = true;
     Sfx.sfx('click'); refreshButtons(); return true;
   };
@@ -190,11 +203,12 @@
     A.raised = false; refreshButtons();
   };
   FPS.coverKey = function () {
-    if (!A || !A.active || A.carrying) return;
+    if (!A || !A.active) return;
+    if (A.carrying) { FPS.msg('背著人不能舉槍', 1600); return; }
     if (!A.cover) {
       var p = W.pos(), c = W.nearestCover(p.x, p.z, (cfg.cover.autoSnapM || 1.2) + 0.3);
       if (!c) { FPS.msg('附近沒有掩體', 1500); return; }
-      A.cover = c; W.place(c.ax, c.az); A.peek = false; W.setCrouch(true); Sfx.sfx('click'); refreshButtons(); return;
+      takeCover(c); Sfx.sfx('click'); refreshButtons(); return;
     }
     if (W.S.fps.on) { A.peek = !A.peek; A.peekT = 0; W.setEye(A.peek ? 1.6 : 1.0); }
     else { A.peek = false; W.setCrouch(!W.S.fps.crouch); }
@@ -345,18 +359,81 @@
   function playerPoint() {
     var p = W.pos(), F = W.S.fps; return { x: p.x, y: A.cover && !A.peek ? 0.9 : (F.on ? F.eye : 1.4), z: p.z };
   }
-  function playerCovered() { return !!(A.cover && !A.peek); }
+  function playerCovered() { return !!(A.cover && A.cover.alive && !A.peek); }
   function playerMoving() { return W.S.mv > 0.2 || A.carrying; }
+  function barkCond(s, expr) {
+    if (!expr) return true;
+    function one(t) {
+      t = String(t || '').trim();
+      if (!t) return true;
+      if (t === 'sgt_wang_down') return !!(s.beach && s.beach.wangDown);
+      if (t.indexOf('quest>=') === 0) {
+        var id = t.slice(7).trim(), q = E.data().q[id];
+        return q && s.quests[id] && (s.quests[id].state === 'active' || s.quests[id].state === 'ready' || s.quests[id].state === 'done' || (s.quests.ch4_beach_command && s.quests.ch4_beach_command.state));
+      }
+      if (/npc_akai\s*不在場/.test(t) || t === 'npc_akai 不在場') return !E.npcPresent(s, 'npc_akai') || !!s.flags.akai_kia;
+      return E.flagExpr(s, t);
+    }
+    return String(expr).split(/\s*\|\|\s*/).some(function (orP) { return orP.split(/\s*&&\s*/).every(one); });
+  }
+  function bark(trigger) {
+    var barks = E.data().barks;
+    if (!barks || !barks.triggers || !A) return;
+    var spec = barks.triggers[trigger];
+    if (!spec) return;
+    if (spec.once && A.barks[trigger]) return;
+    A.barks[trigger] = 1;
+    var s = G(), pick = spec, i, fb, line, radio = false;
+    if (spec.fallback && spec.fallback.length) {
+      if (s.beach && s.beach.wangDown && spec.speaker === 'npc_sgt_wang') pick = null;
+      if (pick && pick.speaker === 'npc_sgt_wang' && (s.flags.sgt_wang_kia || (s.beach && s.beach.wangDown))) pick = null;
+      if (!pick || (pick.speaker === 'npc_akai' && !E.npcPresent(s, 'npc_akai'))) pick = null;
+      if (!pick) {
+        for (i = 0; i < spec.fallback.length; i++) {
+          fb = spec.fallback[i];
+          if (barkCond(s, fb.if) && !(fb.unlessFlag && s.flags[fb.unlessFlag])) { pick = fb; break; }
+        }
+      }
+    }
+    if (!pick) pick = spec;
+    line = pick.line || spec.line;
+    radio = pick.channel === 'radio';
+    FPS.msg(line, 2200);
+    if (radio) Sfx.sfx('radio');
+  }
+  function hitSandbag(dmg) {
+    var c = A.cover, warnAt, before, after;
+    if (!c || c.type !== 'sandbag' || !c.alive) return;
+    warnAt = ((cfg.cover.types.sandbag && cfg.cover.types.sandbag.warnAtPct) || 30) / 100;
+    before = c.hp / c.maxhp;
+    c.hp -= dmg;
+    after = c.hp / c.maxhp;
+    if (before > warnAt && after <= warnAt) {
+      if (W.crackCover) W.crackCover(c);
+      bark('on_sandbag_30pct');
+      FPS.msg((cfg.cover.feedback && cfg.cover.feedback.sandbagWarn) || '沙包要爛了，換位置！', 2200);
+    }
+    if (c.hp <= 0) {
+      W.killCover(c);
+      FPS.msg('沙包被打爛了！換個位置', 2200);
+      Sfx.sfx('thud');
+      $('#dmgfx').style.opacity = '0.45';
+      A.cover = null;
+      /* 不強制放下槍 */
+    }
+  }
   function enemyShoot(e, accMul) {
     var g = G(), mode = E.diffMode(g), et = ET(e.type), pp = playerPoint(), mz = new T.Vector3();
+    var C = cfg.cover || {};
     e.j.muzzle.getWorldPosition(mz);
     var toLin = A.lin && A.lin.hp > 0 && Math.random() < 0.7;
     var tx = toLin ? -32 : pp.x, tz = toLin ? 8 : pp.z, ty = toLin ? 1.0 : pp.y;
     var dist = Math.hypot(tx - e.x, tz - e.z);
     var distF = dist > 35 ? 0.7 : 1;
-    // 視線：只算建築物，不算掩體（掩體只減傷與命中率）
-    var dx = tx - mz.x, dy = ty - mz.y, dz = tz - mz.z, dl = Math.hypot(dx, dy, dz);
-    var blocked = W.rayBlock(mz.x, mz.y, mz.z, dx / dl, dy / dl, dz / dl, dl - 0.5, null, true) < dl - 0.6;
+    var dx = tx - mz.x, dy = ty - mz.y, dz = tz - mz.z, dl = Math.hypot(dx, dy, dz) || 1;
+    var crouched = playerCovered(), peeking = !!(A.cover && A.cover.alive && A.peek);
+    var noCovers = !crouched;
+    var blocked = W.rayBlock(mz.x, mz.y, mz.z, dx / dl, dy / dl, dz / dl, dl - 0.5, null, noCovers) < dl - 0.6;
     var acc = et.acc * mode.enemyAccMul * distF * (accMul || 1);
     if (toLin) {
       acc *= 0.28; var hitL = !blocked && Math.random() < acc;
@@ -365,18 +442,24 @@
       Sfx.sfx('hit');
       return;
     }
-    var covered = playerCovered();
-    if (covered) acc *= 0.4;
-    if (playerMoving()) acc *= 0.7;
-    var hit = !blocked && Math.random() < acc;
+    if (A.carrying) acc *= 0.5;
+    if (crouched) acc *= (C.crouched && C.crouched.enemyAccMul != null) ? C.crouched.enemyAccMul : 0.05;
+    else if (peeking) acc *= (C.peeking && C.peeking.enemyAccMul != null) ? C.peeking.enemyAccMul : 0.7;
+    if (playerMoving() && !A.carrying) acc *= 0.7;
+    var coverStruck = crouched && blocked;
+    var hit = coverStruck ? Math.random() < acc : (!blocked && Math.random() < acc);
     var miss = hit ? 0 : rnd(0.6, 2.4);
     tracer(mz.x, mz.y, mz.z, tx + (hit ? 0 : rnd(-miss, miss)), ty + (hit ? 0 : rnd(-0.5, 0.5)), tz + (hit ? 0 : rnd(-miss, miss)), '#ff9a55');
-    if (A.cover && A.cover.type === 'sandbag' && A.cover.alive) {
-      A.cover.hp -= et.dmg * 1.6;
-      if (A.cover.hp <= 0) { W.killCover(A.cover); FPS.msg('沙包被打爛了！換個位置', 2200); Sfx.sfx('thud'); A.cover = null; A.peek = false; W.setCrouch(false); if (W.S.fps.on) FPS.lower(); }
-    }
-    if (hit) hurt(et.dmg * mode.dmgTakenMul * (covered ? cfg.cover.types[A.cover.type].dmgTakenMul : 1), e);
-    else if (!covered || Math.random() < 0.3) Sfx.sfx('hit');
+    if (coverStruck) hitSandbag(et.dmg);
+    if (hit) {
+      var dmgMul = 1;
+      if (crouched && A.cover) dmgMul = (C.crouched && C.crouched.dmgTakenMul && C.crouched.dmgTakenMul[A.cover.type] != null) ? C.crouched.dmgTakenMul[A.cover.type] : 0.1;
+      else if (peeking) dmgMul = (C.peeking && C.peeking.dmgTakenMul != null) ? C.peeking.dmgTakenMul : 0.5;
+      var dmg = et.dmg * mode.dmgTakenMul * dmgMul;
+      if (dmgMul < 1) FPS.msg((C.feedback && C.feedback.blockedHint) || '掩體擋下', 900);
+      if (peeking) bark('on_first_hit_while_peeking');
+      if (dmg > 0) hurt(dmg, e);
+    } else if (!crouched || Math.random() < 0.3) Sfx.sfx('hit');
   }
   function hurt(dmg, from) {
     var g = G(), mode = E.diffMode(g), hm = E.hpMax(g);
@@ -422,7 +505,21 @@
       var dx = tx - e.x, dz = tz - e.z, dd = Math.hypot(dx, dz), sp = e.state === 'rush' ? 5.2 : e.type === 'gunner' ? 2.4 : 3.3;
       if (e.state === 'rush' && dd < 2.2) {
         moving = false; e.rushT = (e.rushT || 0) - dt;
-        if (e.rushT <= 0) { e.rushT = 1.4; var covered = playerCovered(); hurt(et.dmg * E.diffMode(G()).dmgTakenMul * (covered ? cfg.cover.types[A.cover.type].dmgTakenMul * 2 : 1), e); }
+        if (e.rushT <= 0) {
+          e.rushT = 1.4;
+          var mode = E.diffMode(G()), C = cfg.cover || {}, covered = playerCovered();
+          var macc = et.acc * mode.enemyAccMul;
+          if (A.carrying) macc *= 0.5;
+          if (covered) macc *= (C.rusher && C.rusher.accMulBehindCover != null) ? C.rusher.accMulBehindCover : 0.5;
+          if (C.rusher && C.rusher.meleeNeedsHitRoll && Math.random() >= macc) { Sfx.sfx('hit'); }
+          else {
+            var mmul = 1;
+            if (covered && A.cover && C.crouched && C.crouched.dmgTakenMul && C.crouched.dmgTakenMul[A.cover.type] != null) mmul = C.crouched.dmgTakenMul[A.cover.type];
+            var mdmg = et.dmg * mode.dmgTakenMul * mmul;
+            if (mmul < 1) FPS.msg((C.feedback && C.feedback.blockedHint) || '掩體擋下', 900);
+            if (mdmg > 0) hurt(mdmg, e);
+          }
+        }
       } else if (e.state === 'advance' && dd < 0.8) { e.state = 'cover'; e.t = 0; e.peekT = rnd(0.8, 1.6); }
       else { e.x += dx / dd * sp * dt; e.z += dz / dd * sp * dt; moving = true; e.group.rotation.y = Math.atan2(dx, dz); }
       e.exposed = true; e.crouch = 0;
@@ -475,6 +572,15 @@
   };
   function botStep(dt) {
     var F = W.S.fps; A.botT -= dt;
+    if (A.carrying) {
+      if (F.on) FPS.lower();
+      var tgt = H.carryTarget ? H.carryTarget() : null;
+      if (tgt) {
+        var S = W.S, dx = tgt.x - S.px, dz = tgt.z - S.pz, dd = Math.hypot(dx, dz);
+        if (dd > 0.9) W.place(S.px + dx / dd * 3.4 * dt, S.pz + dz / dd * 3.4 * dt);
+      }
+      return;
+    }
     if (FPS.bot === 'idle') {
       if (A.cover) leaveCover();
       if (W.S.fps.on) W.fpsExit();
@@ -515,11 +621,12 @@
     // 換彈
     if (A.reload > 0) { A.reload -= dt; if (A.reload <= 0) { A.reload = 0; A.mags--; A.mag = 30; Sfx.sfx('confirm'); } }
     if (A.firing && A.fireMode === 'auto') tryFire(false);
-    // 探頭時間：被壓制時縮短
+    // 探頭時間：被壓制時縮短；cover.peekAutoTimeoutSec 為 null 時不自動蹲下
     A.suppress = A.enemies.some(function (e) { return e.type === 'gunner' && e.state === 'peek'; });
-    if (F.on && A.cover && A.peek) {
+    var peekTo = cfg.cover && cfg.cover.peekAutoTimeoutSec;
+    if (peekTo && F.on && A.cover && A.peek) {
       A.peekT += dt;
-      if (A.peekT > (A.suppress ? 1.8 : 4.5)) { A.peek = false; W.setEye(1.0); A.firing = false; FPS.msg(A.suppress ? '被機槍壓制！快躲！' : '探頭太久了，蹲下', 1400); refreshButtons(); }
+      if (A.peekT > (A.suppress ? Math.min(1.8, peekTo) : peekTo)) { A.peek = false; W.setEye(1.0); A.firing = false; FPS.msg(A.suppress ? '被機槍壓制！快躲！' : '探頭太久了，蹲下', 1400); refreshButtons(); }
     }
     // 離開掩體超過 2 公尺：切回第三人稱
     if (F.on && A.cover) { var d = Math.hypot(S.px - A.cover.ax, S.pz - A.cover.az); if (d > 0.7 && !S.mv) { /* 微調位置 */ } if (d > 2.0) { FPS.lower(); A.cover = null; W.setCrouch(false); FPS.msg('離開掩體，切回第三人稱', 1600); } }

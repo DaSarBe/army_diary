@@ -92,7 +92,7 @@
     "routineBEvery": 25
   },
   "endingOverrides": {
-    "bad_injury": "flag hospitalized 且 b < 46",
+    "bad_injury": "flag hospitalized 且 b < 40",
     "exemplar": "d>=51 && b>=48 && o>=57 && m>=52 && demerit==0",
     "brother": "o>=82",
     "iron": "b>=74",

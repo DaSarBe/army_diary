@@ -56,6 +56,11 @@ function playOne(seed, P) {
       if (t === 'check') ok = Engine.rollCheck(s, ob.target, q).ok;
       else if (t === 'minigame') {
         if (ob.target === 'lottery') Engine.lottery(s, o);
+        else if (ob.target === 'cover_tutorial') Engine.minigameResult(s, q.id, ob.target, 90, o);
+        else if (ob.target === 'rehab') {
+          var rh = Engine.minigameResult(s, q.id, ob.target, Math.max(0, Math.min(100, (P.pTreat > 0.8 ? 88 : 50) + gauss(r) * 12)), o);
+          ok = rh.tier !== 'fail';
+        }
         else ok = Engine.minigameResult(s, q.id, ob.target, mgRaw(), o).tier !== 'fail';
       } else if (t === 'rhythm') ok = Engine.minigameResult(s, q.id, 'rhythm', mgRaw(), o).tier !== 'fail';
       else if (t === 'timed' || t === 'stealth' || t === 'defend') ok = Engine.mgFinal(s, 'timed', mgRaw()) >= 60;
@@ -102,7 +107,7 @@ function playOne(seed, P) {
       if (guard > 1) Engine.accept(s, q.id);
       var fo = Engine.newOut(), ok = true;
       switch (q.id) {
-        case 'ch4_beach_prep': steps(q, 4); break;
+        case 'ch4_beach_prep': steps(q, q.objectives.length); break;
         case 'ch4_beach_alert': steps(q, 2); ok = Engine.rollCheck(s, 'check.endure', q).ok; if (ok) steps(q, 1); break;
         case 'ch4_beach_armory':
           steps(q, 1);

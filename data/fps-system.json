@@ -38,7 +38,7 @@
       "hardcore": {
         "name": "硬派",
         "dmgTakenMul": 1.4,
-        "enemyAccMul": 1.25,
+        "enemyAccMul": 1.15,
         "aimAssist": "optional",
         "canDie": true,
         "noHud": [
@@ -112,22 +112,44 @@
   },
   "cover": {
     "autoSnapM": 1.2,
+    "crouched": {
+      "enemyAccMul": 0.05,
+      "blockByRaycast": true,
+      "dmgTakenMul": {
+        "sandbag": 0.1,
+        "rock": 0,
+        "bunker": 0
+      }
+    },
+    "peeking": {
+      "enemyAccMul": 0.7,
+      "dmgTakenMul": 0.5
+    },
     "types": {
       "sandbag": {
-        "dmgTakenMul": 0.2,
-        "hp": 400
+        "hp": 600,
+        "damagedOnlyOnHit": true,
+        "warnAtPct": 30
       },
       "rock": {
-        "dmgTakenMul": 0.1,
         "hp": null
       },
       "bunker": {
-        "dmgTakenMul": 0.05,
         "hp": null
       }
     },
-    "peekToShoot": true,
-    "note": "沙包會被打爛，迫使玩家換位置"
+    "rusher": {
+      "meleeNeedsHitRoll": true,
+      "accMulBehindCover": 0.5,
+      "noDoubleDamage": true
+    },
+    "feedback": {
+      "blockedHint": "掩體擋下",
+      "sandbagWarn": "沙包要爛了，換位置！",
+      "onBreak": "不強制放下槍，改成畫面閃一下加提示"
+    },
+    "peekAutoTimeoutSec": null,
+    "note": "舉槍不再等於全身暴露；探頭時有半掩護，蹲下時幾乎不會被打到。"
   },
   "health": {
     "_desc": "沿用 hp。每一波之間恢復 20% 上限。",
@@ -159,6 +181,36 @@
         }
       ],
       "storyModeNote": "劇情向不會歸零"
+    },
+    "medevacRecovery": {
+      "quest": "ch5_beach_rehab",
+      "trigger": "beach_medevac && hospitalized",
+      "minigame": "rehab",
+      "pass": 60,
+      "onPass": {
+        "clearFlags": [
+          "hospitalized"
+        ],
+        "b": 2,
+        "flags": [
+          "rehab_done"
+        ]
+      },
+      "onFail": {
+        "keep": "hospitalized"
+      },
+      "badInjuryThreshold": "b < 40（取代原本的 46）",
+      "great": 85,
+      "onGreat": {
+        "clearFlags": [
+          "hospitalized"
+        ],
+        "flags": [
+          "rehab_done"
+        ],
+        "b": 3,
+        "m": 2
+      }
     }
   },
   "enemies": {
@@ -346,6 +398,7 @@
     "coast_outpost": "海岸據點（演習準備、軍械室）",
     "bunker": "沙灘碉堡（wave1、wave4）",
     "beach": "灘頭（wave2、救援阿伯）",
-    "comm_trench": "通訊壕（wave3、掩護小林）"
+    "comm_trench": "通訊壕（wave3、掩護小林）",
+    "military_hospital_rehab": "國軍醫院復健室（ch5_beach_rehab）"
   }
 }

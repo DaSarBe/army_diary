@@ -38,9 +38,15 @@
       D.story.quests = D.story.quests.concat(bs.quests);
       var have = {};
       D.story.npcs.forEach(function (n) { have[n.id] = 1; });
-      bs.npcs.forEach(function (n) { if (!have[n.id]) D.story.npcs.push(n); D.npcVar[n.id] = n.variants || {}; });
-      (bs.npcOverrides || []).forEach(function (o) { D.npcVar[o.id] = o.variants || {}; });
+      function cleanVar(v) {
+        if (!v) return {};
+        Object.keys(v).forEach(function (k) { if (!Array.isArray(v[k])) delete v[k]; });
+        return v;
+      }
+      bs.npcs.forEach(function (n) { n.variants = cleanVar(n.variants); if (!have[n.id]) D.story.npcs.push(n); D.npcVar[n.id] = n.variants || {}; });
+      (bs.npcOverrides || []).forEach(function (o) { D.npcVar[o.id] = cleanVar(o.variants || {}); });
       D.beachItems = bs.newItems || [];
+      D.barks = bs.barks || null;
     }
     // tuning.json 為準：重複的新結局與 it_t91 以 tuning 定義，忽略 rpg-system.json 裡的版本
     var newIds = (bt.newEndings || []).map(function (e) { return e.id; });
@@ -55,6 +61,7 @@
         if (!D.rpg.minigames[k]) D.rpg.minigames[k] = { name: m.name, attr: m.attr, check: m.skill, cost: 'training' };
       });
     }
+    if (!D.rpg.minigames.cover_tutorial) D.rpg.minigames.cover_tutorial = { name: '掩體與探頭', attr: 'd', cost: 'training' };
     D.tune.aliases = t.aliases || {};
     D.q = {}; D.qList = [];
     D.npc = {}; D.items = {}; D.skills = {}; D.inj = {}; D.ev = {}; D.units = {};
@@ -380,14 +387,36 @@
       else if (k === 'honor') addHonor(s, Math.round(v * mult), out);
       else if (k === 'demerit') addDemerit(s, v, out);
       else if (k === 'badge') addBadge(s, v, out);
+      else if (k === 'flags' && Array.isArray(v)) v.forEach(function (f) { s.flags[f] = 1; });
+      else if (k === 'clearFlags' && Array.isArray(v)) v.forEach(function (f) { delete s.flags[f]; });
     });
+  }
+  function applyClearFlags(s, list) {
+    (list || []).forEach(function (f) { delete s.flags[f]; if (f === 'hospitalized') delete s.flags.hospitalizedNow; });
+  }
+  function applyRehab(s, score, out) {
+    var rec = D.fps && D.fps.health && D.fps.health.medevacRecovery;
+    if (!rec) return { tier: mgTier(score) };
+    var tier = score >= rec.great ? 'great' : score >= rec.pass ? 'pass' : 'fail';
+    var pack = tier === 'great' ? rec.onGreat : tier === 'pass' ? rec.onPass : rec.onFail;
+    if (pack) {
+      applyClearFlags(s, pack.clearFlags);
+      (pack.flags || []).forEach(function (f) { s.flags[f] = 1; });
+      var b = {};
+      ATTRS.forEach(function (k) { if (pack[k]) b[k] = pack[k]; });
+      applyBundle(s, b, out);
+    }
+    return { tier: tier };
   }
   function minigameResult(s, qid, id, raw, out) {
     var m = mgDef(id) || {}, score = mgFinal(s, id, raw), tier = mgTier(score);
     s.stats.mg++;
     if (tier === 'great') s.stats.mgGreat++;
     var mult = qid ? repMult(s, qid) : 1;
-    if (tier === 'great' && m.greatReward) applyBundle(s, m.greatReward, out, qid, mult);
+    if (id === 'rehab') {
+      var rh = applyRehab(s, score, out);
+      tier = rh.tier;
+    } else if (tier === 'great' && m.greatReward) applyBundle(s, m.greatReward, out, qid, mult);
     else if (tier !== 'fail' && m.passReward) applyBundle(s, m.passReward, out, qid, mult);
     return { score: score, tier: tier, raw: Math.round(raw), assist: mgAssist(s, id) };
   }
@@ -421,7 +450,7 @@
     if (q.id === 'ch4_side_03' && s.flags.akai_kia) return '少了一個人';
     if (s.confine > 0) return '禁閉中';
     var inj = s.injury && D.inj[s.injury.id];
-    if (s.flags.hospitalizedNow && q.id !== 'ch5_side_06') return '住院中';
+    if (s.flags.hospitalizedNow && q.id !== 'ch5_side_06' && q.id !== 'ch5_beach_rehab') return '住院中';
     if (inj && inj.blocks) {
       var blocks = inj.blocks;
       var bad = hasObj(q, function (o) {
@@ -532,6 +561,7 @@
       if (r.badge) addBadge(s, r.badge, out);
     }
     (r.flags || []).forEach(function (f) { if (f === 'radio_fixed' && s.beach && s.beach.medevac) return; s.flags[f] = 1; });
+    applyClearFlags(s, r.clearFlags);
     if (id === 'ch4_beach_relief') beachFinish(s, out);
     if (id === 'ch2_main_01') addItem(s, 'it_dogtag', 1, out);
     if (id === 'ch2_side_02') removeItem(s, 'it_phonecard', 1);
@@ -1026,7 +1056,7 @@
     beachActive: beachActive, beachPending: beachPending, startBeach: startBeach, beachNext: beachNext, diffMode: diffMode, beachKill: beachKill,
     waveClear: waveClear, waveEnemies: waveEnemies, retryWave: retryWave, medevac: medevac, wavesNoRetry: wavesNoRetry, akaiFate: akaiFate, wangFate: wangFate,
     wangChance: wangChance, civilianStay: civilianStay, beachFinish: beachFinish, giverOf: giverOf, npcVariantLine: npcVariantLine, npcPresent: npcPresent, beachXpMul: beachXpMul,
-    flagExpr: flagExpr, questTitle: questTitle, questStart: questStart,
+    flagExpr: flagExpr, questTitle: questTitle, questStart: questStart, applyClearFlags: applyClearFlags, applyRehab: applyRehab,
     packContraband: packContraband, bagCheck: bagCheck, takeContraband: takeContraband, deliverCheck: deliverCheck,
     serialize: serialize, deserialize: deserialize, periodsOf: periodsOf, costKeyOf: costKeyOf, fatiguePenalty: fatiguePenalty
   };

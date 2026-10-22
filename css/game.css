@@ -212,24 +212,25 @@ button{font-family:inherit;color:inherit;font-size:inherit}
 #waveTop{position:absolute;left:50%;top:calc(var(--hudh) + 8px);transform:translateX(-50%);min-width:210px;padding:4px 14px;border-radius:12px;background:var(--hud);border:1px solid var(--line);text-align:center;font-size:13px}
 #waveTop b{display:block;color:var(--brass);font-size:14px}
 #waveTop .mg-timer{height:5px;margin:3px 0 0}
-#ammoHud{position:absolute;left:50%;bottom:calc(10px + var(--sab));transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:4px 14px;border-radius:12px;background:var(--hud);border:1px solid var(--line);font-size:13px;white-space:nowrap}
+#ammoHud{position:absolute;left:50%;bottom:calc(190px + var(--sab));transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:4px 14px;border-radius:12px;background:var(--hud);border:1px solid var(--line);font-size:13px;white-space:nowrap;max-width:min(92vw,420px);z-index:2}
 #ammoHud span:first-child{color:var(--brass)}
-#fpsMsg{position:absolute;left:50%;top:60%;transform:translateX(-50%);max-width:88vw;padding:6px 16px;border-radius:12px;background:rgba(21,26,19,.9);border:1px solid var(--bad);font-size:15px;text-align:center;opacity:0;transition:opacity .2s}
+#fpsMsg{position:absolute;left:50%;top:58%;transform:translateX(-50%);max-width:88vw;padding:6px 16px;border-radius:12px;background:rgba(21,26,19,.9);border:1px solid var(--bad);font-size:15px;text-align:center;opacity:0;transition:opacity .2s;z-index:3}
 #fpsMsg.on{opacity:1}
 #fpsHint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(48px + var(--sab));margin:0;font-size:12px;color:#d6dcc6;text-shadow:0 1px 3px #000;width:min(640px,80vw);text-align:center}
 #fpsBtns button{position:absolute;min-width:64px;min-height:44px;padding:4px 12px;border-radius:12px;background:var(--hud);border:1px solid var(--line);font-size:14px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
-#bFire{right:24px;bottom:calc(72px + var(--sab));width:84px;height:84px;min-height:84px!important;border-radius:50%!important;background:#7a2a20!important;border:3px solid #ffb0a0!important;font-size:18px!important;font-weight:700}
+#fpsBtns button.dim{opacity:.42}
+#bFire{right:max(24px,var(--sar));bottom:calc(72px + var(--sab));width:84px;height:84px;min-height:84px!important;border-radius:50%!important;background:#7a2a20!important;border:3px solid #ffb0a0!important;font-size:18px!important;font-weight:700}
 #bFire:active{background:#a8382a!important}
-#bReload{right:122px;bottom:calc(60px + var(--sab))}
-#bCover{right:24px;bottom:calc(168px + var(--sab))}
-#bRaise{right:96px;bottom:calc(168px + var(--sab))}
-#bMode{right:122px;bottom:calc(112px + var(--sab));min-width:56px!important}
-#bAssist{right:max(8px,var(--sar));top:calc(var(--hudh) + 8px);font-size:12px!important;min-height:34px!important}
-#fpsBtns.touch #bFire{right:24px;bottom:calc(60px + var(--sab));width:96px;height:96px;min-height:96px!important}
-#fpsBtns.touch #bReload{right:136px;bottom:calc(56px + var(--sab));min-width:72px;min-height:56px}
-#fpsBtns.touch #bCover{right:24px;bottom:calc(172px + var(--sab));min-width:84px;min-height:56px}
-#fpsBtns.touch #bRaise{right:116px;bottom:calc(172px + var(--sab));min-width:84px;min-height:56px}
-#fpsBtns.touch #bMode{right:136px;bottom:calc(120px + var(--sab));min-width:72px}
+#bReload{right:calc(max(24px,var(--sar)) + 98px);bottom:calc(60px + var(--sab))}
+#bCover{right:max(24px,var(--sar));bottom:calc(168px + var(--sab))}
+#bRaise{right:calc(max(24px,var(--sar)) + 72px);bottom:calc(168px + var(--sab))}
+#bMode{right:calc(max(24px,var(--sar)) + 98px);bottom:calc(112px + var(--sab));min-width:56px!important}
+#bAssist{right:max(8px,var(--sar));top:calc(var(--hudh) + 58px);font-size:12px!important;min-height:34px!important;left:auto}
+#fpsBtns.touch #bFire{right:max(18px,var(--sar));bottom:calc(60px + var(--sab));width:96px;height:96px;min-height:96px!important}
+#fpsBtns.touch #bReload{right:calc(max(18px,var(--sar)) + 112px);bottom:calc(56px + var(--sab));min-width:72px;min-height:56px}
+#fpsBtns.touch #bCover{right:max(18px,var(--sar));bottom:calc(172px + var(--sab));min-width:84px;min-height:56px}
+#fpsBtns.touch #bRaise{right:calc(max(18px,var(--sar)) + 92px);bottom:calc(172px + var(--sab));min-width:84px;min-height:56px}
+#fpsBtns.touch #bMode{right:calc(max(18px,var(--sar)) + 112px);bottom:calc(120px + var(--sab));min-width:72px}
 body.combat #side,body.combat #track,body.combat #act{display:none!important}
 body.combat #hud{opacity:.85}
 
@@ -239,6 +240,8 @@ body.combat #hud{opacity:.85}
   #act{min-width:92px;min-height:92px;font-size:16px;bottom:calc(40px + var(--sab))}
   #joy{width:116px;height:116px;bottom:calc(24px + var(--sab))}
   .tagcard h1{font-size:34px}
+  #ammoHud{bottom:calc(252px + var(--sab));font-size:12px;padding:4px 10px}
+  #bAssist{top:calc(var(--hudh) + 58px);right:max(8px,var(--sar))}
 }
 @media (max-height:520px) and (orientation:landscape){
   .sheet{max-height:62dvh;left:50%;right:auto;width:min(620px,70vw);transform:translateX(-50%)}

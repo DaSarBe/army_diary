@@ -49,9 +49,57 @@
    "ch4_beach_relief"
   ],
   "ch5Quests": [
-   "ch5_beach_memorial"
+   "ch5_beach_memorial",
+   "ch5_beach_rehab"
   ],
   "balance": "約一半射擊（wave1-4）一半劇情；預設 hardcore；失敗可重玩該波或受傷後送"
+ },
+ "barks": {
+  "_desc": "戰鬥中觸發台詞，對應 data/fps-system.json cover。每個 trigger 觸發一次（once:true）。",
+  "triggers": {
+   "on_first_hit_while_peeking": {
+    "speaker": "npc_sgt_wang",
+    "line": "頭縮回去！",
+    "once": true,
+    "fpsRef": "cover.peeking",
+    "fallback": [
+     {
+      "if": "quest>=ch4_beach_command || sgt_wang_down",
+      "speaker": "npc_akai",
+      "line": "頭縮回去啦！",
+      "unlessFlag": "akai_kia"
+     },
+     {
+      "if": "akai_kia || npc_akai 不在場",
+      "speaker": "npc_captain_huang",
+      "channel": "radio",
+      "line": "（無線電）頭壓低！"
+     }
+    ]
+   },
+   "on_sandbag_30pct": {
+    "speaker": "npc_akai",
+    "line": "沙包要爛了，換位置！",
+    "once": true,
+    "fpsRef": "cover.types.sandbag.warnAtPct / cover.feedback.sandbagWarn",
+    "fallback": [
+     {
+      "if": "akai_kia || npc_akai 不在場",
+      "speaker": "npc_captain_huang",
+      "channel": "radio",
+      "line": "（無線電）沙包撐不住了，換位置！"
+     }
+    ]
+   },
+   "on_first_rock_cover": {
+    "speaker": "npc_signal_lin",
+    "line": "礁岩後面打不穿，靠過來！",
+    "once": true,
+    "optional": true,
+    "fpsRef": "cover.types.rock"
+   }
+  },
+  "fallbackRule": "依序檢查 fallback 陣列，取第一個符合者；ch4_beach_command 起王班長重傷，不再發 bark。"
  },
  "quests": [
   {
@@ -83,6 +131,14 @@
     {
      "type": "talk",
      "target": "npc_uncle_fisher"
+    },
+    {
+     "type": "minigame",
+     "target": "cover_tutorial",
+     "note": "空包彈演練；示範 cover.crouched / cover.peeking",
+     "speaker": "npc_sgt_wang",
+     "line": "王班長：「蹲低！探頭才開槍，打完就縮回來！」",
+     "uiHint": "hint_cover_peek"
     }
    ],
    "prerequisites": [],
@@ -727,10 +783,6 @@
      "line": "黃連長：「那時候退，是對的。活著的人才能守下一次。」"
     },
     {
-     "if": "!akai_kia && !akai_injured",
-     "line": "阿凱拍你肩膀：「欸，珍奶我請，這次不准推。」"
-    },
-    {
      "if": "court",
      "line": "幾個同梯別過頭，沒有人跟你對到眼。"
     }
@@ -747,9 +799,98 @@
      "line": "李輔導長：「大家都還在，真好。今天不用撐。」"
     }
    ]
+  },
+  {
+   "id": "ch5_beach_rehab",
+   "chapter": 5,
+   "type": "side",
+   "title": "復健室的日子",
+   "dayRange": [
+    290,
+    330
+   ],
+   "giver": "npc_rehab_therapist",
+   "location": "military_hospital_rehab",
+   "description": "海岸一役受傷後送，住進國軍醫院。在復健室跟著物理治療師一步一步把身體練回來；同梯會依情況來探望。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "military_hospital_rehab"
+    },
+    {
+     "type": "talk",
+     "target": "npc_rehab_therapist"
+    },
+    {
+     "type": "minigame",
+     "target": "rehab",
+     "pass": "ref fps-system.json health.medevacRecovery"
+    },
+    {
+     "type": "talk",
+     "target": "visitor",
+     "variants": [
+      {
+       "if": "!akai_kia",
+       "speaker": "npc_akai"
+      },
+      {
+       "if": "akai_kia",
+       "speaker": "npc_signal_lin"
+      }
+     ]
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_relief"
+   ],
+   "requirements": {
+    "flags": [
+     "beach_medevac",
+     "hospitalized"
+    ]
+   },
+   "reward": {
+    "systemRewardRef": "fps-system.json health.medevacRecovery（pass/great 的旗標與屬性皆由此發放）"
+   },
+   "failure": {
+    "note": "依 fps-system.json health.medevacRecovery：hospitalized 保留，結局仍可能走 bad_injury"
+   },
+   "dialogue": {
+    "start": "治療師：「不急，今天先站起來就好。我們一天一天來。」",
+    "progress": "治療師：「很好，再一步。你比昨天多走了三步喔。」",
+    "complete": "治療師：「你看，你自己走過來了。回去好好退伍吧。」",
+    "great": "治療師：「你這恢復速度，可以回去帶新兵了。」",
+    "fail": "治療師：「今天到這裡就好，身體會記得你努力過。明天再來。」"
+   },
+   "dialogueVariants": [
+    {
+     "if": "!akai_kia",
+     "line": "阿凱提著兩杯珍奶進來：「欸，換我來看你了。」"
+    },
+    {
+     "if": "akai_kia",
+     "line": "小林坐在床邊，把阿凱的名牌放進你手裡：「他一定也希望你站起來。」"
+    },
+    {
+     "if": "akai_kia && radio_fixed",
+     "line": "小林：「那天你掩護我，今天換我陪你練。」"
+    }
+   ]
   }
  ],
  "npcs": [
+  {
+   "id": "npc_rehab_therapist",
+   "name": "物理治療師",
+   "role": "國軍醫院復健室",
+   "personality": "溫和、有耐心，會記住每個病人的小進步",
+   "location": "military_hospital_rehab",
+   "lines": [
+    "一天一天來。",
+    "你比昨天更好了。"
+   ]
+  },
   {
    "id": "npc_sgt_wang",
    "name": "王班長",
@@ -800,6 +941,8 @@
     "saved_civilian": [
      "你救我一命，以後魚我包了。"
     ],
+    "rehab_done": "由 fps-system.json health.medevacRecovery 在 ch5_beach_rehab 通過時設定並清除 hospitalized，結局回到一般判定",
+    "hospitalized": "既有 flag（inj_fracture 設定）；ch5_beach_rehab 通過時由 fps-system.json health.medevacRecovery 清除",
     "civilian_hurt": [
      "腳還會痛，但我活著，沒怪你。"
     ]
@@ -877,6 +1020,8 @@
   "radio_fixed": "ch4_beach_radio 成功",
   "beach_fallback": "ch4_beach_command 選 fallback",
   "beach_medevac": "任一波 hp 歸零選受傷後送（同時 injury inj_fracture）",
+  "rehab_done": "由 fps-system.json health.medevacRecovery 在 ch5_beach_rehab 通過時設定並清除 hospitalized，結局回到一般判定",
+  "hospitalized": "既有 flag（inj_fracture 設定）；ch5_beach_rehab 通過時由 fps-system.json health.medevacRecovery 清除",
   "civilian_hurt": "stay_down 時機率阿伯受傷（不陣亡）",
   "beach_survived": "完成 ch4_beach_relief",
   "court": "既有 flag；擅自撤離觸發 event_court"
@@ -891,10 +1036,10 @@
   "CARRY_SPEED_PENALTY": -40,
   "CIVILIAN_INJURY_CHANCE": 50,
   "RADIO_HOLD_SEC": 60,
-  "AKAI_TOUGH_PENALTY": 15,
+  "AKAI_TOUGH_PENALTY": "ref fps-system.json npcFate.akai / tuning.json beach",
   "DESERTION_SEC": 10,
-  "AKAI_KIA_FORMULA": "score>=60 ? 0 : clamp(60-(o-50)-20*sk_firstaid,15,70) (+15 tough_it_out)",
-  "WANG_KIA": "見 data/fps-system.json npcFate.sgtWang（hold 倒下/未倒下、counter、fallback；radio_fixed 減半值 25/8/18/5）"
+  "AKAI_KIA_FORMULA": "ref fps-system.json npcFate.akai / tuning.json beach",
+  "WANG_KIA": "ref fps-system.json npcFate.sgtWang / tuning.json beach"
  },
  "notes": [
   "【數值佔位】tunables 內所有值與 quests 中 $XXX 佔位字串須與 data/fps-system.json 對齊（ammo.fromCarry、waves、npcFate、rewards.desertion）；以 fps-system.json 為準。",
@@ -906,6 +1051,9 @@
   "寫實性：記大功、公開表揚、軍法移送（event_court）程序簡化；實際依陸海空軍懲罰法與軍事審判法。",
   "所有兵種（infantry/artillery/airforce/navy/logistics）皆強制參與本章，以「海岸支援任務」解釋；不變更 story.json。",
   "ch5_beach_memorial 新增 titleVariants / startVariants（格式同 dialogueVariants：if + title/line）；符合時取代 title 與 dialogue.start，未符合用預設。",
+  "barks 格式：triggers.{trigger}={speaker(npc id), line, once, fpsRef, optional?, fallback[{if, speaker, channel?, line}]}；trigger 名稱：on_first_hit_while_peeking、on_sandbag_30pct、on_first_rock_cover（選用）。ch4_beach_prep 的 cover_tutorial 使用 UI 提示 key hint_cover_peek。",
+  "ch5_beach_rehab：需 beach_medevac + hospitalized；通過門檻、清除 hospitalized 與 b 獎勵皆引用 fps-system.json health.medevacRecovery，rehab_done 與 great 獎勵也由其發放，本檔不另給獎勵；dialogue.great 對應 great 等級。bad_injury 現為 flag hospitalized 且 b<40（定義於 tuning.json，由 Sam/Dai 維護）。",
+  "地點 military_hospital_rehab（國軍醫院復健室）尚未在 fps-system.json locations 定義，需 Dai 補上。",
   "reward 單項屬性 ≤ +4，符合 rpg-system.json attrCapPerQuest。"
  ]
 }

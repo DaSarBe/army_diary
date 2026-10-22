@@ -27,6 +27,7 @@
     classroom: { label: '教室', camp1: [18, 10.4], unit: [27, 1.4] },
     px: { label: '福利社', camp1: [-10, 10.4], unit: [-14, 1.4] },
     infirmary: { label: '醫務所', camp1: [-18, 10.4], unit: [-27, 1.4] },
+    military_hospital_rehab: { label: '國軍醫院復健室', unit: [-24.5, 3.2] },
     barracks: { label: '營舍', camp1: [16, -1.0], unit: [14, -9.5] },
     barracks_bunk: { label: '床位', camp1: [12.5, -1.0], unit: [11, -9.5] },
     assigned_bunk: { label: '指定床位', unit: [11, -9.5] },
@@ -86,7 +87,8 @@
       npc_senior_chou: [12.4, -9.4, Math.PI / 2, 'sen'], npc_junior_hsiao: [6.6, 7.2, Math.PI, 'rec'],
       npc_akai: [15.6, -9.4, -Math.PI / 2, 'kai'], npc_medic: [-25.5, 1.9, Math.PI, 'med'],
       npc_auntie: [-12.4, 1.9, Math.PI, 'cook'], npc_recruiter: [28.6, 1.9, Math.PI, 'cpt'],
-      npc_sgt_lin: [3, -17.6, Math.PI, 'sgt']
+      npc_sgt_lin: [3, -17.6, Math.PI, 'sgt'],
+      npc_rehab_therapist: [-24.2, 3.4, Math.PI, 'med']
     }
   };
   NPCSPOT.beach = {
@@ -123,7 +125,8 @@
     fire_calc: '射擊諸元計算', inventory_count: '庫存清點', duty_roster: '勤務排班', cooking: '伙房幫廚', essay: '寫心得',
     rehab: '復健', rope_coil: '收纜繩',
     sandbag_line: '沙包線', radar_contact: '雷達上的不明光點', it_t91: 'T91 步槍', load_magazines: '壓彈', it_ammo_crate: '彈藥箱', bunker: '沙灘碉堡',
-    beach_line: '灘頭防線', artillery_call: '砲兵支援', roll_call: '點名', command_choice: '指揮決定', memorial_words: '追思致詞', first_aid: '包紮止血', coast_outpost: '海岸據點',
+    beach_line: '灘頭防線', artillery_call: '砲兵支援', roll_call: '點名', command_choice: '指揮決定', memorial_words: '追思致詞', first_aid: '包紮止血', cover_tutorial: '掩體與探頭', coast_outpost: '海岸據點',
+    military_hospital_rehab: '國軍醫院復健室', npc_rehab_therapist: '物理治療師', visitor: '探病的同袍',
     npc_signal_lin: '小林', visit_route: '懇親路線', village: '受災街區', units: '各單位', sickbay: '醫務室', base_tour: '營區參觀'
   };
   var TEMP_NPC = {
@@ -167,7 +170,8 @@
   var MG_ANCH = {
     pushup: 'training_field', shooting: 'shooting_range', fold_blanket: 'barracks', rifle_assembly: 'armory',
     fire_calc: 'fdc', inventory_count: 'warehouse', duty_roster: 'unit_base', cooking: 'kitchen', essay: 'classroom',
-    rehab: 'infirmary', rope_coil: 'ship_deck', lottery: 'assembly_ground', first_aid: 'bunker'
+    rehab: 'military_hospital_rehab', rope_coil: 'ship_deck', lottery: 'assembly_ground', first_aid: 'bunker',
+    cover_tutorial: 'bunker'
   };
 
   function hash(str) { var h = 7; for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; }
@@ -250,6 +254,18 @@
     switch (o.type) {
       case 'talk':
       case 'report': {
+        if (t === 'visitor' && o.variants) {
+          var vis = o.variants[0].speaker;
+          o.variants.forEach(function (v) {
+            var ok = true, parts = String(v.if || '').split(/\s*&&\s*/);
+            parts.forEach(function (p) {
+              p = p.trim(); var neg = p.charAt(0) === '!'; var f = neg ? p.slice(1) : p;
+              if (neg ? ctx.S.flags[f] : !ctx.S.flags[f]) ok = false;
+            });
+            if (ok) vis = v.speaker;
+          });
+          t = vis;
+        }
         if (t.indexOf('npc_') === 0) {
           var sp = npcSpot(t, cm, unit);
           var mp = cm;

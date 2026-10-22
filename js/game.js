@@ -154,8 +154,9 @@
       dressNow(); toneNow(true);
       W.setMode('world');
       rebuildInteract(); refreshMarks();
+      if (map !== 'beach') beachMode(false);
       UI.fadeText('', false); UI.fade(false);
-      setTimeout(function () { busy--; refreshHud(); if (cb) cb(); }, 500);
+      setTimeout(function () { busy--; refreshHud(); updateTrack(true); if (cb) cb(); }, 500);
     }, 560);
   }
   function syncMap(cb) {
@@ -366,7 +367,7 @@
     updateTimer();
     if (pl.kind === 'check') setTimeout(function () { if (R && R.plan === pl) doCheck(); }, 350);
     if (pl.kind === 'decide') { R.target = R.pts[0]; W.setMarks([{ x: R.pts[0].x, z: R.pts[0].z }]); }
-    if (R.idx === 0 || true) { /* 第一次顯示步驟 */ UI.toast(pl.text, '', 2600); }
+    if (pl.text && pl.kind !== 'wave' && pl.kind !== 'auto' && pl.kind !== 'fate') UI.toast(pl.text, '', 2600);
   }
   function travelTime(pl) {
     var p = W.pos(), t = 0, last = p;
@@ -629,6 +630,7 @@
       opts.onDraw = function () { lotOut = E.newOut(); var uid = E.lottery(G, lotOut); return { name: D.units[uid].name, vibe: UNIT_VIBE[uid] }; };
     }
     if (id === 'duty_roster' && E.skillRank(G, 'sk_social') > 0) opts.hint = true;
+    if (o.uiHint === 'hint_cover_peek') UI.toast('蹲低才安全。探頭才開槍，打完就縮回來。', '', 4200);
     W.setMode('ui');
     MG.run(id, opts, function (raw) {
       if (!R || R.plan !== pl) return;
@@ -639,6 +641,11 @@
       }
       var out = E.newOut(), res = E.minigameResult(G, q.id, def, raw, out), tn = { great: '優秀', pass: '及格', fail: '不及格' }[res.tier];
       var body = ['表現 ' + res.raw + ' 分' + (res.assist ? '，屬性與技能加成 ' + (res.assist > 0 ? '+' : '') + res.assist : '') + '，總分 ' + res.score + '（及格 60／優秀 85）。'];
+      if (q.dialogue) {
+        if (res.tier === 'great' && q.dialogue.great) body.push(q.dialogue.great);
+        else if (res.tier === 'fail' && q.dialogue.fail) body.push(q.dialogue.fail);
+        else if (res.tier !== 'fail' && q.dialogue.complete) body.push(q.dialogue.complete);
+      }
       UI.card({
         kicker: '小遊戲', title: P.tl(id) + '：' + tn, body: body, fx: out.fx, sfx: res.tier === 'fail' ? 'fail' : 'success',
         buttons: [{ t: '繼續', fn: function () { if (res.tier === 'fail') failQuest('「' + P.tl(id) + '」沒有達到及格分數。'); else { refreshHud(); stepSuccess(); } } }]
@@ -671,6 +678,7 @@
           if (R.pts.every(function (x) { return x.done; })) { stepSuccess(); return; }
         }
       } else if (pl.kind === 'wave' && !R.waveStarted && R.pts[0] && Math.hypot(p.x - R.pts[0].x, p.z - R.pts[0].z) < 3.4) {
+        if (G.beach && G.beach.medevac) { R.waveStarted = true; setTimeout(function () { if (R && R.plan === pl) stepSuccess(); }, 200); return; }
         startWaveNow(); return;
       } else if (pl.kind === 'wave' && R.rescueCarry) {
         R.carryT += dt;
@@ -1152,7 +1160,12 @@
   function waveNum(id) { return +id.replace('wave', ''); }
   function setupWaveStep() {
     var pl = R.plan; R.waveStarted = false; R.rescueCarry = false;
-    if (G.beach.medevac) { UI.toast('你在後送途中，這一波由其他人守住了。', '', 3000); setTimeout(function () { if (R && R.plan === pl) stepSuccess(); }, 500); return; }
+    if (G.beach.medevac) {
+      R.waveStarted = true;
+      UI.toast('你在後送途中，這一波由其他人守住了。', '', 3000);
+      setTimeout(function () { if (R && R.plan === pl) stepSuccess(); }, 500);
+      return;
+    }
     if (pl.wave !== 'wave1') spawnSupplies(pl);
     updateMarks();
     UI.toast('到定位後，戰鬥會自動開始。平常用第三人稱，按「舉槍」切成第一人稱射擊。', '', 4000);
@@ -1176,7 +1189,9 @@
     });
   }
   function startWaveNow() {
-    var pl = R.plan, id = pl.wave, info = E.waveEnemies(G, id), w = info.wave, b = G.beach;
+    var pl = R.plan, id = pl.wave, b = G.beach;
+    if (b && b.medevac) { R.waveStarted = true; UI.toast('你在後送途中，這一波由其他人守住了。', '', 2800); setTimeout(function () { if (R && R.plan === pl) stepSuccess(); }, 400); return; }
+    var info = E.waveEnemies(G, id), w = info.wave;
     R.waveStarted = true; W.setMarks([]);
     if (!b.ammo) b.ammo = { mag: 30, mags: Math.max(0, b.mags - 1) };
     R.snap = { hp: G.hp, ammo: { mag: b.ammo.mag, mags: b.ammo.mags }, saved: G.flags.saved_civilian, hurt: G.flags.civilian_hurt };
@@ -1235,13 +1250,15 @@
       onHp: function () { UI.hud(G); },
       onWaveEnd: waveEnded,
       onDesertion: desertion,
-      onLinDown: function () { }
+      onLinDown: function () { },
+      carryTarget: function () { return R && R.rescueCarry ? { x: BUNKER[0], z: BUNKER[1] } : null; }
     });
   }
   /* 倒下 → 黑畫面與無線電 → 兩種選擇 */
   function waveDown(s) {
     var pl = R.plan, id = pl.wave;
     W.clearFollowers(); W.speed(1); R.rescueCarry = false;
+    updateTrack(true);
     blackRadio(['（畫面轉暗）', '無線電：「……一名弟兄倒下了，重複，一名弟兄倒下了……」', '連長：「醫護兵，過去！其他人，守住！」'], function () {
       UI.dialog({
         name: '倒下', lines: ['你的視線慢慢暗下來，耳邊只剩無線電的雜訊。', '要怎麼辦？'],
@@ -1268,15 +1285,17 @@
   }
   function medevacNow() {
     var out = E.newOut(), pl = R.plan;
+    FPS.stop(true); beachMode(false); W.speed(1); W.setCrouch(false);
     E.medevac(G, out); W.clearFollowers(); W.hideNpc('npc_uncle_fisher', false);
-    refreshHud();
-    presentOut(out, { noFx: true }, function () { if (R && R.plan === pl) stepSuccess(); });
+    R.rescueCarry = false; R.waveStarted = true;
+    refreshHud(); updateTrack(true);
+    presentOut(out, { noFx: true }, function () { updateTrack(true); if (R && R.plan === pl) stepSuccess(); });
   }
   function waveEnded(how, s) {
     if (!R || !R.plan || R.plan.kind !== 'wave') { FPS.stop(true); beachMode(false); return; }
     var pl = R.plan, id = pl.wave, b = G.beach;
     b.ammo = { mag: s.mag, mags: s.mags };
-    FPS.stop(true); beachMode(false); W.speed(1); W.setCrouch(false); W.clearFollowers(); R.rescueCarry = false;
+    FPS.stop(true); beachMode(false); W.speed(1); W.setCrouch(false); W.clearFollowers(); R.rescueCarry = false; updateTrack(true);
     if (how === 'clear') {
       var out = E.newOut(); E.waveClear(G, id, out); UI.toastFx(out.fx); Sfx.sfx('success');
       UI.toast('第 ' + waveNum(id) + ' 波守住了', 'up', 2600); refreshHud();
@@ -1321,11 +1340,12 @@
             });
           }
         },
-        { t: '叫他自己壓住，繼續射擊（阿凱陣亡機率 +15%）', fn: function () { G.beach.tough = true; G.beach.aidScore = null; E.addXp(G, 5, E.newOut()); UI.toast('阿凱咬著牙：「我、我自己來……」'); stepSuccess(); } }
+        { t: '叫他自己壓住，繼續射擊（阿凱陣亡機率 +' + ((D.tune.beach && D.tune.beach.akaiKia && D.tune.beach.akaiKia.tough) || 10) + '%）', fn: function () { G.beach.tough = true; G.beach.aidScore = null; E.addXp(G, 5, E.newOut()); UI.toast('阿凱咬著牙：「我、我自己來……」'); stepSuccess(); } }
       ]
     });
   }
   function cmdDecide() {
+    if (G.beach) G.beach.wangDown = true; W.setNpcLying('npc_sgt_wang', true);
     var q = R.q, pl = R.plan, opts = q.objectives[0].options;
     UI.dialog({
       name: '代理指揮', lines: [q.dialogue.progress, '王班長倒在擔架上，所有人都在看你。選擇會改變敵人的數量，也會影響王班長的生死。'],
@@ -1462,7 +1482,7 @@
       E.init(a[0], a[1], a[2], { fps: a[3], beach: a[4] }); D = E.data(); D.beach = a[4]; W.story = D.story;
       if (!initWorld()) { $('#glerr').hidden = false; return; }
       installBeachHooks(); applyFlagWorld();
-      if (/[?&]auto=1/.test(location.search)) MG.auto = true;
+      if (/[?&]auto=1/.test(location.search)) { MG.auto = true; FPS.bot = 'aim'; }
       title();
     }).catch(function (e) { fatal('資料檔讀取失敗（' + (e && e.message) + '）。'); });
   }
@@ -1477,7 +1497,8 @@
     near: function () { return W.S.near; },
     interact: function () { W.interact(); },
     inter: function () { return (W.S.inter || []).map(function (i) { return { x: i.x, z: i.z, label: i.label, prompt: i.prompt }; }); },
-    holdOn: function () { return holdOn; }
+    holdOn: function () { return holdOn; },
+    renderer: function () { return W.renderer && W.renderer(); }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })(typeof self !== 'undefined' ? self : this);

@@ -25,6 +25,15 @@
     if (solid) S.cols.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: y, y1: y + h });
     return m;
   }
+  function fadeWall(w, h, d, x, y, z, col) {
+    var mat = new THREE.MeshLambertMaterial({ color: col, transparent: true, opacity: 1 });
+    var m = new THREE.Mesh(UB, mat); m.scale.set(w, h, d); m.position.set(x, y + h / 2, z); CG.add(m);
+    var colr = { x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: y, y1: y + h, fade: m };
+    S.cols.push(colr);
+    (S.fadeMeshes || (S.fadeMeshes = [])).push(m);
+    m.userData.col = colr;
+    return m;
+  }
   function cyl(r, h, x, y, z, col, solid, seg) {
     var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg || 12), M(col)); m.position.set(x, y + h / 2, z); CG.add(m);
     if (solid) S.cols.push({ x0: x - r, x1: x + r, z0: z - r, z1: z + r, y0: y, y1: y + h });
@@ -342,6 +351,7 @@
     [5, 6.4, 7.8, 9.2].forEach(function (x, k) { if (k !== 1) decoNpc('rec', x, 8.6 + (k % 2) * 0.8, Math.PI); bx(0.7, 0.45, 0.35, x, 0, 9.6 + (k % 2) * 0.4, '#4d5a33'); });
     bld(-14, -3, 7, 5, 3, '#d9c89a', '#6b6a56', 1, '福利社');
     bld(-27, -3, 7, 5, 3, '#e8ebe3', '#6b6a56', 1, '醫務所'); bx(1, 0.3, 0.1, -27, 2.5, -0.45, '#c8312b'); bx(0.3, 1, 0.1, -27, 2, -0.45, '#c8312b');
+    sign('復健室', -24.5, 2.6, 4.4, 2.6, 0.55, '#2c4a2c', '#f2ecd0', 0);
     bld(-14, -14, 9, 6, 3.2, '#d9c89a', '#6b6a56', 1, '伙房');
     for (var cb = 0; cb < 7; cb++) sph(0.32, -11.8 + (cb % 3) * 0.55, 0.32 + (cb > 3 ? 0.5 : 0), -9.7 - Math.floor(cb / 3) * 0.3, '#8fbf5a');
     bld(-6, -3, 4, 4, 3, '#e4dcc4', '#6b6a56', 1, '輔導室');
@@ -389,7 +399,9 @@
     }
     var colr = { x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: 0, y1: h, cover: true };
     S.cols.push(colr);
-    var c = { x: x, z: z, w: w, d: d, h: h, type: type, hp: type === 'sandbag' ? 400 : null, maxhp: 400, ax: ax, az: az, mesh: m, col: colr, alive: true };
+    var bagHp = 600;
+    try { bagHp = root.Engine.data().fps.cover.types.sandbag.hp || 600; } catch (e) { bagHp = 600; }
+    var c = { x: x, z: z, w: w, d: d, h: h, type: type, hp: type === 'sandbag' ? bagHp : null, maxhp: bagHp, ax: ax, az: az, mesh: m, col: colr, alive: true, _sy: m.scale.y, _my: m.position.y, _mat: m.material };
     S.covers.push(c);
     return c;
   }
@@ -424,7 +436,7 @@
     // 己方：沙包線與碉堡
     [-26, -20, -2, 4, 10, 16].forEach(function (x) { coverObj(x, -5, 4, 0.9, 1.0, 'sandbag', x, -3.9); });
     coverObj(-10, -7, 8, 1, 1.3, 'bunker', -10, -5.95);
-    bx(0.8, 2.6, 3.6, -14.4, 0, -5.2, '#a9aaa0', true); bx(0.8, 2.6, 3.6, -5.6, 0, -5.2, '#a9aaa0', true); bx(9.6, 0.5, 4.2, -10, 2.6, -5.3, '#8f9088');
+    fadeWall(0.8, 2.6, 3.6, -14.4, 0, -5.2, '#a9aaa0'); fadeWall(0.8, 2.6, 3.6, -5.6, 0, -5.2, '#a9aaa0'); fadeWall(9.6, 0.5, 4.2, -10, 2.6, -5.3, '#8f9088');
     sign('碉堡', -10, 3.5, -3.1, 3, 0.7, '#3a4a2f', '#f2ecd0', 0);
     coverObj(-34, -6, 3, 2.2, 1.2, 'rock', -34, -4.2); coverObj(26, -6, 3, 2.2, 1.2, 'rock', 26, -4.2);
     // 灘頭與漁船
@@ -484,7 +496,7 @@
       });
     }
     S.root = new THREE.Group(); scene.add(S.root); CG = S.root;
-    S.cols = []; S.covers = []; S.eCovers = []; S.water = null; S.npcs = {}; S.temps = []; S.pickups = []; S.inter = []; S.near = null; SIGNS.length = 0; S.mapKey = key;
+    S.cols = []; S.covers = []; S.eCovers = []; S.fadeMeshes = []; S.water = null; S.npcs = {}; S.temps = []; S.pickups = []; S.inter = []; S.near = null; SIGNS.length = 0; S.mapKey = key;
     S.unit = unit || S.unit; S.vol = vol;
     clearFollowers();
     MAPS[key]();
@@ -791,6 +803,35 @@
       cam.lookAt(S.px + (ex + dxf * 10 - S.px) * kb, 1.2 + (ey + dyf * 10 - 1.2) * kb, S.pz + (ez + dzf * 10 - S.pz) * kb);
       var nf = 60 + 10 * kb; if (Math.abs(cam.fov - nf) > 0.01) { cam.fov = nf; cam.updateProjectionMatrix(); }
     } else if (cam.fov !== 60) { cam.fov = 60; cam.updateProjectionMatrix(); }
+    if (F.t < 0.35) {
+      var cdx = cam.position.x - S.px, cdy = cam.position.y - 1.2, cdz = cam.position.z - S.pz, cdl = Math.hypot(cdx, cdy, cdz) || 1;
+      var hit = W.rayBlock(S.px, 1.2, S.pz, cdx / cdl, cdy / cdl, cdz / cdl, cdl - 0.25, null, false);
+      if (hit < cdl - 0.4) {
+        var nd = Math.max(1.5, hit - 0.4);
+        cam.position.set(S.px + Math.sin(S.yaw) * Math.cos(S.pitchC) * nd, Math.max(0.55, 1.3 + Math.sin(S.pitchC) * nd), S.pz + Math.cos(S.yaw) * Math.cos(S.pitchC) * nd);
+        cam.lookAt(S.px, 1.2, S.pz);
+      }
+      (S.fadeMeshes || []).forEach(function (m) {
+        var c = m.userData.col, see = 1;
+        if (c) {
+          var tmin = 0, tmax = cdl, ok = true, k, lo = [c.x0, c.y0, c.z0], hi = [c.x1, c.y1, c.z1], o = [S.px, 1.2, S.pz], d = [cdx / cdl, cdy / cdl, cdz / cdl];
+          for (k = 0; k < 3; k++) {
+            if (Math.abs(d[k]) < 1e-9) { if (o[k] < lo[k] || o[k] > hi[k]) { ok = false; break; } }
+            else {
+              var t1 = (lo[k] - o[k]) / d[k], t2 = (hi[k] - o[k]) / d[k];
+              if (t1 > t2) { var tt = t1; t1 = t2; t2 = tt; }
+              if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+              if (tmin > tmax) { ok = false; break; }
+            }
+          }
+          if (ok && tmin > 0.05 && tmin < cdl - 0.2) see = 0.22;
+        }
+        m.material.opacity = see;
+        m.material.depthWrite = see > 0.9;
+      });
+    } else {
+      (S.fadeMeshes || []).forEach(function (m) { m.material.opacity = 1; m.material.depthWrite = true; });
+    }
     if (vm) { vm.visible = F.t > 0.85; vm.position.set(0.17, -0.2 + F.kick * 0.02, -0.42 + F.kick * 0.07); vm.rotation.x = F.kick * 0.12 + Math.sin(S.t * 1.6) * 0.004; }
     stars.position.copy(cam.position);
     var sheetOn = (S.mode === 'ui' || S.mode === 'title' || S.mode === 'end') && S.sheetH > 0;
@@ -916,14 +957,28 @@
     return best;
   };
   W.killCover = function (c) {
-    c.alive = false; c.col.dead = true; var i = S.cols.indexOf(c.col); if (i >= 0) S.cols.splice(i, 1);
-    c.mesh.visible = false; if (c.mesh.parent) { /* 保留物件以便重玩時復原 */ }
+    c.alive = false; c.col.dead = true;
+    if (c.mesh) { c.mesh.scale.y = (c._sy || c.mesh.scale.y) * 0.22; c.mesh.position.y = 0.1; c.mesh.material = M('#6a5840'); c.mesh.visible = true; }
+  };
+  W.crackCover = function (c) {
+    if (!c || !c.mesh) return;
+    c.mesh.material = M('#8a6f48');
   };
   W.reviveCovers = function () {
-    S.covers.forEach(function (c) { if (!c.alive) { c.alive = true; c.col.dead = false; S.cols.push(c.col); c.mesh.visible = true; } if (c.type === 'sandbag') c.hp = c.maxhp; });
+    S.covers.forEach(function (c) {
+      if (c.type === 'sandbag') c.hp = c.maxhp;
+      if (!c.alive) { c.alive = true; c.col.dead = false; if (S.cols.indexOf(c.col) < 0) S.cols.push(c.col); }
+      if (c.mesh) {
+        c.mesh.visible = true;
+        if (c._sy) c.mesh.scale.y = c._sy;
+        if (c._my != null) c.mesh.position.y = c._my;
+        if (c._mat) c.mesh.material = c._mat;
+      }
+    });
   };
   W.scene = function () { return scene; };
   W.camera = function () { return cam; };
+  W.renderer = function () { return R; };
   W.setNpcLying = function (id, on) { var n = S.npcs[id]; if (n) { n.g.rotation.x = on ? -Math.PI / 2 : 0; n.g.position.y = on ? 0.25 : 0; } };
   W.moveNpc = function (id, x, z) { var n = S.npcs[id]; if (n) { n.g.position.set(x, 0, z); n.x = x; n.z = z; } };
   W.hideNpc = function (id, hide) { var n = S.npcs[id]; if (n) n.g.visible = !hide; };

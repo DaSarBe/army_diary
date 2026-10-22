@@ -43,12 +43,22 @@
     document.documentElement.style.setProperty('--hudh', hh + 'px');
   };
 
-  /* ---------- 提示 ---------- */
+  /* ---------- 提示（佇列，最多同時 2 則） ---------- */
+  var toastQ = [];
+  function pumpToasts() {
+    var box = $('#toasts');
+    if (!box) return;
+    while (box.children.length < 2 && toastQ.length) {
+      (function (spec) {
+        var t = document.createElement('div');
+        t.className = 'toast' + (spec.cls ? ' ' + spec.cls : ''); t.textContent = spec.msg; box.appendChild(t);
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); pumpToasts(); }, spec.ms);
+      })(toastQ.shift());
+    }
+  }
   UI.toast = function (msg, cls, ms) {
-    var box = $('#toasts'), t = document.createElement('div');
-    t.className = 'toast' + (cls ? ' ' + cls : ''); t.textContent = msg; box.appendChild(t);
-    while (box.children.length > 4) box.removeChild(box.firstChild);
-    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, ms || 2600);
+    toastQ.push({ msg: msg, cls: cls || '', ms: ms || 2600 });
+    pumpToasts();
   };
   UI.toastFx = function (fx) {
     (fx || []).forEach(function (x) {

@@ -10,6 +10,8 @@ const volChoice = process.argv[3] || (mode === 'desktop' ? 'sign' : 'decline');
 const sideRate = +(process.argv[4] || (mode === 'desktop' ? 0.5 : 0.3));
 const BEACH = process.env.BEACH || 'survive', CMD = process.env.CMD || 'hold', RESCUE = process.env.RESCUE || 'carry', AID = process.env.AID || 'treat', FATE = process.env.FATE || '', DIFF = process.env.DIFF || 'hardcore';
 const DIE_WAVE = process.env.DIE_WAVE || 'wave2', DOWN = (process.env.DOWN || (BEACH === 'medevac' ? 'medevac' : 'retry')).split(',');
+const STOP = process.env.STOP_AFTER || '';
+const REHAB = process.env.REHAB || '';
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
 
 function serve(port) {
@@ -50,6 +52,19 @@ async function main() {
   await page.goto(BASE ? BASE + (BASE.includes('?') ? '&' : '?') + 'auto=1' : `http://localhost:${port}/index.html?auto=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__game && __game.phase() === 'title', { timeout: 20000 });
   await sleep(600);
+  const autoOk = await page.evaluate(() => ({ bot: __game.FPS && __game.FPS.bot, renderer: typeof __game.renderer === 'function' && !!__game.renderer() }));
+  log('auto=1：', JSON.stringify(autoOk));
+  if (autoOk.bot !== 'aim') throw new Error('?auto=1 沒有開啟 FPS.bot');
+  if (REHAB === 'fail') {
+    await page.evaluate(() => {
+      const orig = __game.MG.run.bind(__game.MG);
+      __game.MG.run = function (id, opts, cb) {
+        __game.MG.forceScore = id === 'rehab' ? 20 : null;
+        return orig(id, opts, cb);
+      };
+    });
+    log('復健小遊戲強制 20 分（不及格）');
+  }
   await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-01-title.png`) });
 
   const tap = async (el) => { if (mobile) await el.tap(); else await el.click(); };
@@ -188,6 +203,23 @@ async function main() {
     if (key !== last) { last = key; lastChange = Date.now(); }
     if (Date.now() - (global.__lp || 0) > 15000) { global.__lp = Date.now(); log('進度 day', s.day, 'p', s.period, 'lv', s.level, 'active', s.active.join(','), 'R', s.R ? s.R.q + '#' + s.R.idx + ':' + s.R.kind : '-', 'card', s.card, 'dlg', s.dlg, 'mg', s.mg, 'busy', s.busy, 'act', act); }
     if (Date.now() - lastChange > (s.fps ? 150000 : 45000)) { log('卡住了', JSON.stringify(s).slice(0, 1500)); await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-stuck.png`) }); throw new Error('stuck'); }
+    if (s.beachFlags && s.beachFlags.medevac && s.fps) {
+      throw new Error('後送後戰鬥沒停：queue=' + (s.fpsInfo && s.fpsInfo.q) + ' hp=' + (s.fpsInfo && s.fpsInfo.hp));
+    }
+    if (STOP) {
+      const stopNow = await page.evaluate((stop) => {
+        const G = __game.G, E = __game.E;
+        if (!G) return false;
+        if (stop === 'beach') return !E.beachActive(G) && G.quests.ch4_beach_relief && (G.quests.ch4_beach_relief.state === 'done' || G.quests.ch4_beach_relief.state === 'failed');
+        if (stop === 'rehab') {
+          const rh = G.quests.ch5_beach_rehab;
+          if (rh && (rh.state === 'done' || rh.state === 'failed')) return true;
+          if (G.day > 335) return true;
+        }
+        return false;
+      }, STOP);
+      if (stopNow) { log('STOP_AFTER ' + STOP); await shot('90-stop'); break; }
+    }
     if (s.phase === 'end' && s.card) break;
     if (s.phase === 'end') { await sleep(500); continue; }
     if (s.mg) { await sleep(200); continue; }
@@ -277,7 +309,9 @@ async function main() {
           if (s.fps) { if (R.rescueCarry) await tp(-10, -5.95); await sleep(300); break; }
           if (!R.waveStarted) {
             attempts[R.wave] = (attempts[R.wave] || 0) + 1;
-            const die = BEACH !== 'survive' && R.wave === DIE_WAVE && attempts[R.wave] === 1;
+            const die = (DOWN.indexOf('retry') >= 0 && DOWN.indexOf('medevac') >= 0)
+              ? ((R.wave === 'wave1' || R.wave === 'wave2') && attempts[R.wave] === 1)
+              : (BEACH !== 'survive' && R.wave === DIE_WAVE && attempts[R.wave] === 1);
             await page.evaluate((m) => { __game.FPS.bot = m; }, die ? 'idle' : 'aim');
             if (die) log('這一波故意不還擊：' + R.wave);
             await tp(R.pts[0].x, R.pts[0].z); await sleep(400);
@@ -324,10 +358,29 @@ async function main() {
     await sleep(300);
   }
 
-  // 結局
-  const fin = await page.evaluate(() => ({ ending: __game.G.ending, day: __game.G.day, level: __game.G.level, a: __game.G.a, stats: __game.G.stats, flags: Object.keys(__game.G.flags), demerit: __game.G.demerit, title: document.querySelector('#cIn h2').textContent }));
+  // 結局（STOP_AFTER 時只紀錄目前狀態）
+  const fin = await page.evaluate(() => {
+    const G = __game.G;
+    const titleEl = document.querySelector('#cIn h2');
+    return {
+      ending: G && (G.ending || __game.E.evalEnding(G)), day: G && G.day, level: G && G.level, a: G && G.a, stats: G && G.stats,
+      flags: G ? Object.keys(G.flags) : [], demerit: G && G.demerit, title: titleEl ? titleEl.textContent : '',
+      rehab: G && G.quests.ch5_beach_rehab && G.quests.ch5_beach_rehab.state,
+      hospitalized: !!(G && G.flags.hospitalized), rehab_done: !!(G && G.flags.rehab_done), medevac: !!(G && G.flags.beach_medevac),
+      fps: !!(__game.FPS && __game.FPS.active())
+    };
+  });
   await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-99-ending.png`) });
-  log('抵達結局：', JSON.stringify(fin), '，完成的任務(經手)數 ', stats.quests.size, '，用時 ' + Math.round((Date.now() - t0) / 1000) + ' 秒');
+  log(STOP ? 'STOP_AFTER 狀態：' : '抵達結局：', JSON.stringify(fin), '，完成的任務(經手)數 ', stats.quests.size, '，用時 ' + Math.round((Date.now() - t0) / 1000) + ' 秒');
+  if (STOP) {
+    if (fin.fps) throw new Error('停止時 FPS 仍在進行');
+    const bad = errors.filter(e => !/favicon/.test(e));
+    log('console error/warning 數：', bad.length); bad.slice(0, 10).forEach(e => log('  ', e));
+    if (bad.length) process.exitCode = 2;
+    fs.writeFileSync(path.join(__dirname, 'out', `${mode}-result.json`), JSON.stringify({ mode, volChoice, STOP, BEACH, REHAB, fin, errors: bad, steps: stats.steps, quests: stats.quests.size, seconds: Math.round((Date.now() - t0) / 1000) }, null, 1));
+    await browser.close(); srv.close();
+    return;
+  }
 
   // 結局後：回到標題
   await clickIn('#cIn', b => /再服一次役/.test(b.t));

@@ -29,6 +29,7 @@
     lights_out: ['熄燈後潛行', '按住「前進」往床位移動；值星官轉頭看時要立刻放開。被抓到三次就失敗。'],
     duty_officer_patrol: ['躲過值星官', '按住「前進」往目標移動；值星官轉頭看時要立刻放開。被抓到三次就失敗。'],
     first_aid: ['包紮止血', '阿凱的腿在流血！依序點選：止血帶 → 加壓 → 包紮。限時 15 秒，點錯會扣時間。'],
+    cover_tutorial: ['掩體與探頭', '蹲低才安全。探頭才開槍，打完就縮回來。'],
     load_magazines: ['壓彈與上膛', '連點「壓彈」把子彈一顆一顆壓進彈匣，兩個彈匣都壓滿才算完成。限時 120 秒。'],
     objective: ['守住目標', '敵情光點出現時趕快點掉它，不要讓它們靠近。漏掉太多就失守。'],
     position: ['守住陣地', '敵情光點出現時趕快點掉它，不要讓它們靠近。漏掉太多就失守。']
@@ -37,7 +38,8 @@
     pushup: 'mash', shooting: 'shoot', lottery: 'lottery', fold_blanket: 'meter', rifle_assembly: 'ordered', fire_calc: 'calc',
     inventory_count: 'count', duty_roster: 'assign', cooking: 'memory', essay: 'essay', rehab: 'meter', rope_coil: 'meter',
     military_song: 'rhythm', gun_commands: 'rhythm', dress_up: 'ordered', emplace_gun: 'ordered', watch_duty: 'targets',
-    first_aid: 'ordered', load_magazines: 'load', lights_out: 'stealth', duty_officer_patrol: 'stealth', objective: 'targets', position: 'targets'
+    first_aid: 'ordered', load_magazines: 'load', lights_out: 'stealth', duty_officer_patrol: 'stealth', objective: 'targets', position: 'targets',
+    cover_tutorial: 'cover'
   };
 
   var host, cardT, cardD, cardA, cardS, curCleanup, alive = false, finishCb = null;
@@ -174,8 +176,22 @@
     if (M.auto) setTimeout(function () { if (box.firstChild) box.firstChild.click(); }, 30);
   };
 
+  ENG.cover = function (api) {
+    api.area.innerHTML = '<p class="mg-note">王班長：「蹲低！探頭才開槍，打完就縮回來！」</p>';
+    var step = 0;
+    var b1 = btn('蹲下', 'mg-fire', function () { });
+    var b2 = btn('探頭開槍', 'mg-fire', function () { });
+    b2.disabled = true;
+    api.area.appendChild(b1); api.area.appendChild(b2);
+    api.stat('先蹲下，再探頭');
+    onTap(b1, function () { if (step) return; step = 1; b1.disabled = true; b2.disabled = false; api.stat('再按「探頭開槍」'); sfx('confirm'); });
+    onTap(b2, function () { if (step < 1) return; api.done(100, '記住了：蹲低、探頭、縮回來'); });
+    if (M.auto) setTimeout(function () { b1.click(); setTimeout(function () { b2.click(); }, 40); }, 40);
+  };
+
   /* 指標停綠區（折棉被、收纜繩、復健） */
   ENG.meter = function (api) {
+    if (M.forceScore != null) { api.done(M.forceScore, '測試分數'); return; }
     var cfg = { fold_blanket: { n: 5, spd: 0.9, zone: 0.07 }, rope_coil: { n: 4, spd: 1.1, zone: 0.08 }, rehab: { n: Math.max(1, api.opts.count || 3), spd: 0.6, zone: 0.1 } }[api.id];
     var n = cfg.n, k = 0, pos = 0, dir = 1, scores = [], run = true, last = performance.now();
     api.area.innerHTML = '<div class="mg-meter"><i class="mg-zone" style="left:' + (50 - cfg.zone * 100) + '%;width:' + (cfg.zone * 200) + '%"></i><i class="mg-needle" id="nd"></i></div>';
