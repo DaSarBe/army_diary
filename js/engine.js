@@ -27,9 +27,34 @@
   }
 
   /* ---------- 資料初始化 ---------- */
-  function init(story, rpg, tuning) {
+  function init(story, rpg, tuning, extras) {
     var t = tuning || {};
-    D = { story: clone(story), rpg: clone(rpg), tune: t };
+    extras = extras || {};
+    D = { story: clone(story), rpg: clone(rpg), tune: t, fps: extras.fps ? clone(extras.fps) : null, npcVar: {} };
+    var bt = t.beach || {};
+    if (extras.beach) {
+      var bs = clone(extras.beach);
+      bs.quests.forEach(function (q) { if (q.id.indexOf('ch4_beach_') === 0) q.event = true; });
+      D.story.quests = D.story.quests.concat(bs.quests);
+      var have = {};
+      D.story.npcs.forEach(function (n) { have[n.id] = 1; });
+      bs.npcs.forEach(function (n) { if (!have[n.id]) D.story.npcs.push(n); D.npcVar[n.id] = n.variants || {}; });
+      (bs.npcOverrides || []).forEach(function (o) { D.npcVar[o.id] = o.variants || {}; });
+      D.beachItems = bs.newItems || [];
+    }
+    // tuning.json 為準：重複的新結局與 it_t91 以 tuning 定義，忽略 rpg-system.json 裡的版本
+    var newIds = (bt.newEndings || []).map(function (e) { return e.id; });
+    ['conscript', 'volunteer'].forEach(function (k) {
+      D.rpg.endings[k] = D.rpg.endings[k].filter(function (e) { return newIds.indexOf(e.id) < 0; });
+    });
+    var itemIds = (bt.newItems || []).map(function (i) { return i.id; });
+    D.rpg.items.list = D.rpg.items.list.filter(function (i) { return itemIds.indexOf(i.id) < 0; }).concat(clone(bt.newItems || [])).concat(clone(D.beachItems || []));
+    if (D.fps && D.fps.minigames) {
+      Object.keys(D.fps.minigames).forEach(function (k) {
+        var m = D.fps.minigames[k];
+        if (!D.rpg.minigames[k]) D.rpg.minigames[k] = { name: m.name, attr: m.attr, check: m.skill, cost: 'training' };
+      });
+    }
     D.tune.aliases = t.aliases || {};
     D.q = {}; D.qList = [];
     D.npc = {}; D.items = {}; D.skills = {}; D.inj = {}; D.ev = {}; D.units = {};
@@ -42,6 +67,7 @@
     D.story.events.forEach(function (e) { D.ev[e.id] = Object.assign({}, D.ev[e.id] || {}, { title: e.title, description: e.description, dialogue: e.dialogue }); });
     D.endText = {};
     D.story.endings.forEach(function (e) { D.endText[e.id] = e; });
+    (bt.newEndings || []).forEach(function (e) { D.endText[e.id] = { id: e.id, title: e.title || e.n, description: e.description || '' }; });
     var al = D.tune.aliases, extra = D.tune.extraRewards || {};
     D.story.quests.forEach(function (q, i) {
       q.index = i;
@@ -87,7 +113,7 @@
       xp: 0, level: 1, sp: 0, skills: {}, flags: {}, badges: [],
       items: {}, equip: {}, quests: {}, rep: {}, repGain: 0, qgain: {},
       injury: null, injHist: 0, confine: 0, nextCheck: {}, aff: {}, affDay: {},
-      carry: null, dmStage: 0, brokenCount: 0, ending: null, over: false,
+      carry: null, beach: null, dmStage: 0, brokenCount: 0, ending: null, over: false,
       stats: { qDone: 0, qFail: 0, mg: 0, mgGreat: 0, checks: 0, checksOk: 0 }, log: []
     };
     s.hp = hpMax(s);
@@ -123,7 +149,7 @@
   }
   function chapterOfDay(day) { return day <= 3 ? 1 : day <= 5 ? 2 : day <= 30 ? 3 : day <= 285 ? 4 : 5; }
   function baseMap(s) { var c = chapterOfDay(s.day); return c === 1 ? 'home' : c <= 3 ? 'camp1' : 'unit'; }
-  function questMap(q) { return q.chapter === 1 ? 'home' : q.chapter <= 3 ? 'camp1' : 'unit'; }
+  function questMap(q) { if (q.id.indexOf('ch4_beach_') === 0) return 'beach'; return q.chapter === 1 ? 'home' : q.chapter <= 3 ? 'camp1' : 'unit'; }
   function rankOf(s) {
     var r = '二兵', rs = D.rpg.leveling.ranks;
     rs.forEach(function (x) {
@@ -390,6 +416,9 @@
     return m[1] === '<' ? val < n : m[1] === '<=' ? val <= n : m[1] === '>' ? val > n : val >= n;
   }
   function blockedReason(s, q) {
+    if (q.event) return null;
+    if (beachActive(s)) return '戰況緊急';
+    if (q.id === 'ch4_side_03' && s.flags.akai_kia) return '少了一個人';
     if (s.confine > 0) return '禁閉中';
     var inj = s.injury && D.inj[s.injury.id];
     if (s.flags.hospitalizedNow && q.id !== 'ch5_side_06') return '住院中';
@@ -427,7 +456,7 @@
     return { ok: true };
   }
   function listAvailable(s) {
-    return D.qList.filter(function (q) { return availability(s, q).ok; });
+    return D.qList.filter(function (q) { return !q.event && availability(s, q).ok; });
   }
   function activeQuests(s) {
     return D.qList.filter(function (q) { var st = qstate(s, q.id); return st === 'active' || st === 'ready'; });
@@ -435,7 +464,7 @@
   function accept(s, id) {
     var q = D.q[id];
     if (!q || !availability(s, q).ok) return false;
-    if (activeQuests(s).length >= 4) return false;
+    if (!q.event && activeQuests(s).length >= 4) return false;
     s.quests[id] = { state: 'active', step: 0, start: s.day, costs: {} };
     if (!s.track || !(qstate(s, s.track) === 'active' || qstate(s, s.track) === 'ready')) s.track = id;
     return true;
@@ -460,6 +489,7 @@
   function applyCost(s, q, o, out) {
     var key = costKeyOf(o);
     var st = s.quests[q.id];
+    if (q.event) return;
     if (!key || !st || st.costs[key]) return;
     st.costs[key] = 1;
     var c = D.rpg.fatigueCosts[key];
@@ -489,7 +519,7 @@
     if (r.honor == null && tier.honor) r.honor = tier.honor;
     return r;
   }
-  function periodsOf(q) { return q.reward && q.reward.tier === 'big' ? 2 : 1; }
+  function periodsOf(q) { if (q.event) return q.id === 'ch4_beach_relief' ? 3 : 0; return q.reward && q.reward.tier === 'big' ? 2 : 1; }
   function complete(s, id, out) {
     var q = D.q[id], st = s.quests[id];
     if (!q || !st) return;
@@ -501,7 +531,8 @@
       (r.items || []).forEach(function (it) { addItem(s, it, 1, out); });
       if (r.badge) addBadge(s, r.badge, out);
     }
-    (r.flags || []).forEach(function (f) { s.flags[f] = 1; });
+    (r.flags || []).forEach(function (f) { if (f === 'radio_fixed' && s.beach && s.beach.medevac) return; s.flags[f] = 1; });
+    if (id === 'ch4_beach_relief') beachFinish(s, out);
     if (id === 'ch2_main_01') addItem(s, 'it_dogtag', 1, out);
     if (id === 'ch2_side_02') removeItem(s, 'it_phonecard', 1);
     if (id === 'ch3_main_07' && !s.unit) lottery(s, out);
@@ -607,7 +638,7 @@
     applyFailure(s, q, out, false);
     if (s.track === id) { var a = activeQuests(s)[0]; s.track = a ? a.id : null; }
     out.failed = (out.failed || []).concat([id]);
-    consumePeriod(s, 1, out);
+    consumePeriod(s, q.event ? periodsOf(q) : 1, out);
   }
   function expireQuests(s, out) {
     D.qList.forEach(function (q) {
@@ -643,7 +674,7 @@
         triggerEvent(s, th[i].trigger, out);
       }
     }
-    if ((s.hp <= 0 || s.fatigue >= 100) && !s.flags.collapsing) {
+    if ((s.hp <= 0 || s.fatigue >= 100) && !s.flags.collapsing && !beachActive(s)) {
       s.flags.collapsing = 1;
       triggerEvent(s, 'event_collapse', out);
       delete s.flags.collapsing;
@@ -659,6 +690,7 @@
     settle(s, out);
   }
   function settle(s, out) {
+    if (beachActive(s)) return;
     while (s.pendingDays > 0 && !s.over) {
       var n = s.pendingDays; s.pendingDays = 0;
       for (var i = 0; i < n && !s.over; i++) { s.period = 0; dayTick(s, out); }
@@ -666,6 +698,7 @@
   }
   function inSummer(day) { return day >= 100 && day <= 190; }
   function dayTick(s, out) {
+    if (beachPending(s) || (beachActive(s) && s.day === beachDay())) return;
     var T = D.tune.daily || {}, note = [];
     var confined = s.confine > 0;
     if (!confined && s.day >= 4) {
@@ -755,7 +788,7 @@
   /* ---------- 結局 ---------- */
   function evalCond(s, expr) {
     if (expr === 'true') return true;
-    var src = expr.replace(/且/g, '&&')
+    var src = expr.replace(/且/g, '&&').replace(/或/g, '||')
       .replace(/skill\s+(\w+)\s*>=\s*(\d+)/g, 'sk("$1")>=$2')
       .replace(/flag\s+(\w+)/g, 'fl("$1")');
     var env = { b: eff(s, 'b'), m: eff(s, 'm'), d: eff(s, 'd'), o: eff(s, 'o'), demerit: s.demerit, level: s.level };
@@ -767,9 +800,19 @@
     var ov = D.tune.endingOverrides || {};
     return D.rpg.endings[kind].map(function (e) { return { id: e.id, n: e.n, cond: ov[e.id] || e.if, bad: !!e.new }; });
   }
-  function allEndings() { return endingList('conscript').concat(endingList('volunteer')); }
+  function beachEndings() {
+    var ov = D.tune.endingOverrides || {};
+    return ((D.tune.beach || {}).newEndings || []).map(function (e) { return { id: e.id, n: e.n, cond: ov[e.id] || e.if, beach: true }; });
+  }
+  function allEndings() {
+    var seen = {}, out = [];
+    endingList('conscript').filter(function (e) { return e.bad; }).concat(beachEndings()).concat(endingList('conscript').filter(function (e) { return !e.bad; })).concat(endingList('volunteer')).forEach(function (e) {
+      if (!seen[e.id]) { seen[e.id] = 1; out.push(e); }
+    });
+    return out;
+  }
   function evalEnding(s) {
-    var list = endingList('conscript').filter(function (e) { return e.bad; });
+    var list = endingList('conscript').filter(function (e) { return e.bad; }).concat(beachEndings());
     var i, e;
     for (i = 0; i < list.length; i++) if (evalCond(s, list[i].cond)) return list[i].id;
     list = endingList(s.flags.vol ? 'volunteer' : 'conscript').filter(function (e) { return !e.bad; });
@@ -779,6 +822,124 @@
   function endingInfo(id) {
     var t = D.endText[id] || {};
     return { id: id, title: t.title || id, description: t.description || '' };
+  }
+
+  /* ---------- 漢光：海岸（強制章節） ---------- */
+  function beachDay() { return (D.tune.beach || {}).startDay || 240; }
+  function beachActive(s) {
+    if (!D || !D.q.ch4_beach_prep) return false;
+    var p = s.quests.ch4_beach_prep;
+    if (!p) return false;
+    var r = s.quests.ch4_beach_relief;
+    return !(r && (r.state === 'done' || r.state === 'failed'));
+  }
+  function beachPending(s) { return !!(D && D.q.ch4_beach_prep) && s.day >= beachDay() && !s.quests.ch4_beach_prep; }
+  function startBeach(s, opts) {
+    opts = opts || {};
+    s.beach = { diff: opts.diff || (D.fps ? D.fps.difficulty.default : 'hardcore'), aim: !!opts.aim, mags: 2, crates: 0, retries: {}, played: {}, hpZeroW4: false, cmd: null, tough: false, medevac: false, kills: 0, wavesCleared: 0 };
+    return accept(s, 'ch4_beach_prep');
+  }
+  function beachNext(s) {
+    if (!beachActive(s) || !D.fps) return null;
+    var order = D.fps.questOrder, i;
+    for (i = 0; i < order.length; i++) {
+      var q = D.q[order[i]];
+      if (!q) continue;
+      if (!qstate(s, q.id)) {
+        var ok = q.prerequisites.every(function (p) { return resolved(s, p); });
+        return ok ? q : null;
+      }
+    }
+    return null;
+  }
+  function diffMode(s) { return D.fps.difficulty.modes[(s.beach && s.beach.diff) || D.fps.difficulty.default]; }
+  function beachXpMul(s) {
+    var m = 1;
+    if (s.beach && s.beach.aim && s.beach.diff === 'hardcore') m *= D.fps.difficulty.aimAssist.hardcorePenalty.xpMul;
+    if (s.beach && s.beach.cmd === 'counter') m *= 1.3;
+    return m;
+  }
+  function beachKill(s, out) {
+    s.beach.kills++;
+    addXp(s, Math.max(1, Math.round(D.fps.rewards.perKill.xp * beachXpMul(s))), out);
+  }
+  function waveClear(s, id, out) {
+    s.beach.played[id] = 1; s.beach.wavesCleared++;
+    var w = D.fps.rewards.waveClear;
+    addXp(s, Math.round(w.xp * beachXpMul(s)), out);
+    addAttr(s, 'm', w.m, out);
+    var heal = Math.round(hpMax(s) * 0.2);
+    s.hp = Math.min(hpMax(s), s.hp + heal); fx(out, 'hp', heal);
+  }
+  function waveEnemies(s, id) {
+    var w = D.fps.waves.filter(function (x) { return x.id === id; })[0], mul = 1, out = {};
+    if (id === 'wave4') {
+      var mod = (w.modByCommandChoice || {})[s.beach.cmd];
+      if (mod) mul *= mod.enemiesMul;
+      if (s.flags.radio_fixed) mul *= w.artillerySupport.enemiesMul;
+    }
+    Object.keys(w.enemies).forEach(function (k) { out[k] = Math.max(1, Math.round(w.enemies[k] * mul)); });
+    return { wave: w, enemies: out };
+  }
+  function retryWave(s, id) { s.beach.retries[id] = (s.beach.retries[id] || 0) + 1; }
+  function medevac(s, out) {
+    s.beach.medevac = true;
+    s.flags.beach_medevac = 1;
+    inflictInjury(s, 'inj_fracture', out);
+    s.hp = Math.max(1, Math.round(hpMax(s) * 0.3));
+  }
+  function wavesNoRetry(s) {
+    var n = 0;
+    ['wave1', 'wave2', 'wave3', 'wave4'].forEach(function (w) { if (s.beach.played[w] && !s.beach.retries[w]) n++; });
+    return n;
+  }
+  function akaiFate(s, score, tough, out) {
+    var A = (D.tune.beach || {}).akaiKia || { base: 60, perO: 1, perFirstAid: 20, min: 15, max: 70, tough: 15 };
+    var kia = false, p = 0;
+    if (!(score != null && score >= 60)) {
+      p = clamp(A.base - A.perO * (eff(s, 'o') - 50) - A.perFirstAid * skillRank(s, 'sk_firstaid'), A.min, A.max) + (tough ? A.tough : 0);
+      kia = rng() * 100 < p;
+    }
+    s.flags[kia ? 'akai_kia' : 'akai_injured'] = 1;
+    return { kia: kia, p: p };
+  }
+  function wangChance(s, cmd, hpZero) {
+    var W = (D.tune.beach || {}).wangKia, fixed = s.flags.radio_fixed ? 1 : 0;
+    var row = cmd === 'hold' ? (hpZero ? W.hold_zero : W.hold) : (W[cmd] || W.hold);
+    return row[fixed];
+  }
+  function wangFate(s, out) {
+    var p = wangChance(s, s.beach.cmd || 'hold', s.beach.hpZeroW4);
+    var kia = rng() * 100 < p;
+    if (kia) s.flags.sgt_wang_kia = 1;
+    return { kia: kia, p: p };
+  }
+  function civilianStay(s) {
+    var hurt = rng() * 100 < ((D.tune.beach || {}).uncleHurtChance || 50);
+    if (hurt) s.flags.civilian_hurt = 1;
+    return hurt;
+  }
+  function beachFinish(s, out) {
+    var cr = D.fps.rewards.chapterClear, tier = D.rpg.questRewards.tiers[cr.tier] || {};
+    applyBundle(s, { xp: tier.xp || 0, honor: cr.honor }, out);
+    s.flags.beach_survived = 1;
+    if (s.flags.saved_civilian && s.flags.radio_fixed && !s.flags.beach_fallback && !s.flags.beach_medevac && wavesNoRetry(s) >= 3) s.flags.beach_hero = 1;
+    removeItem(s, 'it_t91', 1);
+  }
+  function giverOf(s, q) {
+    if (q.giver === 'npc_akai' && s.flags.akai_kia) return 'npc_senior_chou';
+    return q.giver;
+  }
+  function npcVariantLine(s, id) {
+    var v = D.npcVar[id];
+    if (!v) return null;
+    var keys = Object.keys(v), i;
+    for (i = 0; i < keys.length; i++) if (keys[i] !== 'default' && s.flags[keys[i]]) return v[keys[i]];
+    return null;
+  }
+  function npcPresent(s, id) {
+    if (id === 'npc_akai' && s.flags.akai_kia) return false;
+    return true;
   }
 
   /* ---------- 違禁品誘惑 ---------- */
@@ -832,6 +993,9 @@
     consumePeriod: consumePeriod, skipDays: skipDays, sleep: sleep, takeLeave: takeLeave, nextQuestDay: nextQuestDay, settle: settle,
     talkNpc: talkNpc, triggerEvent: triggerEvent, afterChange: afterChange, inflictInjury: inflictInjury, setFlag: setFlag,
     evalEnding: evalEnding, endingInfo: endingInfo, allEndings: allEndings, endGame: endGame,
+    beachActive: beachActive, beachPending: beachPending, startBeach: startBeach, beachNext: beachNext, diffMode: diffMode, beachKill: beachKill,
+    waveClear: waveClear, waveEnemies: waveEnemies, retryWave: retryWave, medevac: medevac, wavesNoRetry: wavesNoRetry, akaiFate: akaiFate, wangFate: wangFate,
+    wangChance: wangChance, civilianStay: civilianStay, beachFinish: beachFinish, giverOf: giverOf, npcVariantLine: npcVariantLine, npcPresent: npcPresent, beachXpMul: beachXpMul,
     packContraband: packContraband, bagCheck: bagCheck, takeContraband: takeContraband, deliverCheck: deliverCheck,
     serialize: serialize, deserialize: deserialize, periodsOf: periodsOf, costKeyOf: costKeyOf, fatiguePenalty: fatiguePenalty
   };

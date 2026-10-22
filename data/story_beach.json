@@ -1,0 +1,890 @@
+{
+ "version": "1.0",
+ "attributeSource": "rpg-system.json",
+ "fpsSource": "data/fps-system.json",
+ "attributeKeysUsed": [
+  "b",
+  "m",
+  "d",
+  "o",
+  "hp",
+  "fatigue",
+  "money",
+  "honor",
+  "demerit",
+  "xp",
+  "items",
+  "flags",
+  "badge",
+  "tier",
+  "injury",
+  "trigger",
+  "choice"
+ ],
+ "chapter": {
+  "id": 4,
+  "title": "漢光：海岸",
+  "dayRange": [
+   240,
+   242
+  ],
+  "mandatory": true,
+  "summary": "漢光演習中海岸據點遭不明敵軍突襲，數小時後援軍與空中支援抵達。",
+  "maps": [
+   "coast_outpost",
+   "armory",
+   "bunker",
+   "beach",
+   "comm_trench"
+  ],
+  "mainQuests": [
+   "ch4_beach_prep",
+   "ch4_beach_alert",
+   "ch4_beach_armory",
+   "ch4_beach_wave1",
+   "ch4_beach_rescue",
+   "ch4_beach_radio",
+   "ch4_beach_aid",
+   "ch4_beach_command",
+   "ch4_beach_relief"
+  ],
+  "ch5Quests": [
+   "ch5_beach_memorial"
+  ],
+  "balance": "約一半射擊（wave1-4）一半劇情；預設 hardcore；失敗可重玩該波或受傷後送"
+ },
+ "quests": [
+  {
+   "id": "ch4_beach_prep",
+   "chapter": 4,
+   "type": "main",
+   "title": "漢光前的黎明",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_sgt_wang",
+   "location": "coast_outpost",
+   "description": "漢光演習第三天清晨，海岸據點。檢查沙包、對講機，跟阿凱和小林閒聊早餐。所有兵種皆須參與（跨單位支援海岸防務）。",
+   "objectives": [
+    {
+     "type": "inspect",
+     "target": "sandbag_line",
+     "count": 6
+    },
+    {
+     "type": "talk",
+     "target": "npc_akai"
+    },
+    {
+     "type": "talk",
+     "target": "npc_signal_lin"
+    },
+    {
+     "type": "talk",
+     "target": "npc_uncle_fisher"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "o": 1
+   },
+   "failure": {
+    "d": -1
+   },
+   "dialogue": {
+    "start": "王班長：「演習也要當真打，沙包給我一個一個踩過。」",
+    "progress": "阿凱：「欸，演完是不是就能放榮譽假？」",
+    "complete": "海邊阿伯：「少年仔，今天浪很怪喔。」",
+    "fail": "王班長：「沙包倒一排你沒看到？」"
+   },
+   "mandatory": true,
+   "allUnits": [
+    "infantry",
+    "artillery",
+    "airforce",
+    "navy",
+    "logistics"
+   ],
+   "view": "third"
+  },
+  {
+   "id": "ch4_beach_alert",
+   "chapter": 4,
+   "type": "main",
+   "title": "這不是演習",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_signal_lin",
+   "location": "coast_outpost",
+   "description": "雷達回報海面異常光點，連長在無線電上確認：「這不是演習，重複，這不是演習。」全員進入戰備位置。",
+   "objectives": [
+    {
+     "type": "report",
+     "target": "radar_contact"
+    },
+    {
+     "type": "goto",
+     "target": "armory",
+     "timeLimit": 90
+    },
+    {
+     "type": "check",
+     "target": "check.endure"
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_prep"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "m": 1
+   },
+   "failure": {
+    "m": -3,
+    "fatigue": 10
+   },
+   "dialogue": {
+    "start": "小林：「班長……雷達上這些不是我們的船。」",
+    "progress": "連長（無線電）：「各單位注意，這不是演習，重複，這不是演習！」",
+    "complete": "你深吸一口氣，腳自己動了起來。",
+    "fail": "你愣在原地好幾秒，王班長一把拉住你。"
+   },
+   "cutscene": "radio_broadcast"
+  },
+  {
+   "id": "ch4_beach_armory",
+   "chapter": 4,
+   "type": "main",
+   "title": "軍械室：領槍裝彈",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_sgt_wang",
+   "location": "armory",
+   "description": "領取 T91、壓彈匣，並決定搬幾箱彈藥到碉堡。每搬一箱 = 稍後多 1 個彈匣，但增加疲勞。本章第一次切換第一人稱（壓彈與上膛）。",
+   "objectives": [
+    {
+     "type": "collect",
+     "target": "it_t91"
+    },
+    {
+     "type": "timed",
+     "target": "load_magazines",
+     "count": "$AMMO_START_MAGS",
+     "timeLimit": "$ARMORY_TIME_LIMIT"
+    },
+    {
+     "type": "carry",
+     "target": "it_ammo_crate:bunker",
+     "count": "0..$AMMO_MAX_CRATES",
+     "costPerUnit": {
+      "fatigue": "$FATIGUE_PER_CRATE"
+     },
+     "setsVar": "beach_mags = $AMMO_START_MAGS + crates*$AMMO_PER_CRATE (上限 $AMMO_MAX_MAGS)"
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_alert"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "items": [
+     "it_t91"
+    ]
+   },
+   "failure": {
+    "fatigue": 10
+   },
+   "dialogue": {
+    "start": "王班長：「彈藥能搬多少搬多少，但跑不動就沒用。」",
+    "progress": "手在抖，子彈一顆一顆壓進彈匣。",
+    "complete": "槍機拉上，你第一次從準星後面看這片海。",
+    "fail": "時間到了，只拿到基本彈匣。"
+   },
+   "view": "first",
+   "fpsRef": "data/fps-system.json ammo.fromCarry"
+  },
+  {
+   "id": "ch4_beach_wave1",
+   "chapter": 4,
+   "type": "main",
+   "title": "第一波：登陸艇接近",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_sgt_wang",
+   "location": "bunker",
+   "description": "登陸艇從海上射擊，守住碉堡。學會掩體、探頭、換彈。",
+   "objectives": [
+    {
+     "type": "defend",
+     "target": "bunker",
+     "wave": "wave1",
+     "count": "fps-system.json waves[wave1]"
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_armory"
+   ],
+   "requirements": {},
+   "reward": {
+    "xp": 25,
+    "m": 1
+   },
+   "failure": {
+    "onZeroHp": [
+     "retry_wave",
+     "medevac"
+    ],
+    "medevac": {
+     "injury": "inj_fracture",
+     "flags": [
+      "beach_medevac"
+     ]
+    },
+    "hp": -10
+   },
+   "dialogue": {
+    "start": "王班長：「低頭！看到艇再打，別浪費子彈！」",
+    "progress": "阿凱縮在沙包後面：「我、我打不到……」",
+    "complete": "艇退了，但海平線上還有更多。",
+    "fail": "你被打倒在碉堡口。"
+   },
+   "view": "first",
+   "shootingSegment": true
+  },
+  {
+   "id": "ch4_beach_rescue",
+   "chapter": 4,
+   "type": "main",
+   "title": "火線上的阿伯",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_uncle_fisher",
+   "location": "beach",
+   "description": "第二波灘頭上岸，海邊阿伯困在漁船旁。選擇冒著火力把他背回碉堡，或喊他趴低原地不動。阿伯不會陣亡，最多受傷。",
+   "objectives": [
+    {
+     "type": "defend",
+     "target": "beach_line",
+     "wave": "wave2"
+    },
+    {
+     "type": "decide",
+     "target": "rescue_choice",
+     "options": [
+      {
+       "id": "carry",
+       "label": "衝出去把阿伯背回來",
+       "objective": {
+        "type": "escort",
+        "target": "npc_uncle_fisher",
+        "count": "bunker",
+        "moveSpeedPct": "$CARRY_SPEED_PENALTY"
+       },
+       "reward": {
+        "honor": 1,
+        "o": 2,
+        "flags": [
+         "saved_civilian"
+        ]
+       },
+       "failure": {
+        "hp": -25,
+        "injury": "inj_sprain"
+       }
+      },
+      {
+       "id": "stay_down",
+       "label": "大喊叫他趴下別動",
+       "reward": {
+        "d": 1
+       },
+       "result": "$CIVILIAN_INJURY_CHANCE% 機率阿伯受傷（flag civilian_hurt），不陣亡"
+      }
+     ]
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_wave1"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "o": 2
+   },
+   "failure": {
+    "onZeroHp": [
+     "retry_wave",
+     "medevac"
+    ],
+    "medevac": {
+     "injury": "inj_fracture",
+     "flags": [
+      "beach_medevac"
+     ]
+    },
+    "m": -2
+   },
+   "dialogue": {
+    "start": "阿伯：「少年仔！我的腳卡住了！」",
+    "progress": "背上的重量讓你每一步都像在泥裡。",
+    "complete": "阿伯喘著氣：「你救我一命……我會記得你。」",
+    "fail": "阿伯趴在船邊，你只能隔著槍聲喊他別動。"
+   },
+   "view": "third+first",
+   "shootingSegment": true
+  },
+  {
+   "id": "ch4_beach_radio",
+   "chapter": 4,
+   "type": "main",
+   "title": "掩護小林修線",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_signal_lin",
+   "location": "comm_trench",
+   "description": "通信線被砲擊炸斷，小林要 60 秒接線。敵人優先攻擊小林；守住他就能呼叫砲兵支援。",
+   "objectives": [
+    {
+     "type": "defend",
+     "target": "npc_signal_lin",
+     "wave": "wave3",
+     "timeLimit": "$RADIO_HOLD_SEC",
+     "failIf": "npc_signal_lin.hp<=0"
+    },
+    {
+     "type": "check",
+     "target": "fate.signal",
+     "rule": "fps-system.json npcFate.signal：hp 歸零只受傷，不陣亡"
+    },
+    {
+     "type": "report",
+     "target": "artillery_call",
+     "requires": "radio_fixed"
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_rescue"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 2,
+    "flags": [
+     "radio_fixed"
+    ]
+   },
+   "failure": {
+    "m": -3,
+    "note": "小林重傷撤離（不陣亡），無法呼叫砲兵；wave4 無砲兵減免"
+   },
+   "dialogue": {
+    "start": "小林：「給我一分鐘！一分鐘就好！」",
+    "progress": "連長（無線電，斷斷續續）：「……座標……再說一次……」",
+    "complete": "小林：「通了！連長，請求砲兵支援！」",
+    "fail": "小林倒在線盤旁，耳機裡只剩雜訊。"
+   },
+   "view": "first",
+   "shootingSegment": true,
+   "unlocks": "artillery_call"
+  },
+  {
+   "id": "ch4_beach_aid",
+   "chapter": 4,
+   "type": "main",
+   "title": "包紮阿凱",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_akai",
+   "location": "bunker",
+   "description": "阿凱被流彈擊中大腿。用包紮小遊戲止血（止血帶→加壓→包紮）。或在火力下選擇讓他自己壓住傷口撐著。",
+   "objectives": [
+    {
+     "type": "decide",
+     "target": "aid_choice",
+     "options": [
+      {
+       "id": "treat",
+       "label": "放下槍幫他包紮",
+       "objective": {
+        "type": "minigame",
+        "target": "first_aid"
+       }
+      },
+      {
+       "id": "tough_it_out",
+       "label": "叫他自己壓住，繼續射擊",
+       "modifier": {
+        "akaiKiaChanceAdd": "$AKAI_TOUGH_PENALTY"
+       },
+       "reward": {
+        "xp": 5
+       }
+      }
+     ]
+    },
+    {
+     "type": "check",
+     "target": "fate.akai",
+     "rule": "fps-system.json npcFate.akai",
+     "sets": [
+      "akai_injured",
+      "akai_kia"
+     ]
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_radio"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "o": 2,
+    "badge": "rescuer"
+   },
+   "failure": {
+    "m": -4
+   },
+   "dialogue": {
+    "start": "阿凱：「我、我腳沒感覺了……我會不會死？」",
+    "progress": "你的手全是血，但你記得醫官教的順序。",
+    "complete": "阿凱臉色發白卻還在笑：「回去……請你喝珍奶。」",
+    "fail": "［黑畫面］無線電：「……碉堡二號，一名弟兄……沒有反應了。」"
+   },
+   "view": "third",
+   "deathPresentation": "black_screen_radio"
+  },
+  {
+   "id": "ch4_beach_command",
+   "chapter": 4,
+   "type": "main",
+   "title": "代理指揮",
+   "dayRange": [
+    240,
+    240
+   ],
+   "giver": "npc_sgt_wang",
+   "location": "bunker",
+   "description": "ch4_beach_command 一開始王班長即重傷倒下，指揮權交給你。敵人最後反撲：守住碉堡、退到第二線，或反衝鋒。王班長生死於 wave4 結束時依選擇與表現判定。",
+   "objectives": [
+    {
+     "type": "decide",
+     "target": "command_choice",
+     "options": [
+      {
+       "id": "hold",
+       "label": "死守碉堡",
+       "waveMod": {
+        "enemiesMul": 1.0
+       },
+       "reward": {
+        "d": 2,
+        "honor": 1
+       }
+      },
+      {
+       "id": "fallback",
+       "label": "退守第二線",
+       "waveMod": {
+        "enemiesMul": 0.7
+       },
+       "reward": {
+        "flags": [
+         "beach_fallback"
+        ]
+       },
+       "note": "經無線電回報後撤退＝合法；未回報擅自撤離見 desertion"
+      },
+      {
+       "id": "counter",
+       "label": "帶隊反衝鋒",
+       "waveMod": {
+        "enemiesMul": 1.2,
+        "xpMul": 1.3
+       },
+       "reward": {
+        "b": 2,
+        "o": 1
+       }
+      }
+     ]
+    },
+    {
+     "type": "defend",
+     "target": "position",
+     "wave": "wave4"
+    },
+    {
+     "type": "check",
+     "target": "fate.sgt_wang",
+     "rule": "fps-system.json npcFate.sgtWang",
+     "timing": "wave4 結束時",
+     "sets": [
+      "sgt_wang_kia"
+     ]
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_aid"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "m": 2
+   },
+   "failure": {
+    "onZeroHp": [
+     "retry_wave",
+     "medevac"
+    ],
+    "medevac": {
+     "injury": "inj_fracture",
+     "flags": [
+      "beach_medevac"
+     ]
+    },
+    "desertion": {
+     "if": "wave 中擅自離開戰區超過 $DESERTION_SEC 秒且未選 fallback，或棄守陣地",
+     "trigger": "event_court",
+     "flags": [
+      "court"
+     ]
+    }
+   },
+   "dialogue": {
+    "start": "王班長按著腹部把對講機塞給你：「現在……你帶。」",
+    "progress": "所有人都在看你。",
+    "complete": "敵人退了，王班長被抬上擔架。",
+    "fail": "［黑畫面］無線電：「……王班長……沒有生命跡象。重複……」"
+   },
+   "view": "first",
+   "shootingSegment": true,
+   "deathPresentation": "black_screen_radio"
+  },
+  {
+   "id": "ch4_beach_relief",
+   "chapter": 4,
+   "type": "main",
+   "title": "援軍與點名",
+   "dayRange": [
+    240,
+    242
+   ],
+   "giver": "npc_captain_huang",
+   "location": "coast_outpost",
+   "description": "援軍與空中支援抵達，不明敵軍撤退。點名、清點裝備、記功嘉獎，之後回到正常勤務。",
+   "objectives": [
+    {
+     "type": "report",
+     "target": "roll_call"
+    },
+    {
+     "type": "inspect",
+     "target": "equipment_list",
+     "count": 8
+    },
+    {
+     "type": "talk",
+     "target": "npc_captain_huang"
+    },
+    {
+     "type": "rest"
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_command"
+   ],
+   "requirements": {},
+   "reward": {
+    "flags": [
+     "beach_survived"
+    ],
+    "note": "章節獎勵只發一次，由 fps-system.json rewards.chapterClear 發放"
+   },
+   "failure": {
+    "m": -2
+   },
+   "dialogue": {
+    "start": "直升機的聲音從山後傳來，有人哭了出來。",
+    "progress": "點名時，每個沒有回應的名字都很長。",
+    "complete": "黃連長：「你們守住了。上面會記功。」",
+    "fail": "你坐在沙包上，很久都沒站起來。"
+   },
+   "postFlagCheck": {
+    "flag": "beach_hero",
+    "if": "saved_civilian && radio_fixed && !beach_fallback && !beach_medevac && wavesNoRetry>=3"
+   }
+  },
+  {
+   "id": "ch5_beach_memorial",
+   "chapter": 5,
+   "type": "main",
+   "title": "海岸追思",
+   "dayRange": [
+    300,
+    300
+   ],
+   "giver": "npc_counselor_lee",
+   "location": "coast_outpost",
+   "description": "第五章：回到海岸據點參加追思。依 flag 出現不同對話。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "coast_outpost"
+    },
+    {
+     "type": "talk",
+     "target": "npc_counselor_lee"
+    },
+    {
+     "type": "decide",
+     "target": "memorial_words",
+     "options": [
+      {
+       "id": "speak",
+       "label": "上台說幾句",
+       "reward": {
+        "m": 2,
+        "o": 1
+       }
+      },
+      {
+       "id": "silent",
+       "label": "默默敬禮",
+       "reward": {
+        "m": 1
+       }
+      }
+     ]
+    }
+   ],
+   "prerequisites": [
+    "ch4_beach_relief"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "m": 2
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "李輔導長：「今天不用撐，想說什麼就說。」",
+    "progress": "海風和那天一樣大。",
+    "complete": "你把手舉到帽沿，很久才放下。",
+    "fail": ""
+   },
+   "dialogueVariants": [
+    {
+     "if": "sgt_wang_kia",
+     "line": "王班長的照片擺在最前面，旁邊是他那支沒抽完的菸。"
+    },
+    {
+     "if": "!sgt_wang_kia",
+     "line": "王班長拄著拐杖來了：「看什麼？我命硬。」"
+    },
+    {
+     "if": "akai_kia",
+     "line": "你在阿凱的照片前放了一杯珍奶。"
+    },
+    {
+     "if": "akai_injured",
+     "line": "阿凱走路還有點跛：「欠你的珍奶，今天還。」"
+    },
+    {
+     "if": "saved_civilian",
+     "line": "海邊阿伯提著一簍魚來：「這個少年仔救過我。」"
+    },
+    {
+     "if": "radio_fixed",
+     "line": "小林：「那一分鐘，是我這輩子最長的一分鐘。」"
+    },
+    {
+     "if": "beach_fallback",
+     "line": "黃連長：「那時候退，是對的。活著的人才能守下一次。」"
+    }
+   ]
+  }
+ ],
+ "npcs": [
+  {
+   "id": "npc_sgt_wang",
+   "name": "王班長",
+   "role": "海岸據點班長",
+   "personality": "沉穩、嘴硬心軟，受傷時把指揮交給玩家",
+   "location": "coast_outpost",
+   "lines": [
+    "演習也當真打。",
+    "現在……你帶。"
+   ],
+   "variants": {
+    "sgt_wang_kia": [
+     "（只在回憶與無線電錄音中出現）"
+    ],
+    "default": [
+     "你那天做得很好。"
+    ]
+   }
+  },
+  {
+   "id": "npc_signal_lin",
+   "name": "小林",
+   "role": "通信兵",
+   "personality": "斯文、技術宅，緊張時話很快",
+   "location": "comm_trench",
+   "lines": [
+    "給我一分鐘！"
+   ],
+   "variants": {
+    "radio_fixed": [
+     "我們通了，是因為你。"
+    ],
+    "default": [
+     "我那天……沒接起來，對不起。"
+    ]
+   }
+  },
+  {
+   "id": "npc_uncle_fisher",
+   "name": "海邊阿伯",
+   "role": "漁民（平民）",
+   "personality": "豪爽、講台語，常送魚給阿兵哥",
+   "location": "beach",
+   "lines": [
+    "少年仔，今天浪很怪喔。"
+   ],
+   "variants": {
+    "saved_civilian": [
+     "你救我一命，以後魚我包了。"
+    ],
+    "civilian_hurt": [
+     "腳還會痛，但我活著，沒怪你。"
+    ]
+   }
+  }
+ ],
+ "npcOverrides": [
+  {
+   "id": "npc_akai",
+   "chapterScope": "ch4_beach",
+   "personalityOverride": "平時樂天，實戰中膽小、發抖（沿用 story.json 既有 NPC，不新增 id）",
+   "variants": {
+    "akai_injured": [
+     "欠你一杯珍奶。"
+    ],
+    "akai_kia": [
+     "（不再出現；寢室床位留著他的名牌）"
+    ]
+   }
+  },
+  {
+   "id": "npc_captain_huang",
+   "chapterScope": "ch4_beach",
+   "note": "本章「連長」即黃連長，戰鬥中僅以無線電語音出現",
+   "variants": {
+    "beach_hero": [
+     "你守住的不只是碉堡。"
+    ],
+    "sgt_wang_kia": [
+     "王班長的事……我會跟他家人交代。"
+    ]
+   }
+  }
+ ],
+ "itemsRef": {
+  "it_t91": "rpg-system.json items（slot weapon）"
+ },
+ "newItems": [
+  {
+   "id": "it_ammo_crate",
+   "name": "彈藥箱",
+   "type": "quest"
+  }
+ ],
+ "locationsRef": "data/fps-system.json locations",
+ "events": [],
+ "endings": [
+  {
+   "id": "beach_hero",
+   "title": "海岸英雄",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "漢光那天的海岸讓你記了大功。退伍時連長在全連面前公開表揚，阿伯帶著鄰居來營門口送你。你不覺得自己是英雄，只是那天沒有退。"
+  },
+  {
+   "id": "survivor",
+   "title": "倖存者",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "你活著走出營門，但有些名字再也沒人應答。每年那一天，你都會回到那片海，站很久。"
+  }
+ ],
+ "endingRules": {
+  "_desc": "條件已由 Dai 寫入 rpg-system.json endings（conscript 與 volunteer），順序 bad_injury 之後：survivor → beach_hero。此處只引用，不重複定義。",
+  "ref": "rpg-system.json endings",
+  "ids": [
+   "survivor",
+   "beach_hero"
+  ]
+ },
+ "flags": {
+  "beach_hero": "saved_civilian && radio_fixed && !beach_fallback && !beach_medevac && 至少 3 波未重玩（ch4_beach_relief 結算）",
+  "saved_civilian": "ch4_beach_rescue 選 carry 並成功送回碉堡",
+  "akai_injured": "ch4_beach_aid 判定阿凱存活",
+  "akai_kia": "ch4_beach_aid 判定阿凱陣亡",
+  "sgt_wang_kia": "ch4_beach_command 判定王班長陣亡",
+  "radio_fixed": "ch4_beach_radio 成功",
+  "beach_fallback": "ch4_beach_command 選 fallback",
+  "beach_medevac": "任一波 hp 歸零選受傷後送（同時 injury inj_fracture）",
+  "civilian_hurt": "stay_down 時機率阿伯受傷（不陣亡）",
+  "beach_survived": "完成 ch4_beach_relief",
+  "court": "既有 flag；擅自撤離觸發 event_court"
+ },
+ "tunables": {
+  "AMMO_START_MAGS": 2,
+  "AMMO_PER_CRATE": 1,
+  "AMMO_MAX_CRATES": 4,
+  "AMMO_MAX_MAGS": 6,
+  "FATIGUE_PER_CRATE": 8,
+  "ARMORY_TIME_LIMIT": 120,
+  "CARRY_SPEED_PENALTY": -40,
+  "CIVILIAN_INJURY_CHANCE": 50,
+  "RADIO_HOLD_SEC": 60,
+  "AKAI_TOUGH_PENALTY": 15,
+  "DESERTION_SEC": 10,
+  "AKAI_KIA_FORMULA": "score>=60 ? 0 : clamp(60-(o-50)-20*sk_firstaid,15,70) (+15 tough_it_out)",
+  "WANG_KIA": "見 data/fps-system.json npcFate.sgtWang（hold 倒下/未倒下、counter、fallback；radio_fixed 減半值 25/8/18/5）"
+ },
+ "notes": [
+  "【數值佔位】tunables 內所有值與 quests 中 $XXX 佔位字串須與 data/fps-system.json 對齊（ammo.fromCarry、waves、npcFate、rewards.desertion）；以 fps-system.json 為準。",
+  "王班長陣亡機率一律以 fps-system.json npcFate.sgtWang 為準，本檔不重述數值。",
+  "章節獎勵（big tier、honor 3）只由 fps-system.json rewards.chapterClear 發放一次；ch4_beach_relief 不再另發。",
+  "陣亡一律黑畫面＋無線電語音，不呈現血腥細節；dialogue 中『血』僅文字提及，可改為更隱晦。",
+  "寫實性：漢光為年度演習，演習轉實戰為虛構情境；敵軍統稱「不明敵軍」，不涉國名。",
+  "寫實性：義務役是否部署海岸第一線、彈藥實彈領用程序（演習時通常空包彈）、交戰規則與撤退授權均為遊戲化處理，非真實程序。",
+  "寫實性：記大功、公開表揚、軍法移送（event_court）程序簡化；實際依陸海空軍懲罰法與軍事審判法。",
+  "所有兵種（infantry/artillery/airforce/navy/logistics）皆強制參與本章，以「海岸支援任務」解釋；不變更 story.json。",
+  "reward 單項屬性 ≤ +4，符合 rpg-system.json attrCapPerQuest。"
+ ]
+}

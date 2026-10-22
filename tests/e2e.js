@@ -8,6 +8,8 @@ const CHROME = process.env.CHROME || '/usr/local/bin/google-chrome';
 const mode = process.argv[2] || 'desktop';
 const volChoice = process.argv[3] || (mode === 'desktop' ? 'sign' : 'decline');
 const sideRate = +(process.argv[4] || (mode === 'desktop' ? 0.5 : 0.3));
+const BEACH = process.env.BEACH || 'survive', CMD = process.env.CMD || 'hold', RESCUE = process.env.RESCUE || 'carry', AID = process.env.AID || 'treat', FATE = process.env.FATE || '', DIFF = process.env.DIFF || 'hardcore';
+const DIE_WAVE = process.env.DIE_WAVE || 'wave2', DOWN = (process.env.DOWN || (BEACH === 'medevac' ? 'medevac' : 'retry')).split(',');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
 
 function serve(port) {
@@ -92,12 +94,12 @@ async function main() {
     return {
       phase: g.phase(), busy: g.busy(), map: g.map(), card: vis('#card'), dlg: vis('#dlg'), panel: vis('#panel'), mg: vis('#mg'), hold: g.holdOn(),
       day: G && G.day, period: G && G.period, level: G && G.level, over: G && G.over, ending: G && G.ending, active: G ? g.E.activeQuests(G).map(q => q.id) : [],
-      av, track: G && G.track,
+      av, track: G && G.track, fps: !!(g.FPS && g.FPS.active()), fpsInfo: g.FPS && g.FPS.debug() ? { k: g.FPS.debug().kills, q: g.FPS.debug().queue, hp: G.hp } : null, beachFlags: G && { akai_kia: !!G.flags.akai_kia, akai_injured: !!G.flags.akai_injured, wang: !!G.flags.sgt_wang_kia, saved: !!G.flags.saved_civilian, radio: !!G.flags.radio_fixed, hero: !!G.flags.beach_hero, medevac: !!G.flags.beach_medevac, court: !!G.flags.court },
       R: R && {
         q: R.q.id, ready: !!R.ready, kind: R.plan && R.plan.kind, idx: R.idx, phase: R.phase, timer: R.timer && Math.round(R.timer.left), giver: R.q.giver,
         pts: (R.pts || []).map(p => ({ x: p.x, z: p.z, done: p.done, npc: p.npc || null })),
         inter: (R.inter || []).map(i => ({ x: i.x, z: i.z, label: i.label })), dst: R.plan && R.plan.dst && { x: R.plan.dst.x, z: R.plan.dst.z, npc: R.plan.dst.npc || null }, dstNpc: R.plan && R.plan.dstNpc,
-        pickup: R.pickupPt || null, seq: R.plan && R.plan.seq, tmap: R.plan && R.plan.map
+        pickup: R.pickupPt || null, waveStarted: !!R.waveStarted, rescueCarry: !!R.rescueCarry, wave: R.plan && R.plan.wave, which: R.plan && R.plan.which, seq: R.plan && R.plan.seq, tmap: R.plan && R.plan.map
       },
       pos: g.W.pos(), pickups: g.W.S.pickups.map(p => ({ x: p.x, z: p.z })),
       npcs: Object.keys(g.W.S.npcs).filter(k => !g.W.S.npcs[k].deco).reduce((o, k) => { o[k] = { x: g.W.S.npcs[k].x, z: g.W.S.npcs[k].z }; return o; }, {})
@@ -147,7 +149,7 @@ async function main() {
   const shot = async (name) => { if (shotDone[name]) return; shotDone[name] = 1; await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-${name}.png`) }); };
   const R0 = s => !!s.R;
   const t0 = Date.now(), LIMIT = 28 * 60 * 1000;
-  let sleepRound = 0, toured = 0, shopped = false;
+  let sleepRound = 0, toured = 0, shopped = false, downCount = 0; const attempts = {}; let rngSet = false;
   async function closePanelIfAny() { await page.evaluate(() => __game.UI.closePanel()); await sleep(150); }
   async function panelsTour() {
     // 技能：把所有技能點花掉（優先「做人圓融」）；背包：使用一個消耗品；角色與日誌：確認能開啟
@@ -182,10 +184,10 @@ async function main() {
 
   while (Date.now() - t0 < LIMIT) {
     const s = await snap();
-    const key = JSON.stringify([s.day, s.period, s.active, s.R && [s.R.q, s.R.idx, s.R.phase, s.R.pts.filter(p => p.done).length], s.card, s.dlg, s.panel, s.mg, s.phase, s.level]);
+    const key = JSON.stringify([s.fpsInfo, s.day, s.period, s.active, s.R && [s.R.q, s.R.idx, s.R.phase, s.R.pts.filter(p => p.done).length], s.card, s.dlg, s.panel, s.mg, s.phase, s.level]);
     if (key !== last) { last = key; lastChange = Date.now(); }
     if (Date.now() - (global.__lp || 0) > 15000) { global.__lp = Date.now(); log('進度 day', s.day, 'p', s.period, 'lv', s.level, 'active', s.active.join(','), 'R', s.R ? s.R.q + '#' + s.R.idx + ':' + s.R.kind : '-', 'card', s.card, 'dlg', s.dlg, 'mg', s.mg, 'busy', s.busy, 'act', act); }
-    if (Date.now() - lastChange > 45000) { log('卡住了', JSON.stringify(s).slice(0, 1500)); await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-stuck.png`) }); throw new Error('stuck'); }
+    if (Date.now() - lastChange > (s.fps ? 150000 : 45000)) { log('卡住了', JSON.stringify(s).slice(0, 1500)); await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-stuck.png`) }); throw new Error('stuck'); }
     if (s.phase === 'end' && s.card) break;
     if (s.phase === 'end') { await sleep(500); continue; }
     if (s.mg) { await sleep(200); continue; }
@@ -194,7 +196,7 @@ async function main() {
       const title = await page.$eval('#cIn h2', e => e.textContent).catch(() => '');
       if (/結局|第.*章|任務|升/.test(title)) { /* ok */ }
       if (s.level >= 3) await shot('05-card-sample');
-      const r = await clickIn('#cIn', (b, i) => true);
+      const r = await clickIn('#cIn', (b, i) => (/硬派/.test(b.t) ? DIFF === 'hardcore' : /^標準/.test(b.t) ? DIFF === 'standard' : /^劇情向/.test(b.t) ? DIFF === 'story' : true));
       if (!r) await sleep(100);
       await sleep(80); continue;
     }
@@ -205,7 +207,11 @@ async function main() {
         let r0 = await clickIn('#dBtns', b => volChoice === 'sign' ? /簽志願役/.test(b.t) : /^不簽/.test(b.t));
         if (!r0) await clickIn('#dBtns', b => /go/.test(b.c));
       } else {
-        let r = await clickIn('#dBtns', b => /^接受任務/.test(b.t));
+        let r = await clickIn('#dBtns', b => CMD === 'hold' ? /^死守碉堡/.test(b.t) : CMD === 'fallback' ? /^退守第二線/.test(b.t) : /^帶隊反衝鋒/.test(b.t));
+        if (!r) r = await clickIn('#dBtns', b => RESCUE === 'carry' ? /^衝出去把阿伯背回來/.test(b.t) : /^大喊叫他趴下別動/.test(b.t));
+        if (!r) r = await clickIn('#dBtns', b => /^重玩這一波|^受傷後送/.test(b.t) && (DOWN[Math.min(downCount, DOWN.length - 1)] === 'retry' ? /^重玩這一波/.test(b.t) : /^受傷後送/.test(b.t)) && (downCount++ || true));
+        if (!r) r = await clickIn('#dBtns', b => AID === 'treat' ? /^放下槍幫他包紮/.test(b.t) : /^叫他自己壓住/.test(b.t));
+        if (!r) r = await clickIn('#dBtns', b => /^接受任務/.test(b.t));
         if (!r) r = await clickIn('#dBtns', b => /go/.test(b.c) && !/放進去/.test(b.t));
         if (!r) r = await clickIn('#dBtns', b => !/dim/.test(b.c) && !/離開|聊聊/.test(b.t));
         if (!r) r = await clickIn('#dBtns', b => /離開/.test(b.t));
@@ -266,6 +272,19 @@ async function main() {
           await near(it.x, it.z, 0.8); await interact(); await sleep(150);
           break;
         }
+        case 'wave': {
+          if (FATE && !rngSet) { rngSet = true; await page.evaluate((f) => __game.E.setRng(f === 'kia' ? () => 0.0 : () => 0.999), FATE); }
+          if (s.fps) { if (R.rescueCarry) await tp(-10, -5.95); await sleep(300); break; }
+          if (!R.waveStarted) {
+            attempts[R.wave] = (attempts[R.wave] || 0) + 1;
+            const die = BEACH !== 'survive' && R.wave === DIE_WAVE && attempts[R.wave] === 1;
+            await page.evaluate((m) => { __game.FPS.bot = m; }, die ? 'idle' : 'aim');
+            if (die) log('這一波故意不還擊：' + R.wave);
+            await tp(R.pts[0].x, R.pts[0].z); await sleep(400);
+          } else await sleep(300);
+          break;
+        }
+        case 'auto': case 'radio': case 'bdecide': case 'fate': await sleep(400); break;
         case 'carry': {
           if (R.phase === 1 && R.pickup) { await tp(R.pickup.x, R.pickup.z); await sleep(200); }
           else if (R.dst) {

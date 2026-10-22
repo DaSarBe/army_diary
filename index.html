@@ -71,6 +71,25 @@
   </div>
 </section>
 
+<section id="fps" hidden>
+  <div id="dmgfx"></div>
+  <div id="xhair" hidden><i></i></div>
+  <div id="hitmk"><b></b></div>
+  <div id="waveBanner"></div>
+  <div id="waveTop"><b id="waveName"></b><span id="waveLeft"></span><div class="mg-timer"><u id="waveHold"></u></div></div>
+  <div id="ammoHud"><span id="magHint"></span><span id="magRes"></span><span id="fireMode"></span><span id="coverState"></span></div>
+  <div id="fpsMsg"></div>
+  <p id="fpsHint">F 舉槍／放下　C 掩體／探頭　R 換彈　V 單發／連發　T 輔助瞄準　滑鼠左鍵或空白鍵射擊　右鍵瞄準</p>
+  <div id="fpsBtns">
+    <button type="button" id="bFire" hidden>射擊</button>
+    <button type="button" id="bReload" hidden>換彈</button>
+    <button type="button" id="bCover" hidden>掩體</button>
+    <button type="button" id="bRaise" hidden>舉槍</button>
+    <button type="button" id="bMode" hidden>單發</button>
+    <button type="button" id="bAssist" hidden>輔助瞄準：關</button>
+  </div>
+</section>
+
 <div id="toasts" aria-live="polite"></div>
 <div id="fade"></div>
 <div id="fadeTxt"></div>
@@ -98,6 +117,7 @@
 <script src="js/audio.js"></script>
 <script src="js/world.js"></script>
 <script src="js/minigames.js"></script>
+<script src="js/fps.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/game.js"></script>
 </body>

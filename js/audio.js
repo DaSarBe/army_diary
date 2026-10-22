@@ -58,7 +58,13 @@
     shot: function () { noise(0.25, 0.35, 0, 200); tone(120, 0.2, 'sawtooth', 0.2, 0, 40); },
     dice: function () { for (var i = 0; i < 6; i++) tone(300 + Math.random() * 500, 0.04, 'square', 0.1, i * 0.06); },
     save: function () { tone(660, 0.08, 'triangle', 0.16); tone(880, 0.12, 'triangle', 0.16, 0.09); },
-    tick: function () { tone(1000, 0.03, 'square', 0.08); }
+    tick: function () { tone(1000, 0.03, 'square', 0.08); },
+    reload: function () { noise(0.05, 0.2, 0, 1500); tone(180, 0.06, 'square', 0.12, 0.05); noise(0.05, 0.2, 0.9, 1500); tone(260, 0.07, 'square', 0.14, 1.05); },
+    empty: function () { tone(140, 0.05, 'square', 0.14); },
+    hurt: function () { noise(0.1, 0.28, 0, 300); tone(110, 0.14, 'sawtooth', 0.18, 0, 70); },
+    heart: function () { tone(70, 0.09, 'sine', 0.35); tone(60, 0.1, 'sine', 0.3, 0.16); },
+    hitmark: function () { tone(1500, 0.04, 'square', 0.1); },
+    radio: function () { noise(0.12, 0.12, 0, 2500); tone(900, 0.05, 'square', 0.06, 0.1); }
   };
   function sfx(name, arg) {
     if (name === 'note') { tone(NOTES[(arg || 0) % 4], 0.14, 'triangle', 0.22); return; }

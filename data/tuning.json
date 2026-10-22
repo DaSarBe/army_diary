@@ -92,14 +92,76 @@
     "routineBEvery": 25
   },
   "endingOverrides": {
-    "bad_injury": "flag hospitalized 且 b < 60",
-    "exemplar": "d>=54 && b>=54 && o>=58 && m>=58 && demerit==0",
-    "brother": "o>=72",
-    "iron": "b>=73",
-    "rule": "d>=59 && demerit<=1",
-    "sunny": "m>=73",
-    "calm": "b+m+d+o>=215 && demerit<=2",
-    "vstar": "d>=66 && b>=63 && level>=9",
-    "vlead": "o>=61 && skill sk_social>=2"
+    "bad_injury": "flag hospitalized 且 b < 46",
+    "exemplar": "d>=51 && b>=48 && o>=57 && m>=52 && demerit==0",
+    "brother": "o>=82",
+    "iron": "b>=74",
+    "rule": "d>=57 && demerit<=1",
+    "sunny": "m>=77",
+    "calm": "b+m+d+o>=226 && demerit<=2",
+    "vstar": "d>=68 && b>=55 && level>=9",
+    "vlead": "o>=62 && skill sk_social>=2"
+  },
+  "beach": {
+    "_desc": "漢光：海岸。新結局與 it_t91 只在這裡定義一次（rpg-system.json 裡重複的那兩個結局與 it_t91 會被忽略）。機率數字出自 fps-system.json npcFate。",
+    "startDay": 240,
+    "newItems": [
+      {
+        "id": "it_t91",
+        "name": "T91 步槍",
+        "type": "equip",
+        "slot": "weapon",
+        "issued": true,
+        "effect": {},
+        "note": "只在漢光海岸期間發放；數值見 data/fps-system.json"
+      }
+    ],
+    "newEndings": [
+      {
+        "id": "survivor",
+        "n": "倖存者",
+        "if": "flag akai_kia 或 flag sgt_wang_kia",
+        "title": "倖存者",
+        "description": "你活著走出營門，但有些名字再也沒人應答。每年那一天，你都會回到那片海，站很久。"
+      },
+      {
+        "id": "beach_hero",
+        "n": "海岸英雄",
+        "if": "flag beach_hero 且 demerit<=2",
+        "title": "海岸英雄",
+        "description": "漢光那天的海岸讓你記了大功。退伍時連長在全連面前公開表揚，阿伯帶著鄰居來營門口送你。你不覺得自己是英雄，只是那天沒有退。"
+      }
+    ],
+    "wangKia": {
+      "hold_zero": [
+        50,
+        25
+      ],
+      "hold": [
+        15,
+        8
+      ],
+      "counter": [
+        35,
+        18
+      ],
+      "fallback": [
+        10,
+        5
+      ]
+    },
+    "akaiKia": {
+      "base": 60,
+      "perO": 1,
+      "perFirstAid": 20,
+      "min": 15,
+      "max": 70,
+      "tough": 15
+    },
+    "uncleHurtChance": 50,
+    "signalHp": 100,
+    "crateFatigue": 8,
+    "aidTough": true,
+    "desertionSec": 10
   }
 }

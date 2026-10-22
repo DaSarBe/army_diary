@@ -11,7 +11,7 @@
   var S = {
     mapKey: null, root: null, cols: [], bounds: [-30, 30, -30, 30], spawn: [0, 0], px: 0, pz: 0, yaw: 0, pitch: 0.5,
     distC: 8, pitchC: 0.5, face: 0, mv: 0, t: 0, mode: 'title', npcs: {}, temps: [], pickups: [], inter: [], near: null,
-    followers: [], sheetH: 0, off: 0, w: 1, h: 1, marks: [], speed: 1, stepT: 0, unit: null
+    followers: [], covers: [], eCovers: [], spawns: { sea: [], shore: [] }, water: null, fps: { on: false, t: 0, yaw: 0, pitch: 0, eye: 1.6, eyeT: 1.6, kick: 0, crouch: 0 }, sheetH: 0, off: 0, w: 1, h: 1, marks: [], speed: 1, stepT: 0, unit: null
   };
   W.S = S;
 
@@ -22,12 +22,12 @@
   /* ---------- 建構用的小函式 ---------- */
   function bx(w, h, d, x, y, z, col, solid, ry) {
     var m = new THREE.Mesh(UB, M(col)); m.scale.set(w, h, d); m.position.set(x, y + h / 2, z); if (ry) m.rotation.y = ry; CG.add(m);
-    if (solid) S.cols.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
+    if (solid) S.cols.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: y, y1: y + h });
     return m;
   }
   function cyl(r, h, x, y, z, col, solid, seg) {
     var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg || 12), M(col)); m.position.set(x, y + h / 2, z); CG.add(m);
-    if (solid) S.cols.push({ x0: x - r, x1: x + r, z0: z - r, z1: z + r });
+    if (solid) S.cols.push({ x0: x - r, x1: x + r, z0: z - r, z1: z + r, y0: y, y1: y + h });
     return m;
   }
   function cone(r, h, x, y, z, col, seg, ry) {
@@ -173,7 +173,7 @@
   W.PRE = PRE;
   function addNpc(id, preset, x, z, ry, wave, name) {
     var g = person(PRE[preset] || PRE.rec); g.position.set(x, 0, z); g.rotation.y = ry || 0; CG.add(g);
-    var col = { x0: x - 0.35, x1: x + 0.35, z0: z - 0.35, z1: z + 0.35 }; S.cols.push(col);
+    var col = { x0: x - 0.35, x1: x + 0.35, z0: z - 0.35, z1: z + 0.35, noRay: true }; S.cols.push(col);
     var n = { id: id, g: g, x: x, z: z, wave: !!wave, col: col, mark: null, name: name || '' };
     if (name) { var lb = label(name, '#ffffff', '#1c2218', 0.0078); lb.position.set(0, 2.75, 0); g.add(lb); n.lbl = lb; }
     S.npcs[id] = n;
@@ -181,14 +181,14 @@
   }
   function decoNpc(p, x, z, ry, wave) {
     var g = person(PRE[p] || PRE.rec); g.position.set(x, 0, z); g.rotation.y = ry || 0; CG.add(g);
-    S.cols.push({ x0: x - 0.35, x1: x + 0.35, z0: z - 0.35, z1: z + 0.35 });
+    S.cols.push({ x0: x - 0.35, x1: x + 0.35, z0: z - 0.35, z1: z + 0.35, noRay: true });
     S.npcs['_d' + Object.keys(S.npcs).length] = { g: g, x: x, z: z, wave: !!wave, deco: true };
   }
   function placeNpcs(map) {
     var tbl = Places.NPCSPOT[map] || {}, ids = Object.keys(tbl), i;
     var story = (W.story && W.story.npcs) || [], names = {};
     story.forEach(function (n) { names[n.id] = n.name; });
-    for (i = 0; i < ids.length; i++) { var a = tbl[ids[i]]; addNpc(ids[i], a[3], a[0], a[1], a[2], a[4], names[ids[i]]); }
+    for (i = 0; i < ids.length; i++) { if (W.npcFilter && !W.npcFilter(ids[i])) continue; var a = tbl[ids[i]]; addNpc(ids[i], a[3], a[0], a[1], a[2], a[4], names[ids[i]]); }
     if (map === 'unit' && Places.UNIT_NPC[S.unit]) {
       var ut = Places.UNIT_NPC[S.unit];
       Object.keys(ut).forEach(function (id) { var b = ut[id]; addNpc(id, b[3], b[0], b[1], b[2], b[4], names[id]); });
@@ -377,6 +377,86 @@
     drawPosts('unit');
   };
 
+
+  /* ---------- 海灘（漢光：海岸） ---------- */
+  function coverObj(x, z, w, d, h, type, ax, az, ry) {
+    var col = type === 'rock' ? '#7d7d74' : type === 'bunker' ? '#a9aaa0' : '#b9a46a', m;
+    if (type === 'rock') {
+      m = new THREE.Mesh(new THREE.IcosahedronGeometry(Math.max(w, d) * 0.55, 0), M(col)); m.scale.set(1, h / (Math.max(w, d) * 1.1), d / w); m.position.set(x, h * 0.5, z); CG.add(m);
+    } else {
+      m = bx(w, h, d, x, 0, z, col, false, ry);
+      if (type === 'sandbag') { bx(w * 0.94, h * 0.18, d * 1.05, x, h * 0.35, z, '#a8935a', false, ry); bx(w * 0.94, h * 0.18, d * 1.05, x, h * 0.7, z, '#c0ab72', false, ry); }
+    }
+    var colr = { x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: 0, y1: h, cover: true };
+    S.cols.push(colr);
+    var c = { x: x, z: z, w: w, d: d, h: h, type: type, hp: type === 'sandbag' ? 400 : null, maxhp: 400, ax: ax, az: az, mesh: m, col: colr, alive: true };
+    S.covers.push(c);
+    return c;
+  }
+  function eCover(x, z, kind) {
+    var w = kind === 'boat' ? 6 : kind === 'wreck' ? 4.5 : 2.4, d = kind === 'boat' ? 2.6 : kind === 'wreck' ? 1.8 : 1.6, h = kind === 'boat' ? 1.2 : 1.05;
+    var m;
+    if (kind === 'rock') { m = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3, 0), M('#6f6f68')); m.scale.set(1, 0.8, 0.9); m.position.set(x, 0.5, z); CG.add(m); }
+    else if (kind === 'wreck') { bx(w, h, d, x, 0, z, '#5c4a38', false, 0.2); bx(w * 0.6, 0.3, d * 0.9, x, h, z, '#493a2c', false, 0.2); }
+    else { bx(w, h, d, x, -0.1, z, '#4a5058', false); bx(w * 0.8, 0.25, d * 0.9, x, h - 0.1, z, '#3b4046', false); }
+    S.cols.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: 0, y1: h, ecover: true });
+    S.eCovers.push({ x: x, z: z - d / 2 - 0.5, cx: x, cz: z, kind: kind, taken: 0 });
+  }
+  MAPS.beach = function () {
+    S.bounds = [-46, 46, -36, 38]; S.spawn = [0, 30];
+    S.covers = []; S.eCovers = []; S.spawns = { sea: [[-22, -48], [0, -50], [22, -48]], shore: [[-36, -40], [-14, -40], [14, -40], [36, -40]] };
+    bx(320, 0.2, 320, 0, -0.2, -10, '#6e8b4f');
+    bx(140, 0.06, 52, 0, 0, -12, '#d9c690'); bx(140, 0.05, 8, 0, 0.02, -33, '#b9aa7a');
+    // 海面：捲動貼圖加頂點微波，不做反射
+    var wg = new THREE.PlaneGeometry(240, 72, 48, 16); wg.rotateX(-Math.PI / 2);
+    var tc = document.createElement('canvas'); tc.width = tc.height = 128; var tx = tc.getContext('2d');
+    tx.fillStyle = '#3a77ad'; tx.fillRect(0, 0, 128, 128); tx.strokeStyle = 'rgba(210,235,255,.35)'; tx.lineWidth = 3;
+    for (var wi = 0; wi < 7; wi++) { tx.beginPath(); var wy = wi * 20 + 6; tx.moveTo(0, wy); tx.bezierCurveTo(32, wy - 8, 64, wy + 8, 128, wy); tx.stroke(); }
+    var wt = new THREE.CanvasTexture(tc); wt.wrapS = wt.wrapT = THREE.RepeatWrapping; wt.repeat.set(10, 4);
+    var wm = new THREE.Mesh(wg, new THREE.MeshLambertMaterial({ map: wt, color: '#ffffff' })); wm.position.set(0, -0.02, -75); CG.add(wm);
+    var base = Array.prototype.slice.call(wg.attributes.position.array);
+    S.water = { geo: wg, base: base, tex: wt, mesh: wm };
+    // 登陸艇（敵方）
+    [[-22, -44], [0, -46], [22, -44]].forEach(function (b) { eCover(b[0], b[1], 'boat'); });
+    // 敵方掩體（岩石與殘骸）
+    [[-30, -22], [-18, -27], [-6, -22], [6, -27], [18, -23], [30, -27], [-12, -15], [12, -15], [0, -19], [24, -14], [-24, -14]].forEach(function (r) { eCover(r[0], r[1], 'rock'); });
+    eCover(16, -23, 'wreck'); eCover(-36, -25, 'wreck');
+    // 己方：沙包線與碉堡
+    [-26, -20, -2, 4, 10, 16].forEach(function (x) { coverObj(x, -5, 4, 0.9, 1.0, 'sandbag', x, -3.9); });
+    coverObj(-10, -7, 8, 1, 1.3, 'bunker', -10, -5.95);
+    bx(0.8, 2.6, 3.6, -14.4, 0, -5.2, '#a9aaa0', true); bx(0.8, 2.6, 3.6, -5.6, 0, -5.2, '#a9aaa0', true); bx(9.6, 0.5, 4.2, -10, 2.6, -5.3, '#8f9088');
+    sign('碉堡', -10, 3.5, -3.1, 3, 0.7, '#3a4a2f', '#f2ecd0', 0);
+    coverObj(-34, -6, 3, 2.2, 1.2, 'rock', -34, -4.2); coverObj(26, -6, 3, 2.2, 1.2, 'rock', 26, -4.2);
+    // 灘頭與漁船
+    bx(6, 1.3, 2.2, 16, 0, -22, '#5c7ea0', false, 0.15); bx(2, 1.8, 0.3, 14.5, 1.3, -22, '#cfc7a8', false, 0.15);
+    cyl(0.1, 3, 18.5, 0, -22, '#d8d0b0', false, 6);
+    bx(1.6, 0.2, 1.2, 12, 0, -17, '#8a6a46'); bx(1.4, 0.5, 0.9, 11, 0, -19.5, '#d9d0b8', true);
+    sign('漁民的船', 16, 2.6, -20.6, 3.2, 0.6, '#2f5d8a', '#ffffff', 0);
+    // 通訊壕
+    bx(8, 1.2, 1, -32, 0, 12.5, '#c7b57c', true); bx(8, 1.2, 1, -32, 0, 3.5, '#c7b57c', true); bx(1, 1.2, 8, -36.5, 0, 8, '#c7b57c', true);
+    bx(7.4, 0.04, 7.4, -32, 0, 8, '#8c7a50');
+    cyl(0.5, 0.5, -34.5, 0, 9.5, '#3a3d42', false, 10); cyl(0.12, 1.6, -34.5, 0.5, 9.5, '#8a8a80', false, 6);
+    coverObj(-27.8, 10.5, 0.9, 4, 1.0, 'sandbag', -29.4, 10.5); coverObj(-27.8, 5, 0.9, 3, 1.0, 'sandbag', -29.4, 5);
+    sign('通訊壕', -32, 2.6, 2.8, 3, 0.7, '#3a4a2f', '#f2ecd0', 0);
+    // 海岸據點
+    bld(-16, 24, 10, 6, 3.4, '#b9b08c', '#6b6a56', -1, '軍械室');
+    tent(-30, 26, 3.2, 3, '#6b7a45'); tent(26, 28, 3.2, 3, '#6b7a45'); tent(0, 27, 3.6, 3.2, '#6e7c4a');
+    cyl(0.12, 5, 10, 0, 26, '#7a7a72'); var dish = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), M('#c9cdd0')); dish.rotation.x = Math.PI / 3; dish.position.set(10, 5.2, 26); CG.add(dish);
+    bx(2, 1.1, 1, 10, 0, 23.5, '#55603f', true); bx(1.6, 0.1, 0.8, 10, 1.1, 23.5, '#2a2f26');
+    sign('雷達站', 10, 3, 22.8, 2.4, 0.6, '#3a4a2f', '#f2ecd0', Math.PI);
+    flagpole(3, 30, 9); car(24, 18, '#4d5a33'); lamp(-6, 22); lamp(8, 18);
+    sign('海岸據點', 0, 3.4, 20.2, 5, 0.9, '#2c4a2c', '#f2ecd0', Math.PI);
+    fence(-46, 37, 46, 37);
+    [[-40, 30], [40, 30], [-38, 16], [38, 14]].forEach(function (t) { tree(t[0], t[1], 1.2); });
+    placeNpcs('beach');
+  };
+  W.updateWater = function (dt) {
+    var w = S.water; if (!w) return;
+    var pos = w.geo.attributes.position, a = pos.array, b = w.base, t = S.t, i;
+    for (i = 0; i < a.length; i += 3) { a[i + 1] = b[i + 1] + Math.sin(b[i] * 0.12 + t * 1.4) * 0.18 + Math.cos(b[i + 2] * 0.2 + t * 1.1) * 0.12; }
+    pos.needsUpdate = true; w.tex.offset.y -= dt * 0.04; w.tex.offset.x += dt * 0.01;
+  };
+
   MAPS.exit = function () {
     var vol = !!S.vol;
     S.bounds = [-20, 20, -34, 16]; S.spawn = [0, 10];
@@ -404,7 +484,7 @@
       });
     }
     S.root = new THREE.Group(); scene.add(S.root); CG = S.root;
-    S.cols = []; S.npcs = {}; S.temps = []; S.pickups = []; S.inter = []; S.near = null; SIGNS.length = 0; S.mapKey = key;
+    S.cols = []; S.covers = []; S.eCovers = []; S.water = null; S.npcs = {}; S.temps = []; S.pickups = []; S.inter = []; S.near = null; SIGNS.length = 0; S.mapKey = key;
     S.unit = unit || S.unit; S.vol = vol;
     clearFollowers();
     MAPS[key]();
@@ -478,7 +558,7 @@
   }
 
   /* ---------- 玩家外觀 ---------- */
-  var avatar = null, avSig = '';
+  var avatar = null, avSig = '', vm = null;
   function dress(sig, spec) {
     if (avatar && avSig === sig) return;
     var rot = avatar ? avatar.rotation.y : 0;
@@ -528,11 +608,26 @@
     joy.addEventListener('pointermove', function (e) { if (e.pointerId === jid) jmove(e); });
     function jend(e) { if (e.pointerId === jid) { jid = null; jv.x = 0; jv.y = 0; knob.style.transform = 'translate(0,0)'; } }
     joy.addEventListener('pointerup', jend); joy.addEventListener('pointercancel', jend);
-    cv.addEventListener('pointerdown', function (e) { if (oid !== null) return; oid = e.pointerId; ox = e.clientX; oy = e.clientY; try { cv.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ } });
+    cv.addEventListener('contextmenu', function (e) { if (S.mode === 'fps') e.preventDefault(); });
+    cv.addEventListener('pointerdown', function (e) {
+      if (S.mode === 'fps' && e.pointerType === 'mouse') {
+        if (document.pointerLockElement !== cv && cv.requestPointerLock) { try { var pr = cv.requestPointerLock(); if (pr && pr.catch) pr.catch(function () { /* 無法鎖定指標時改用拖曳瞄準 */ }); } catch (x2) { /* ignore */ } }
+        if (e.button === 2) { if (W.cb.onAds) W.cb.onAds(true); } else if (W.cb.onFireDown) W.cb.onFireDown();
+      }
+      if (oid !== null) return; oid = e.pointerId; ox = e.clientX; oy = e.clientY; try { cv.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
+    });
     cv.addEventListener('pointermove', function (e) {
+      if (S.mode === 'fps') {
+        if (document.pointerLockElement === cv && e.pointerType === 'mouse') return;
+        if (e.pointerId !== oid) return;
+        if (W.cb.onAim) W.cb.onAim(e.clientX - ox, e.clientY - oy, e.pointerType);
+        ox = e.clientX; oy = e.clientY; return;
+      }
       if (e.pointerId !== oid) return;
       S.yaw -= (e.clientX - ox) * 0.008; S.pitch = clamp(S.pitch + (e.clientY - oy) * 0.004, 0.12, 1.05); ox = e.clientX; oy = e.clientY;
     });
+    document.addEventListener('mousemove', function (e) { if (S.mode === 'fps' && document.pointerLockElement === cv && W.cb.onAim) W.cb.onAim(e.movementX, e.movementY, 'mouse'); });
+    cv.addEventListener('pointerup', function (e) { if (S.mode === 'fps' && e.pointerType === 'mouse') { if (e.button === 2) { if (W.cb.onAds) W.cb.onAds(false); } else if (W.cb.onFireUp) W.cb.onFireUp(); } });
     function oend(e) { if (e.pointerId === oid) oid = null; }
     cv.addEventListener('pointerup', oend); cv.addEventListener('pointercancel', oend);
     window.addEventListener('keydown', function (e) {
@@ -540,9 +635,11 @@
       if (t === 'INPUT' || t === 'TEXTAREA') return;
       keys[e.code] = 1;
       if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') && S.mode === 'world' && !e.repeat && W.cb.onInteractKey) W.cb.onInteractKey();
-      if (S.mode === 'world' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(e.code) >= 0) e.preventDefault();
+      if ((S.mode === 'world' || S.mode === 'fps') && !e.repeat && W.cb.onCombatKey) W.cb.onCombatKey(e.code, true);
+      if (S.mode === 'fps' && e.code === 'Space' && !e.repeat && W.cb.onFireDown) W.cb.onFireDown();
+      if ((S.mode === 'world' || S.mode === 'fps') && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(e.code) >= 0) e.preventDefault();
     });
-    window.addEventListener('keyup', function (e) { delete keys[e.code]; });
+    window.addEventListener('keyup', function (e) { delete keys[e.code]; if (S.mode === 'fps' && e.code === 'Space' && W.cb.onFireUp) W.cb.onFireUp(); });
     window.addEventListener('blur', function () { keys = {}; jv.x = 0; jv.y = 0; });
   }
   function kx() { return ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0); }
@@ -608,7 +705,7 @@
   }
 
   /* ---------- 更新 ---------- */
-  function setMode(m) { S.mode = m; var w = m === 'world'; joy.hidden = !w; }
+  function setMode(m) { S.mode = m; var w = m === 'world' || m === 'fps'; joy.hidden = !w; }
   function update(dt) {
     S.t += dt; applyTone(dt);
     var moving = 0;
@@ -633,11 +730,26 @@
         if (Math.hypot(S.px - pk.x, S.pz - pk.z) < 1.5 && W.cb.onPickup) W.cb.onPickup(pk);
       }
       if (W.cb.onTick) W.cb.onTick(dt);
+    } else if (S.mode === 'fps') {
+      var F0 = S.fps, fy = F0.yaw, fwx = -Math.sin(fy), fwz = -Math.cos(fy), rtx = Math.cos(fy), rtz = -Math.sin(fy);
+      var kk = { x: kx(), y: ky() };
+      if (kk.x || kk.y) {
+        var sx = rtx * kk.x + fwx * kk.y, sz = rtz * kk.x + fwz * kk.y, sl = Math.hypot(sx, sz) || 1, sp2 = 2.4 * S.speed;
+        S.px += sx / sl * sp2 * dt; S.pz += sz / sl * sp2 * dt; moving = 0.5;
+      }
+      collide();
+      S.face = Math.atan2(fwx, fwz);
+      if (W.cb.onAimJoy && (jv.x || jv.y)) W.cb.onAimJoy(jv.x, jv.y, dt);
+      if (W.cb.onTick) W.cb.onTick(dt);
     } else if (S.mode === 'title' || S.mode === 'end') {
       S.yaw += dt * 0.32; S.face = S.yaw;
     }
+    if (W.cb.onFrame) W.cb.onFrame(dt);
+    if (S.water) W.updateWater(dt);
     S.mv += (moving - S.mv) * Math.min(1, dt * 10);
     if (avatar) {
+      avatar.visible = S.fps.t < 0.7;
+      avatar.scale.y = 0.88 * (S.fps.crouch ? 0.74 : 1);
       avatar.position.set(S.px, Math.abs(Math.sin(S.t * 9)) * 0.05 * S.mv, S.pz);
       avatar.rotation.y = turn(avatar.rotation.y, S.face, Math.min(1, dt * 12));
       var ud = avatar.userData, sw = Math.sin(S.t * 9) * 0.85 * S.mv;
@@ -667,7 +779,20 @@
     if (S.w / S.h < 0.8) { dT *= 1.3; }
     var k = Math.min(1, dt * 3.5); S.distC += (dT - S.distC) * k; S.pitchC += (pT - S.pitchC) * k;
     var cx2 = S.px + Math.sin(S.yaw) * Math.cos(S.pitchC) * S.distC, cz2 = S.pz + Math.cos(S.yaw) * Math.cos(S.pitchC) * S.distC, cy2 = Math.max(0.6, 1.3 + Math.sin(S.pitchC) * S.distC);
-    cam.position.set(cx2, cy2, cz2); cam.lookAt(S.px, 1.2, S.pz); stars.position.copy(cam.position);
+    cam.position.set(cx2, cy2, cz2); cam.lookAt(S.px, 1.2, S.pz);
+    var F = S.fps, ft = F.on ? 1 : 0;
+    F.t += Math.max(-dt / 0.3, Math.min(dt / 0.3, ft - F.t));
+    F.eye += (F.eyeT - F.eye) * Math.min(1, dt * 10);
+    F.kick *= Math.max(0, 1 - dt * 12);
+    if (F.t > 0.001) {
+      var kb = F.t * F.t * (3 - 2 * F.t), cp = Math.cos(F.pitch), dxf = -Math.sin(F.yaw) * cp, dyf = Math.sin(F.pitch), dzf = -Math.cos(F.yaw) * cp;
+      var ex = S.px, ey = F.eye, ez = S.pz;
+      cam.position.set(cx2 + (ex - cx2) * kb, cy2 + (ey - cy2) * kb, cz2 + (ez - cz2) * kb);
+      cam.lookAt(S.px + (ex + dxf * 10 - S.px) * kb, 1.2 + (ey + dyf * 10 - 1.2) * kb, S.pz + (ez + dzf * 10 - S.pz) * kb);
+      var nf = 60 + 10 * kb; if (Math.abs(cam.fov - nf) > 0.01) { cam.fov = nf; cam.updateProjectionMatrix(); }
+    } else if (cam.fov !== 60) { cam.fov = 60; cam.updateProjectionMatrix(); }
+    if (vm) { vm.visible = F.t > 0.85; vm.position.set(0.17, -0.2 + F.kick * 0.02, -0.42 + F.kick * 0.07); vm.rotation.x = F.kick * 0.12 + Math.sin(S.t * 1.6) * 0.004; }
+    stars.position.copy(cam.position);
     var sheetOn = (S.mode === 'ui' || S.mode === 'title' || S.mode === 'end') && S.sheetH > 0;
     var offT = sheetOn ? Math.min(S.h * 0.42, S.sheetH * 0.5) : 0;
     S.off += (offT - S.off) * Math.min(1, dt * 6);
@@ -692,10 +817,17 @@
       R = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' });
       if (!R.getContext()) return false;
     } catch (e) { return false; }
-    var mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || window.innerWidth < 700;
+    var mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || window.innerWidth < 700 || (window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
     R.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2));
-    scene = new THREE.Scene(); cam = new THREE.PerspectiveCamera(58, 1, 0.1, 220);
+    scene = new THREE.Scene(); cam = new THREE.PerspectiveCamera(60, 1, 0.05, 260); scene.add(cam);
     scene.fog = new THREE.Fog('#9cc3e6', 38, 115);
+    vm = new THREE.Group();
+    function vpart(w, h, d, x, y, z, col) { var m = new THREE.Mesh(UB, new THREE.MeshLambertMaterial({ color: col, depthTest: true })); m.scale.set(w, h, d); m.position.set(x, y, z); vm.add(m); return m; }
+    vpart(0.05, 0.09, 0.3, 0, 0, 0.08, '#2c2f2a'); vpart(0.045, 0.06, 0.34, 0, 0.0, -0.22, '#3a3d36');
+    var brl = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 8), new THREE.MeshLambertMaterial({ color: '#1d1f1c' })); brl.rotation.x = Math.PI / 2; brl.position.set(0, 0.025, -0.42); vm.add(brl);
+    vpart(0.03, 0.08, 0.05, 0, -0.07, 0.0, '#26291f'); vpart(0.04, 0.04, 0.12, 0, 0.065, -0.1, '#1d1f1c');
+    var hand = vpart(0.07, 0.07, 0.1, 0.02, -0.04, -0.2, '#d9a77a'); void hand;
+    vm.scale.setScalar(0.62); cam.add(vm); vm.visible = false;
     hemi = new THREE.HemisphereLight('#d7e8ff', '#6d7b55', 0.95); scene.add(hemi);
     sun = new THREE.DirectionalLight('#fff1d2', 0.8); sun.position.set(30, 50, 20); scene.add(sun);
     var starG = new THREE.BufferGeometry(), sp = [];
@@ -739,5 +871,64 @@
     var n = S.npcs[id]; if (!n) return;
     n.g.rotation.y = Math.atan2(S.px - n.x, S.pz - n.z); S.face = Math.atan2(n.x - S.px, n.z - S.pz);
   };
+
+
+  /* ---------- 戰鬥相關 ---------- */
+  W.fpsEnter = function () {
+    var F = S.fps; F.on = true; F.yaw = S.yaw; F.pitch = 0; F.eyeT = F.crouch ? 1.0 : 1.6; setMode('fps');
+    if (document.exitPointerLock && document.pointerLockElement === cv) { /* 保持 */ }
+  };
+  W.fpsExit = function () {
+    var F = S.fps; if (!F.on) return;
+    F.on = false; S.yaw = F.yaw; S.pitch = 0.5; setMode('world');
+    if (document.pointerLockElement === cv && document.exitPointerLock) document.exitPointerLock();
+  };
+  W.setCrouch = function (on) { S.fps.crouch = on ? 1 : 0; S.fps.eyeT = on ? 1.0 : 1.6; };
+  W.setEye = function (h) { S.fps.eyeT = h; };
+  W.fpsAim = function () { return S.fps; };
+  W.rayBlock = function (ox, oy, oz, dx, dy, dz, maxT, skip, noCovers) {
+    var best = maxT, i;
+    for (i = 0; i < S.cols.length; i++) {
+      var c = S.cols[i];
+      if (c.noRay || c === skip || (c.cover && c.dead) || (noCovers && (c.cover || c.ecover))) continue;
+      var y0 = c.y0 != null ? c.y0 : 0, y1 = c.y1 != null ? c.y1 : 3, tmin = 0, tmax = best, ok = true;
+      var lo = [c.x0, y0, c.z0], hi = [c.x1, y1, c.z1], o = [ox, oy, oz], d = [dx, dy, dz], k;
+      for (k = 0; k < 3; k++) {
+        if (Math.abs(d[k]) < 1e-9) { if (o[k] < lo[k] || o[k] > hi[k]) { ok = false; break; } }
+        else {
+          var t1 = (lo[k] - o[k]) / d[k], t2 = (hi[k] - o[k]) / d[k];
+          if (t1 > t2) { var tt = t1; t1 = t2; t2 = tt; }
+          if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+          if (tmin > tmax) { ok = false; break; }
+        }
+      }
+      if (ok && tmin < best && tmin > 0.001) best = tmin;
+    }
+    return best;
+  };
+  W.nearestCover = function (x, z, maxd) {
+    var best = null, bd = maxd || 1.2, i;
+    for (i = 0; i < S.covers.length; i++) {
+      var c = S.covers[i]; if (!c.alive) continue;
+      var d = Math.hypot(c.ax - x, c.az - z);
+      if (d < bd) { bd = d; best = c; }
+    }
+    return best;
+  };
+  W.killCover = function (c) {
+    c.alive = false; c.col.dead = true; var i = S.cols.indexOf(c.col); if (i >= 0) S.cols.splice(i, 1);
+    c.mesh.visible = false; if (c.mesh.parent) { /* 保留物件以便重玩時復原 */ }
+  };
+  W.reviveCovers = function () {
+    S.covers.forEach(function (c) { if (!c.alive) { c.alive = true; c.col.dead = false; S.cols.push(c.col); c.mesh.visible = true; } if (c.type === 'sandbag') c.hp = c.maxhp; });
+  };
+  W.scene = function () { return scene; };
+  W.camera = function () { return cam; };
+  W.setNpcLying = function (id, on) { var n = S.npcs[id]; if (n) { n.g.rotation.x = on ? -Math.PI / 2 : 0; n.g.position.y = on ? 0.25 : 0; } };
+  W.moveNpc = function (id, x, z) { var n = S.npcs[id]; if (n) { n.g.position.set(x, 0, z); n.x = x; n.z = z; } };
+  W.hideNpc = function (id, hide) { var n = S.npcs[id]; if (n) n.g.visible = !hide; };
+  W.addEnemyGroup = function (g) { scene.add(g); };
+  W.isMobileLike = function () { return (window.matchMedia && window.matchMedia('(pointer:coarse)').matches) || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent); };
+
   root.World = W;
 })(typeof self !== 'undefined' ? self : this);

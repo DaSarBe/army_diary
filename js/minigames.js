@@ -28,6 +28,8 @@
     watch_duty: ['值更警戒', '光點亮起時快點按下去。不要漏掉太多。'],
     lights_out: ['熄燈後潛行', '按住「前進」往床位移動；值星官轉頭看時要立刻放開。被抓到三次就失敗。'],
     duty_officer_patrol: ['躲過值星官', '按住「前進」往目標移動；值星官轉頭看時要立刻放開。被抓到三次就失敗。'],
+    first_aid: ['包紮止血', '阿凱的腿在流血！依序點選：止血帶 → 加壓 → 包紮。限時 15 秒，點錯會扣時間。'],
+    load_magazines: ['壓彈與上膛', '連點「壓彈」把子彈一顆一顆壓進彈匣，兩個彈匣都壓滿才算完成。限時 120 秒。'],
     objective: ['守住目標', '敵情光點出現時趕快點掉它，不要讓它們靠近。漏掉太多就失守。'],
     position: ['守住陣地', '敵情光點出現時趕快點掉它，不要讓它們靠近。漏掉太多就失守。']
   };
@@ -35,7 +37,7 @@
     pushup: 'mash', shooting: 'shoot', lottery: 'lottery', fold_blanket: 'meter', rifle_assembly: 'ordered', fire_calc: 'calc',
     inventory_count: 'count', duty_roster: 'assign', cooking: 'memory', essay: 'essay', rehab: 'meter', rope_coil: 'meter',
     military_song: 'rhythm', gun_commands: 'rhythm', dress_up: 'ordered', emplace_gun: 'ordered', watch_duty: 'targets',
-    lights_out: 'stealth', duty_officer_patrol: 'stealth', objective: 'targets', position: 'targets'
+    first_aid: 'ordered', load_magazines: 'load', lights_out: 'stealth', duty_officer_patrol: 'stealth', objective: 'targets', position: 'targets'
   };
 
   var host, cardT, cardD, cardA, cardS, curCleanup, alive = false, finishCb = null;
@@ -206,6 +208,7 @@
   var ORDER = {
     rifle_assembly: { items: ['槍機', '複進簧', '槍管護木', '彈匣', '槍托', '照門', '準星', '保險'], limit: 60, t: '依序結合：' },
     dress_up: { items: ['內衣', '迷彩褲', '軍靴', '迷彩上衣', '腰帶', '鋼盔'], limit: 22, t: '依序穿戴：' },
+    first_aid: { items: ['止血帶', '加壓', '包紮'], limit: 15, t: '依序處置：' },
     emplace_gun: { items: ['卸下砲衣', '展開架腳', '架設砲身', '調整方位', '裝定射角', '裝填準備'], limit: 24, t: '依序放列：' }
   };
   ENG.ordered = function (api) {
@@ -244,6 +247,32 @@
       }, 25);
       api.cleanup(function () { clearInterval(bi); });
     }
+  };
+
+  /* 壓彈：連點把兩個彈匣壓滿 */
+  ENG.load = function (api) {
+    var need = 60, n = 0, t0 = performance.now(), lim = 120000, done = false;
+    api.area.innerHTML = '<div class="mg-count" id="mgN">0 / 60</div><div class="mg-timer"><u id="mgTm"></u></div>';
+    var b = btn('壓彈', 'mg-big', function () {});
+    api.area.appendChild(b);
+    var cnt = $('#mgN'), tm = $('#mgTm');
+    api.stat('第 1 個彈匣（30 發）');
+    function loop() {
+      if (done || !api.alive()) return;
+      var e = (performance.now() - t0) / lim;
+      tm.style.transform = 'scaleX(' + Math.max(0, 1 - e) + ')';
+      if (e >= 1) { done = true; api.done(Math.max(20, 40 + n), '時間到了…只壓了 ' + n + ' 發'); return; }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+    function tap() {
+      if (done) return;
+      n++; cnt.textContent = n + ' / ' + need; sfx('hit');
+      api.stat(n < 30 ? '第 1 個彈匣（' + n + '/30）' : '第 2 個彈匣（' + (n - 30) + '/30）');
+      if (n >= need) { done = true; var sec = (performance.now() - t0) / 1000; api.done(clamp(100 - Math.max(0, sec - 14) * 1.2, 62, 100), '兩個彈匣都壓滿了，用了 ' + Math.round(sec) + ' 秒'); }
+    }
+    onTap(b, tap);
+    if (M.auto) { var iv = setInterval(function () { if (done || !api.alive()) clearInterval(iv); else for (var k = 0; k < 6; k++) tap(); }, 40); api.cleanup(function () { clearInterval(iv); }); }
   };
 
   /* 選擇題（射擊諸元計算） */

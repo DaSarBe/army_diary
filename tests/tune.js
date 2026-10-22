@@ -5,11 +5,13 @@ var P = sim.POLICIES[polName], states = [], i;
 for (i = 0; i < N; i++) {
   var s = sim.playOne(9000 + i, P).s;
   states.push({ b: Engine.eff(s, 'b'), m: Engine.eff(s, 'm'), d: Engine.eff(s, 'd'), o: Engine.eff(s, 'o'), dem: s.demerit, lv: s.level,
-    soc: Engine.skillRank(s, 'sk_social'), vol: !!s.flags.vol, court: !!s.flags.court, hosp: !!s.flags.hospitalized });
+    soc: Engine.skillRank(s, 'sk_social'), vol: !!s.flags.vol, court: !!s.flags.court, hosp: !!s.flags.hospitalized, surv: !!(s.flags.akai_kia || s.flags.sgt_wang_kia), hero: !!s.flags.beach_hero });
 }
 function ending(x, t) {
   if (x.court) return 'bad_court';
   if (x.hosp && x.b < t.injB) return 'bad_injury';
+  if (x.surv) return 'survivor';
+  if (x.hero && x.dem <= 2) return 'beach_hero';
   if (x.vol) {
     if (x.d >= t.vsD && x.b >= t.vsB && x.lv >= 9) return 'vstar';
     if (x.o >= t.vlO && x.soc >= 2) return 'vlead';
@@ -29,7 +31,7 @@ function dist(t) {
   Object.keys(c).forEach(function (k) { c[k] = +(100 * c[k] / states.length).toFixed(1); });
   return c;
 }
-var NORMAL = ['exemplar', 'brother', 'iron', 'rule', 'sunny', 'calm', 'phew', 'vstar', 'vlead', 'vstep'];
+var NORMAL = ['survivor', 'beach_hero', 'exemplar', 'brother', 'iron', 'rule', 'sunny', 'calm', 'phew', 'vstar', 'vlead', 'vstep'];
 function score(d) { return Math.min.apply(null, NORMAL.map(function (k) { return d[k] || 0; })); }
 function toOverrides(t) {
   return {
@@ -46,11 +48,16 @@ if (require.main === module) {
   console.log('原始門檻', JSON.stringify(dist(orig)));
   var r = Engine.mulberry(11), best = null;
   function rnd(a, b) { return a + Math.floor(r() * (b - a + 1)); }
-  for (var k = 0; k < 80000; k++) {
-    var t = { injB: 60, exD: rnd(54, 68), exB: rnd(54, 66), exO: rnd(58, 72), exM: rnd(56, 72), To: rnd(66, 84), Tb: rnd(60, 76), Td: rnd(58, 76),
-      Tm: rnd(64, 84), Ts: rnd(215, 270), vsD: rnd(54, 70), vsB: rnd(52, 66), vlO: rnd(56, 70) };
-    var d = dist(t), sc = score(d) - 0.05 * Math.max(0, (d.vstar || 0) - 10) - 0.05 * Math.max(0, (d.vstep || 0) - 25);
-    if (!best || sc > best.sc) best = { sc: sc, t: t, d: d };
+  var RANGE = { injB: [36, 52], exD: [50, 68], exB: [48, 66], exO: [54, 72], exM: [52, 70], To: [68, 88], Tb: [58, 78], Td: [56, 76], Tm: [62, 84], Ts: [208, 262], vsD: [52, 70], vsB: [50, 66], vlO: [54, 70] };
+  function evalT(t) { var d = dist(t); return { sc: score(d) - 0.05 * Math.max(0, (d.vstar || 0) - 10) - 0.05 * Math.max(0, (d.vstep || 0) - 25), t: t, d: d }; }
+  for (var k = 0; k < 50000; k++) {
+    var t = {}; Object.keys(RANGE).forEach(function (key) { t[key] = rnd(RANGE[key][0], RANGE[key][1]); });
+    var e = evalT(t); if (!best || e.sc > best.sc) best = e;
+  }
+  for (k = 0; k < 40000; k++) {
+    var t2 = Object.assign({}, best.t), key2 = Object.keys(RANGE)[rnd(0, Object.keys(RANGE).length - 1)];
+    t2[key2] = Math.max(RANGE[key2][0], Math.min(RANGE[key2][1], t2[key2] + rnd(-3, 3)));
+    var e2 = evalT(t2); if (e2.sc >= best.sc) best = e2;
   }
   console.log(JSON.stringify(best));
   console.log(JSON.stringify(toOverrides(best.t)));

@@ -373,7 +373,8 @@
       "head",
       "body",
       "feet",
-      "accessory"
+      "accessory",
+      "weapon"
     ],
     "list": [
       {
@@ -557,6 +558,15 @@
         "type": "quest",
         "effect": {},
         "note": "任務道具；story.json 的 photo_album 請改成這個 id"
+      },
+      {
+        "id": "it_t91",
+        "name": "T91 步槍",
+        "type": "equip",
+        "slot": "weapon",
+        "issued": true,
+        "effect": {},
+        "note": "只在 ch4_beach 期間發放；數值見 data/fps-system.json；演習與實戰都用這把"
       }
     ],
     "questItemRule": "carry 目標裡沒有 it_ 前綴的東西（canteen、sandbag 等）一律視為臨時任務道具，type quest，不占背包格、任務結束自動移除，不需要另外定義。"
@@ -777,6 +787,18 @@
         "if": "flag hospitalized 且 b < 35"
       },
       {
+        "id": "survivor",
+        "n": "倖存者",
+        "new": true,
+        "if": "flag akai_kia 或 sgt_wang_kia"
+      },
+      {
+        "id": "beach_hero",
+        "n": "海岸英雄",
+        "new": true,
+        "if": "flag beach_hero 且 demerit<=2"
+      },
+      {
         "id": "exemplar",
         "n": "模範役男",
         "if": "d>=62 && b>=58 && o>=58 && m>=55 && demerit==0"
@@ -813,6 +835,18 @@
       }
     ],
     "volunteer": [
+      {
+        "id": "survivor",
+        "n": "倖存者",
+        "new": true,
+        "if": "flag akai_kia 或 sgt_wang_kia"
+      },
+      {
+        "id": "beach_hero",
+        "n": "海岸英雄",
+        "new": true,
+        "if": "flag beach_hero 且 demerit<=2"
+      },
       {
         "id": "vstar",
         "n": "志願役新星",

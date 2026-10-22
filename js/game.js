@@ -1,17 +1,18 @@
 /* 遊戲控制器：任務執行、NPC 對話、面板、存讀檔、結局。 */
 (function (root) {
   'use strict';
-  var E = root.Engine, P = root.Places, W = root.World, UI = root.UI, Sfx = root.Sfx, MG = root.Minigames;
+  var E = root.Engine, P = root.Places, W = root.World, UI = root.UI, Sfx = root.Sfx, MG = root.Minigames, FPS = root.FPS || { active: function () { return false; }, stop: function () { }, init: function () { } };
   var $ = function (s) { return document.querySelector(s); };
   var esc = UI.esc;
   var D = null, G = null, R = null, mapNow = null, phase = 'boot', busy = 0, lastChapter = 1, lastTalk = null, holdOn = false;
   var lastName = '王小明', lastBg = 'uni', tracked = '';
-  var MAPNAME = { home: '家附近', camp1: '新訓中心', unit: '營區' };
+  var MAPNAME = { home: '家附近', camp1: '新訓中心', unit: '營區', beach: '海岸據點' };
   var SAVE = 'abg2-save-', ENDK = 'abg2-endings';
   var STATIC = {
     home: { bed: [-14, 1.5], board: [-8, -3.6], shops: [[-4, -18.4, '便利商店']] },
     camp1: { bed: [16, -1.0], board: [-4.2, 4.8], shops: [] },
-    unit: { bed: [14, -9.5], board: [-4.8, 6.2], shops: [[-12, 16.6, '營外小店']] }
+    unit: { bed: [14, -9.5], board: [-4.8, 6.2], shops: [[-12, 16.6, '營外小店']] },
+    beach: { bed: null, board: null, shops: [] }
   };
   var PHONE = { camp1: [9.5, 2.7], unit: [7, -4.2] };
   var UNIT_VIBE = {
@@ -31,6 +32,7 @@
   };
 
   function now() { return Date.now(); }
+  function gv(q) { return G ? E.giverOf(G, q) : q.giver; }
   function npcName(id) { return D.npc[id] ? D.npc[id].name : id; }
   function curQ() { return R && R.q; }
   function overlays() { return UI.dialogOpen() || UI.cardOpen() || UI.panelOpen() || (MG && MG.active) || holdOn || busy > 0; }
@@ -93,6 +95,7 @@
   /* ---------- 儲存 ---------- */
   function saveGame(slot, quiet) {
     if (!G || G.over) return false;
+    if (FPS.active()) { if (!quiet) UI.toast('戰鬥中不能存檔'); return false; }
     try {
       var p = W.pos();
       localStorage.setItem(SAVE + slot, JSON.stringify({ G: G, map: mapNow, pos: p, t: now() }));
@@ -128,7 +131,7 @@
     return { sig: 'u' + (hat ? 'h' : ''), spec: { shirt: '#5b6b3c', pants: '#4d5a33', skin: '#d9a77a', shoes: '#1f1f1f', hat: hat ? '#4d5a33' : null, pack: G.day >= 31 ? '#4d5a33' : null } };
   }
   function dressNow() { if (!G) return; var o = outfit(); W.dress(o.sig, o.spec); }
-  function toneNow(now0) { W.setTone(G && G.period === 2 ? 'night' : (G && G.period === 1 ? 'dusk' : 'day'), now0); }
+  function toneNow(now0) { W.setTone(G && E.beachActive(G) ? 'dusk' : (G && G.period === 2 ? 'night' : (G && G.period === 1 ? 'dusk' : 'day')), now0); }
 
   /* ---------- 地圖進出 ---------- */
   function showPlayUI(on) {
@@ -146,7 +149,7 @@
       mapNow = map;
       var sp = opts.pos || W.spawn();
       W.place(sp.x, sp.z);
-      if (!opts.pos) { var st = STATIC[map]; W.lookAt(st.bed[0], st.bed[1]); W.S.yaw = W.S.face + Math.PI; }
+      if (!opts.pos) { var st = STATIC[map]; if (st.bed) { W.lookAt(st.bed[0], st.bed[1]); W.S.yaw = W.S.face + Math.PI; } else { W.lookAt(0, -20); W.S.yaw = W.S.face + Math.PI; } }
       dressNow(); toneNow(true);
       W.setMode('world');
       rebuildInteract(); refreshMarks();
@@ -156,6 +159,7 @@
   }
   function syncMap(cb) {
     var base = E.baseMap(G);
+    if (E.beachActive(G)) return false;
     if ((!R || !G.quests[R.q.id] || (G.quests[R.q.id].state !== 'active' && !R.ready)) && mapNow !== base && !G.over) {
       var ch = E.chapterOfDay(G.day), txt = null;
       if (ch !== lastChapter) txt = '第 ' + ch + ' 章　' + D.story.chapters[ch - 1].title + '\n' + (CHAP_TEXT[ch] || '');
@@ -177,8 +181,8 @@
   function rebuildInteract() {
     var list = [], st = STATIC[mapNow];
     if (!st || !G) { W.setInteract([]); return; }
-    list.push({ x: st.bed[0], z: st.bed[1], r: 2.2, label: '寢室', prompt: mapNow === 'home' ? '回家休息' : '休息', act: bedMenu });
-    list.push({ x: st.board[0], z: st.board[1], r: 2.4, label: '布告欄', prompt: '看布告欄', act: boardMenu });
+    if (st.bed) list.push({ x: st.bed[0], z: st.bed[1], r: 2.2, label: '寢室', prompt: mapNow === 'home' ? '回家休息' : '休息', act: bedMenu });
+    if (st.board) list.push({ x: st.board[0], z: st.board[1], r: 2.4, label: '布告欄', prompt: '看布告欄', act: boardMenu });
     st.shops.forEach(function (s) { list.push({ x: s[0], z: s[1], r: 2.4, label: s[2], prompt: '買東西', act: openShop }); });
     if (PHONE[mapNow]) list.push({ x: PHONE[mapNow][0], z: PHONE[mapNow][1], r: 2.4, label: '電話亭', prompt: '打電話', act: phoneCall, phoneBase: true });
     Object.keys(W.S.npcs).forEach(function (id) {
@@ -197,8 +201,8 @@
   }
   function refreshMarks() {
     W.clearNpcMarks();
-    E.activeQuests(G).forEach(function (q) { if (E.qstate(G, q.id) === 'ready' && W.hasNpc(q.giver)) W.setNpcMark(q.giver, '?'); });
-    E.listAvailable(G).forEach(function (q) { if (W.hasNpc(q.giver) && !W.S.npcs[q.giver].mark) W.setNpcMark(q.giver, '!'); });
+    E.activeQuests(G).forEach(function (q) { if (E.qstate(G, q.id) === 'ready' && W.hasNpc(gv(q))) W.setNpcMark(gv(q), '?'); });
+    E.listAvailable(G).forEach(function (q) { if (W.hasNpc(gv(q)) && !W.S.npcs[gv(q)].mark) W.setNpcMark(gv(q), '!'); });
   }
   function updateAct() {
     var a = $('#act'), it = W.S.near;
@@ -208,20 +212,21 @@
   /* ---------- HUD 與追蹤 ---------- */
   function refreshHud() { UI.hud(G); updateTrack(true); }
   var lastTrackTxt = '';
-  function boardQuests() { return E.listAvailable(G).filter(function (q) { return !W.hasNpc(q.giver); }); }
+  function boardQuests() { return E.listAvailable(G).filter(function (q) { return !W.hasNpc(gv(q)); }); }
   function trackTarget() {
     var q = R && R.q, txt = '', tgt = null;
     if (R && R.plan && !R.ready) {
       txt = (q.type === 'main' ? '[主線] ' : '[支線] ') + q.title + '：' + (R.hint || R.plan.text);
       tgt = R.target || null;
     } else if (R && R.ready) {
-      txt = '[回報] ' + q.title + '：找「' + npcName(q.giver) + '」';
-      tgt = W.npcPos(q.giver);
+      txt = '[回報] ' + q.title + '：找「' + npcName(gv(q)) + '」';
+      tgt = W.npcPos(gv(q));
     } else {
-      var av = E.listAvailable(G), pres = av.filter(function (x) { return W.hasNpc(x.giver); })[0];
-      if (pres) { txt = '可接任務：找頭上有「!」的人（' + npcName(pres.giver) + '）'; tgt = W.npcPos(pres.giver); }
-      else if (boardQuests().length) { txt = '布告欄有新任務'; tgt = { x: STATIC[mapNow].board[0], z: STATIC[mapNow].board[1] }; }
-      else { txt = '沒有可接的任務。到寢室休息，或快轉到下一個任務日'; tgt = { x: STATIC[mapNow].bed[0], z: STATIC[mapNow].bed[1] }; }
+      var av = E.listAvailable(G), pres = av.filter(function (x) { return W.hasNpc(gv(x)); })[0];
+      if (pres) { txt = '可接任務：找頭上有「!」的人（' + npcName(gv(pres)) + '）'; tgt = W.npcPos(gv(pres)); }
+      else if (boardQuests().length && STATIC[mapNow].board) { txt = '布告欄有新任務'; tgt = { x: STATIC[mapNow].board[0], z: STATIC[mapNow].board[1] }; }
+      else if (STATIC[mapNow].bed) { txt = '沒有可接的任務。到寢室休息，或快轉到下一個任務日'; tgt = { x: STATIC[mapNow].bed[0], z: STATIC[mapNow].bed[1] }; }
+      else { txt = '戰況緊急'; tgt = null; }
     }
     return { txt: txt, tgt: tgt };
   }
@@ -307,6 +312,7 @@
     var pl = R.plan, q = R.q;
     R.pts = placePts(pl);
     R.inter = [];
+    if (q.id === 'ch4_beach_command') W.setNpcLying('npc_sgt_wang', true);
     if (pl.limit) R.timer = { left: pl.limit + (pl.kind === 'reach' || pl.kind === 'carry' || pl.kind === 'escort' ? travelTime(pl) : 0), total: 0 };
     if (R.timer) R.timer.total = R.timer.left;
     switch (pl.kind) {
@@ -342,6 +348,11 @@
         R.inter.push({ x: R.pts[0].x, z: R.pts[0].z, r: 2.8, label: R.pts[0].label, prompt: '開始', act: runOverlay });
         break;
       case 'check': break;
+      case 'wave': setupWaveStep(); break;
+      case 'auto': setTimeout(function () { if (R && R.plan === pl) stepSuccess(); }, 60); break;
+      case 'radio': setTimeout(function () { if (R && R.plan === pl) radioStep(); }, 300); break;
+      case 'bdecide': setTimeout(function () { if (R && R.plan === pl) bdecideStep(); }, 450); break;
+      case 'fate': setTimeout(function () { if (R && R.plan === pl) fateStep(); }, 450); break;
       case 'decide':
         R.inter.push({ x: R.pts[0].x, z: R.pts[0].z, r: 3, label: '決定', prompt: '做決定', act: decideStep });
         break;
@@ -349,7 +360,7 @@
         R.inter.push({ x: R.pts[0].x, z: R.pts[0].z, r: 2.8, label: R.pts[0].label, prompt: pl.verb, act: restStep });
         break;
     }
-    if (pl.kind !== 'carry') updateMarks();
+    if (pl.kind !== 'carry' && pl.kind !== 'bdecide' && pl.kind !== 'fate') updateMarks();
     applyInteract();
     updateTimer();
     if (pl.kind === 'check') setTimeout(function () { if (R && R.plan === pl) doCheck(); }, 350);
@@ -395,20 +406,21 @@
   }
   function afterQuestEnd() {
     saveGame(0, true);
+    if (E.beachActive(G)) { chainNext(); return; }
     var moved = syncMap(function () { startTracked(); });
     if (!moved) startTracked();
   }
   function readyFlow(q) {
     R = { q: q, ready: true, inter: [], pts: [] };
-    if (!W.hasNpc(q.giver) || lastTalk === q.giver) { turnIn(q, true); return; }
+    if (q.event || !W.hasNpc(gv(q)) || lastTalk === gv(q)) { turnIn(q, true); return; }
     refreshMarks(); applyInteract(); updateTrack(true);
-    UI.toast('任務目標完成，回去找「' + npcName(q.giver) + '」回報', '', 3200);
+    UI.toast('任務目標完成，回去找「' + npcName(gv(q)) + '」回報', '', 3200);
   }
   function turnIn(q, auto) {
     var line = (q.dialogue && q.dialogue.complete) || '任務完成。';
     var go = function () { completeQuest(q); };
     if (auto) { go(); return; }
-    UI.dialog({ name: npcName(q.giver), lines: [line], btn: '回報完成', done: go });
+    UI.dialog({ name: npcName(gv(q)), lines: [line], btn: '回報完成', done: go });
   }
   function completeQuest(q) {
     var out = E.newOut(), done = (q.dialogue && q.dialogue.complete) || '';
@@ -416,6 +428,7 @@
     E.complete(G, q.id, out);
     lastTalk = null;
     var body = [done].filter(Boolean);
+    if (q.id === 'ch4_beach_relief') body = body.concat(reliefSummary());
     (out.msgs || []).forEach(function (m) { body.push(m); });
     resetRunner();
     Sfx.sfx('success');
@@ -423,9 +436,18 @@
   }
 
   /* 各步驟處理 */
+  function variantOk(cond) { var neg = cond.charAt(0) === '!', f = neg ? cond.slice(1) : cond; return neg ? !G.flags[f] : !!G.flags[f]; }
+  function memorialLines() {
+    var q = R.q, lines = [q.dialogue.start];
+    (q.dialogueVariants || []).forEach(function (v) { if (variantOk(v.if)) lines.push(v.line); });
+    return lines;
+  }
   function talkLines(name, npcId, first) {
-    var N = npcId && D.npc[npcId], l = N && N.lines && N.lines.length ? N.lines[Math.floor(Math.random() * N.lines.length)] : GEN_TALK[Math.floor(Math.random() * GEN_TALK.length)];
-    var lines = [name + '：「' + String(l).replace(/^「|」$/g, '') + '」'];
+    var N = npcId && D.npc[npcId], vv = npcId ? E.npcVariantLine(G, npcId) : null;
+    if (!vv && npcId && G.flags.beach_survived && D.npcVar[npcId] && D.npcVar[npcId].default) vv = D.npcVar[npcId].default;
+    var pool = vv || (N && N.lines && N.lines.length ? N.lines : null);
+    var l = pool ? pool[Math.floor(Math.random() * pool.length)] : GEN_TALK[Math.floor(Math.random() * GEN_TALK.length)];
+    var lines = [/^（/.test(String(l)) ? String(l) : name + '：「' + String(l).replace(/^「|」$/g, '') + '」'];
     if (first && R.q.dialogue && R.q.dialogue.progress && !R.progressShown) { lines.push(R.q.dialogue.progress); R.progressShown = true; }
     return lines;
   }
@@ -437,7 +459,7 @@
     G.flagsTalk = null;
     var firstTalk = R.q.objectives.slice(0, R.idx).every(function (o) { return o.type !== 'talk'; });
     UI.dialog({
-      name: name, lines: talkLines(name, pid, !firstTalk || R.idx > 0 || true), btn: '好', done: function () {
+      name: name, lines: (R.q.id === 'ch5_beach_memorial' && pid === 'npc_counselor_lee') ? memorialLines() : talkLines(name, pid, !firstTalk || R.idx > 0 || true), btn: '好', done: function () {
         p.done = true; R.done++;
         if (pid) lastTalk = pid;
         var aff = pid ? E.talkNpc(G, pid, E.newOut()) : null;
@@ -490,6 +512,8 @@
           return;
         }
       }
+      if (pl.special === 'radar') { radarReport(finish); return; }
+      if (pl.special === 'rollcall') { rollCall(finish); return; }
       var first = i === 0 && R.pts.length === 1 ? true : false;
       UI.toast(pl.verb + '了「' + p.label + '」', '', 1800);
       void first;
@@ -497,6 +521,7 @@
     });
   }
   function onPickup(pk) {
+    if (pk.id === 'supply') { supplyPick(pk); return; }
     if (!R || !R.plan) return;
     if (R.plan.kind === 'collect' && typeof pk.id === 'number') {
       var p = R.pts[pk.id];
@@ -510,6 +535,7 @@
   }
   function setupCarry() {
     var pl = R.plan;
+    if (pl.crates && !R.crateChosen) { chooseCrates(); return; }
     if (pl.pickup) {
       R.phase = 1; R.pickupPt = { x: pl.pickup.x, z: pl.pickup.z };
       var f = W.freeSpot(pl.pickup.x, pl.pickup.z); R.pickupPt = { x: f[0], z: f[1] };
@@ -543,6 +569,7 @@
       return;
     }
     if (out.fx.length) UI.toastFx(out.fx);
+    if (pl.crates) crateDelivered();
     var name = pl.dstNpc ? npcName(pl.dst.npc) : pl.dst.label;
     if (pl.dstNpc) {
       W.faceNpc(pl.dst.npc);
@@ -642,6 +669,12 @@
           updateMarks();
           if (R.pts.every(function (x) { return x.done; })) { stepSuccess(); return; }
         }
+      } else if (pl.kind === 'wave' && !R.waveStarted && R.pts[0] && Math.hypot(p.x - R.pts[0].x, p.z - R.pts[0].z) < 3.4) {
+        startWaveNow(); return;
+      } else if (pl.kind === 'wave' && R.rescueCarry) {
+        R.carryT += dt;
+        if (Math.hypot(p.x - BUNKER[0], p.z - BUNKER[1]) < 3) { rescueDone(true); return; }
+        if (R.carryT > 28) { rescueDone(false); return; }
       } else if (pl.kind === 'carry' && R.phase === 2 && !pl.dstNpc) {
         if (Math.hypot(p.x - pl.dst.x, p.z - pl.dst.z) < 2.6) { R.phase = 3; deliver(); return; }
       }
@@ -677,7 +710,7 @@
       if (f) { refreshHud(); f(step); return; }
       refreshHud();
       if (G.over) { endGameFlow(); return; }
-      chapterCheck(function () { refreshMarks(); toneNow(); dressNow(); done && done(); });
+      chapterCheck(function () { refreshMarks(); toneNow(); dressNow(); if (E.beachPending(G) && !beachBusy) { maybeStartBeach(); return; } done && done(); });
     }
     step();
   }
@@ -726,7 +759,7 @@
   /* ---------- NPC 與接任務 ---------- */
   function questDialogue(q) { return (q.dialogue && q.dialogue.start) || q.description; }
   function acceptDialog(q, npcId) {
-    var name = npcId ? npcName(npcId) : npcName(q.giver);
+    var name = npcId ? npcName(npcId) : npcName(gv(q));
     var objs = q.objectives.map(function (o, i) { return (i + 1) + '. ' + objText(o); }).join('\n');
     UI.dialog({
       name: name, lines: [questDialogue(q), '【' + (q.type === 'main' ? '主線' : '支線') + '任務】' + q.title + '\n' + q.description, '目標：\n' + objs + '\n\n獎勵：' + rewardText(q)],
@@ -748,13 +781,13 @@
       }
       if (pl.kind === 'carry' && R.phase === 2 && pl.dstNpc && pl.dst.npc === id) { R.phase = 3; deliver(); return; }
     }
-    var rq = E.activeQuests(G).filter(function (q) { return E.qstate(G, q.id) === 'ready' && q.giver === id; })[0];
+    var rq = E.activeQuests(G).filter(function (q) { return E.qstate(G, q.id) === 'ready' && gv(q) === id; })[0];
     if (rq) { W.faceNpc(id); turnIn(rq, false); return; }
     W.faceNpc(id);
     var N = D.npc[id] || {}, name = npcName(id);
-    var avail = E.listAvailable(G).filter(function (q) { return q.giver === id; });
+    var avail = E.listAvailable(G).filter(function (q) { return gv(q) === id; });
     var blocked = D.qList.filter(function (q) {
-      if (q.giver !== id) return false;
+      if (gv(q) !== id) return false;
       var a = E.availability(G, q);
       return !a.ok && a.reason && /^(需要|薪餉不足|太累|冷卻|受傷|禁閉|住院)|不能/.test(a.reason);
     });
@@ -775,7 +808,7 @@
   }
   function boardMenu() {
     var qs = boardQuests();
-    var choices = qs.map(function (q) { return { t: '【' + (q.type === 'main' ? '主線' : '支線') + '】' + q.title + '（來自' + npcName(q.giver) + '）', cls: 'go', fn: function () { acceptDialog(q, q.giver); } }; });
+    var choices = qs.map(function (q) { return { t: '【' + (q.type === 'main' ? '主線' : '支線') + '】' + q.title + '（來自' + npcName(gv(q)) + '）', cls: 'go', fn: function () { acceptDialog(q, gv(q)); } }; });
     choices.push({ t: '離開', fn: function () { } });
     UI.dialog({ name: '布告欄', lines: [qs.length ? '貼著幾張通知與來信，有幾件事需要你去處理。' : '布告欄上目前沒有新的通知。'], choices: choices });
   }
@@ -847,18 +880,18 @@
       act.forEach(function (q) {
         var st = G.quests[q.id], isTrack = G.track === q.id;
         h += '<div class="qcard' + (isTrack ? ' tr' : '') + '"><h4><span class="tag ' + q.type + '">' + (q.type === 'main' ? '主線' : '支線') + '</span>' + esc(q.title) + (isTrack ? '（追蹤中）' : '') + '</h4>' +
-          '<div class="note">第 ' + q.chapter + ' 章 · 期限第 ' + q.dayRange[1] + ' 天 · 委託人：' + esc(npcName(q.giver)) + '</div><p>' + esc(q.description) + '</p><ul>' +
+          '<div class="note">第 ' + q.chapter + ' 章 · 期限第 ' + q.dayRange[1] + ' 天 · 委託人：' + esc(npcName(gv(q))) + '</div><p>' + esc(q.description) + '</p><ul>' +
           q.objectives.map(function (o, i) { return '<li class="' + (i < st.step ? 'done' : i === st.step && st.state === 'active' ? 'cur' : '') + '">' + esc(objText(o)) + '</li>'; }).join('') + '</ul>' +
-          (st.state === 'ready' ? '<p class="note">目標已完成，回去找「' + esc(npcName(q.giver)) + '」回報。</p>' : '') +
+          (st.state === 'ready' ? '<p class="note">目標已完成，回去找「' + esc(npcName(gv(q))) + '」回報。</p>' : '') +
           '<div class="note">獎勵：' + esc(rewardText(q)) + '</div><div class="row"><button data-a="track" data-q="' + q.id + '"' + (isTrack ? ' disabled' : '') + '>追蹤</button><button data-a="drop" data-q="' + q.id + '">放棄任務</button></div></div>';
       });
     } else if (tab === 'avail') {
       var av = E.listAvailable(G);
       if (!av.length) h += '<p class="note">現在沒有可接的任務。時間過去、章節推進，或抽到單位之後，會有新的任務出現。</p>';
       av.forEach(function (q) {
-        var present = W.hasNpc(q.giver);
+        var present = W.hasNpc(gv(q));
         h += '<div class="qcard"><h4><span class="tag ' + q.type + '">' + (q.type === 'main' ? '主線' : '支線') + '</span>' + esc(q.title) + '</h4>' +
-          '<div class="note">期限第 ' + q.dayRange[1] + ' 天 · ' + (present ? '在這裡找「' + esc(npcName(q.giver)) + '」' : (where(q.giver) ? '到布告欄接取（來自' + esc(npcName(q.giver)) + '）' : '到布告欄接取')) + '</div>' +
+          '<div class="note">期限第 ' + q.dayRange[1] + ' 天 · ' + (present ? '在這裡找「' + esc(npcName(gv(q))) + '」' : (where(gv(q)) ? '到布告欄接取（來自' + esc(npcName(gv(q))) + '）' : '到布告欄接取')) + '</div>' +
           '<p>' + esc(q.description) + '</p><div class="note">獎勵：' + esc(rewardText(q)) + '</div></div>';
       });
       var blocked = D.qList.filter(function (q) {
@@ -894,7 +927,7 @@
     if (!UI.panelOpen()) UI.panel('背包與裝備', function () { W.setMode('world'); refreshHud(); });
     UI.panelTabs(null);
     var h = '<p class="note">背包 ' + E.bagUsed(G) + ' / ' + E.bagSize() + ' 格　薪餉 ' + G.money + ' 元' + (G.carry ? '　搬運中：' + esc(G.carry.name) : '') + '</p><h3>裝備</h3><div class="grid2">';
-    var slots = { head: '頭部', body: '身上', feet: '腳部', accessory: '配件' };
+    var slots = { head: '頭部', body: '身上', feet: '腳部', accessory: '配件', weapon: '武器' };
     D.rpg.items.equipSlots.forEach(function (sl) {
       var id = G.equip[sl], it = id && D.items[id];
       h += '<div class="slot"><b>' + slots[sl] + '</b>' + (it ? esc(it.name) + '<small class="note"> ' + esc(effText(it.effect) || '無加成') + '</small>' : '（空）') + (it ? '<div class="row"><button data-a="un" data-s="' + sl + '">卸下</button></div>' : '') + '</div>';
@@ -1011,7 +1044,7 @@
   /* ---------- 新遊戲、標題、讀檔 ---------- */
   function title() {
     phase = 'title'; G = null; R = null; busy = 0;
-    UI.closeCard(); UI.closeDialog(); UI.closePanel(); MG.abort();
+    UI.closeCard(); UI.closeDialog(); UI.closePanel(); MG.abort(); FPS.stop(true); document.body.classList.remove('combat'); beachBusy = false;
     showPlayUI(false); $('#hold').hidden = true; holdOn = false;
     cleanupStep();
     W.loadMap('camp1', 'infantry', false); mapNow = 'camp1';
@@ -1065,7 +1098,319 @@
     if (!d) { UI.toast('找不到存檔'); title(); return; }
     G = d.G; G.flags = G.flags || {}; G.carry = null;
     UI.closeCard(); startPlay();
-    enterMap(d.map && STATIC[d.map] ? d.map : E.baseMap(G), { pos: d.pos, text: '讀取存檔…' }, function () { startTracked(); UI.toast('讀取完成'); });
+    enterMap(d.map && STATIC[d.map] ? d.map : E.baseMap(G), { pos: d.pos, text: '讀取存檔…' }, function () { applyFlagWorld(); if (E.beachPending(G)) { maybeStartBeach(); return; } startTracked(); UI.toast('讀取完成'); });
+  }
+
+
+  /* ================= 漢光：海岸（強制章節） ================= */
+  var beachBusy = false, BUNKER = [-10, -5.95];
+  var ZONES = { wave1: { x: -10, z: -6, r: 32 }, wave2: { x: 6, z: -14, r: 44 }, wave3: { x: -31, z: 8, r: 28 }, wave4: { x: -10, z: -6, r: 32 } };
+  var ANCHORS = { wave1: BUNKER, wave2: null, wave3: [-29.4, 10.5], wave4: BUNKER };
+  function applyFlagWorld() { W.npcFilter = function (id) { return !G || E.npcPresent(G, id); }; }
+  function beachMode(on) { document.body.classList.toggle('combat', !!on); if (on) $('#act').hidden = true; }
+  function blackRadio(lines, cb) {
+    busy++; UI.fade(true);
+    var i = 0, gap = MG.auto ? 260 : 2400;
+    setTimeout(function next() {
+      if (i >= lines.length) {
+        UI.fadeText('', false);
+        setTimeout(function () { UI.fade(false); setTimeout(function () { busy--; if (cb) cb(); }, 520); }, 260);
+        return;
+      }
+      UI.fadeText(lines[i++], true); Sfx.sfx('radio'); setTimeout(next, gap);
+    }, 820);
+  }
+  function maybeStartBeach() {
+    if (beachBusy || !E.beachPending(G) || G.over) return false;
+    beachBusy = true; resetRunner();
+    var chap = D.beach ? D.beach.chapter : null, mobile = W.isMobileLike();
+    function go(diff) {
+      var aim = !!($('#aimChk') && $('#aimChk').checked);
+      E.startBeach(G, { diff: diff, aim: aim }); G.track = 'ch4_beach_prep';
+      Sfx.sfx('alarm');
+      enterMap('beach', { text: '漢光演習 · 第 240 天\n海岸據點' }, function () {
+        beachBusy = false; lastChapter = E.chapterOfDay(G.day);
+        UI.dialog({ name: '漢光演習', lines: [D.q.ch4_beach_prep.dialogue.start], btn: '繼續', done: startTracked });
+      });
+    }
+    UI.card({
+      kicker: '第 240 天 · 漢光演習', title: '漢光：海岸',
+      body: [(chap && chap.summary) || '漢光演習中海岸據點遭不明敵軍突襲。', '所有兵種都被調來支援海岸據點，這一章不能跳過。約一半是射擊，一半是劇情：平常是第三人稱，按「舉槍」才會切成第一人稱射擊。你可能在戰鬥中倒下，身邊的人也可能犧牲。', '選擇難度。硬派是預設：彈藥數不顯示、敵人更準、傷害更高。劇情向不會倒下。輔助瞄準可以隨時開關（硬派開輔助的經驗值打 9 折）。'],
+      extra: '<label class="field" style="display:flex;gap:8px;align-items:center;color:var(--fg)"><input type="checkbox" id="aimChk"' + (mobile ? ' checked' : '') + '> 開啟輔助瞄準</label>',
+      buttons: [{ t: '硬派（預設）', cls: 'go', fn: function () { go('hardcore'); } }, { t: '標準', fn: function () { go('standard'); } }, { t: '劇情向（不會倒下）', fn: function () { go('story'); } }], sfx: 'alarm'
+    });
+    return true;
+  }
+  function chainNext() {
+    var q = E.beachNext(G);
+    if (!q) { startTracked(); return; }
+    E.accept(G, q.id); G.track = q.id;
+    var line = q.dialogue && q.dialogue.start;
+    if (line) UI.dialog({ name: '【' + q.title + '】', lines: [line], btn: '繼續', done: startTracked }); else startTracked();
+  }
+  function waveNum(id) { return +id.replace('wave', ''); }
+  function setupWaveStep() {
+    var pl = R.plan; R.waveStarted = false; R.rescueCarry = false;
+    if (G.beach.medevac) { UI.toast('你在後送途中，這一波由其他人守住了。', '', 3000); setTimeout(function () { if (R && R.plan === pl) stepSuccess(); }, 500); return; }
+    if (pl.wave !== 'wave1') spawnSupplies(pl);
+    updateMarks();
+    UI.toast('到定位後，戰鬥會自動開始。平常用第三人稱，按「舉槍」切成第一人稱射擊。', '', 4000);
+  }
+  function spawnSupplies(pl) {
+    var n = 1 + Math.floor(Math.random() * 2), a = pl.pts[0];
+    for (var i = 0; i < n; i++) {
+      var f = W.freeSpot(a.x + (i ? 3.2 : -3.2), a.z + 3.4);
+      W.addPickup(f[0], f[1], 'supply', 'pile');
+    }
+    UI.toast('補給箱送到了（每箱 +2 個彈匣），可以先去拿。', '', 3200);
+  }
+  function supplyPick(pk) {
+    if (holdOn || busy) return;
+    var b = G.beach; if (!b.ammo) b.ammo = { mag: 30, mags: Math.max(0, b.mags - 1) };
+    hold('補給彈匣…', 2000, function () {
+      W.removePickup(pk);
+      b.ammo.mags = Math.min(D.fps.ammo.maxMags - 1, b.ammo.mags + D.fps.ammo.resupply.perCrate);
+      if (FPS.active()) FPS.addMags(D.fps.ammo.resupply.perCrate);
+      UI.toast('補到了彈匣', 'up');
+    });
+  }
+  function startWaveNow() {
+    var pl = R.plan, id = pl.wave, info = E.waveEnemies(G, id), w = info.wave, b = G.beach;
+    R.waveStarted = true; W.setMarks([]);
+    if (!b.ammo) b.ammo = { mag: 30, mags: Math.max(0, b.mags - 1) };
+    R.snap = { hp: G.hp, ammo: { mag: b.ammo.mag, mags: b.ammo.mags }, saved: G.flags.saved_civilian, hurt: G.flags.civilian_hurt };
+    var zone = ZONES[id];
+    if (id === 'wave4' && b.cmd === 'fallback') zone = { x: 0, z: 14, r: 46 };
+    beachMode(true); W.setMode('world');
+    FPS.startWave({ id: id, num: waveNum(id), name: w.name, enemies: info.enemies, holdSec: w.holdSec || 0, zone: zone, anchor: ANCHORS[id], lin: id === 'wave3', mag: b.ammo.mag, mags: b.ammo.mags, carrying: !!pl.rescue, grace: id === 'wave1' ? 5 : 4 });
+    if (pl.rescue) rescueStart();
+  }
+  function rescueStart() {
+    var q = R.q;
+    UI.dialog({
+      name: '海邊阿伯', lines: [q.dialogue.start, '火線就在阿伯身後。揹他回碉堡，移動速度會慢 40%，而且是在子彈底下；或是喊他趴下，自己守住位置。阿伯不會陣亡，最多受傷。'],
+      choices: [
+        { t: '衝出去把阿伯背回來', cls: 'go', fn: function () { carryUncle(); } },
+        { t: '大喊叫他趴下別動', fn: function () { stayDown(); } }
+      ]
+    });
+  }
+  function carryUncle() {
+    var p = W.pos();
+    W.hideNpc('npc_uncle_fisher', true);
+    W.setFollowers([{ preset: 'gpa', name: '海邊阿伯' }], p.x, p.z);
+    W.speed(0.6);
+    R.rescueCarry = true; R.carryT = 0; FPS.setCarrying(true);
+    W.setMarks([{ x: BUNKER[0], z: BUNKER[1] }]); R.target = { x: BUNKER[0], z: BUNKER[1] }; R.hint = '把阿伯背回碉堡'; updateTrack(true);
+    UI.toast('把阿伯背回碉堡！（移動速度 −40%）', '', 3000);
+  }
+  function rescueDone(ok) {
+    var out = E.newOut(), q = R.q;
+    R.rescueCarry = false; W.speed(1); W.clearFollowers(); W.setMarks([]); FPS.setCarrying(false);
+    if (ok) {
+      G.flags.saved_civilian = 1; E.addAttr(G, 'o', 2, out, q.id); G.honor = Math.min(10, G.honor + 1);
+      UI.toast('把阿伯背回碉堡了！', 'up'); Sfx.sfx('success');
+      W.moveNpc('npc_uncle_fisher', -4.5, -3.2); W.hideNpc('npc_uncle_fisher', false);
+    } else {
+      G.hp = Math.max(1, G.hp - 25); E.inflictInjury(G, 'inj_sprain', out);
+      UI.toast('腳下一滑，阿伯摔在地上，你也扭傷了腳踝', 'dn', 3600);
+      W.moveNpc('npc_uncle_fisher', -4.5, -3.2); W.hideNpc('npc_uncle_fisher', false);
+    }
+    refreshHud(); W.place(BUNKER[0], BUNKER[1]); FPS.enterCover();
+    if (out.events.length) presentOut(out, { noFx: true }, function () { });
+  }
+  function stayDown() {
+    var out = E.newOut(), q = R.q;
+    E.addAttr(G, 'd', 1, out, q.id);
+    var hurt = E.civilianStay(G);
+    UI.toast(hurt ? '阿伯沒能躲過流彈，腿受了傷（不會陣亡）' : '阿伯趴低躲過了這一輪火力', hurt ? 'dn' : 'up', 3200);
+    W.place(BUNKER[0], BUNKER[1]); FPS.setCarrying(false); FPS.enterCover(); refreshHud();
+  }
+
+  function installBeachHooks() {
+    FPS.init({
+      G: function () { return G; },
+      onKill: function () { var o = E.newOut(); E.beachKill(G, o); UI.hud(G); },
+      onHp: function () { UI.hud(G); },
+      onWaveEnd: waveEnded,
+      onDesertion: desertion,
+      onLinDown: function () { }
+    });
+  }
+  /* 倒下 → 黑畫面與無線電 → 兩種選擇 */
+  function waveDown(s) {
+    var pl = R.plan, id = pl.wave;
+    W.clearFollowers(); W.speed(1); R.rescueCarry = false;
+    blackRadio(['（畫面轉暗）', '無線電：「……一名弟兄倒下了，重複，一名弟兄倒下了……」', '連長：「醫護兵，過去！其他人，守住！」'], function () {
+      UI.dialog({
+        name: '倒下', lines: ['你的視線慢慢暗下來，耳邊只剩無線電的雜訊。', '要怎麼辦？'],
+        choices: [
+          { t: '重玩這一波（回到這一波開頭，彈藥與體力恢復）', cls: 'go', fn: function () { retryWaveNow(id); } },
+          { t: '受傷後送（劇情繼續，跳過剩下的波次；結局會受影響）', fn: function () { medevacNow(); } }
+        ]
+      });
+    });
+  }
+  function retryWaveNow(id) {
+    var pl = R.plan, b = G.beach;
+    E.retryWave(G, id);
+    G.hp = R.snap.hp; b.ammo = { mag: R.snap.ammo.mag, mags: R.snap.ammo.mags };
+    G.flags.saved_civilian = R.snap.saved; G.flags.civilian_hurt = R.snap.hurt;
+    if (!R.snap.saved) delete G.flags.saved_civilian; if (!R.snap.hurt) delete G.flags.civilian_hurt;
+    W.hideNpc('npc_uncle_fisher', false);
+    var a = pl.pts[0];
+    busy++; UI.fade(true);
+    setTimeout(function () {
+      W.place(a.x, a.z); W.reviveCovers();
+      UI.fade(false); setTimeout(function () { busy--; refreshHud(); R.waveStarted = false; startWaveNow(); }, 450);
+    }, 600);
+  }
+  function medevacNow() {
+    var out = E.newOut(), pl = R.plan;
+    E.medevac(G, out); W.clearFollowers(); W.hideNpc('npc_uncle_fisher', false);
+    refreshHud();
+    presentOut(out, { noFx: true }, function () { if (R && R.plan === pl) stepSuccess(); });
+  }
+  function waveEnded(how, s) {
+    if (!R || !R.plan || R.plan.kind !== 'wave') { FPS.stop(true); beachMode(false); return; }
+    var pl = R.plan, id = pl.wave, b = G.beach;
+    b.ammo = { mag: s.mag, mags: s.mags };
+    FPS.stop(true); beachMode(false); W.speed(1); W.setCrouch(false); W.clearFollowers(); R.rescueCarry = false;
+    if (how === 'clear') {
+      var out = E.newOut(); E.waveClear(G, id, out); UI.toastFx(out.fx); Sfx.sfx('success');
+      UI.toast('第 ' + waveNum(id) + ' 波守住了', 'up', 2600); refreshHud();
+      setTimeout(function () { if (R && R.plan === pl) stepSuccess(); }, 900);
+    } else if (how === 'lin') {
+      blackRadio(['（耳機裡只剩雜訊）', '小林倒在線盤旁。通訊沒有接通。'], function () { failQuest('小林重傷撤離（不會陣亡），通訊沒有接通，叫不到砲兵支援。'); });
+    } else if (how === 'down') waveDown(s);
+  }
+  function desertion() {
+    FPS.stop(true); beachMode(false); resetRunner(); W.speed(1);
+    UI.card({
+      kicker: '軍紀', title: '擅自撤離', body: ['你離開戰區超過 10 秒，而且沒有向上回報。', '連長在無線電裡只說了一句：「憲兵會處理。」'], buttons: [{
+        t: '繼續', fn: function () {
+          var out = E.newOut(); E.triggerEvent(G, 'event_court', out); presentOut(out, {}, function () { });
+        }
+      }], sfx: 'alarm'
+    });
+  }
+  /* 劇情橋段 */
+  function radioStep() {
+    var q = R.q, pl = R.plan;
+    Sfx.sfx('radio');
+    UI.dialog({ name: '無線電', lines: [q.dialogue.progress, '小林：「通了！連長，請求砲兵支援！」', '連長（無線電）：「砲兵支援已出發，再撐一下。」'], btn: '繼續', done: function () { if (R && R.plan === pl) stepSuccess(); } });
+  }
+  function bdecideStep() {
+    var w = R.plan.which;
+    if (w === 'aid') aidDecide(); else if (w === 'command') cmdDecide(); else memorialDecide();
+  }
+  function aidDecide() {
+    var q = R.q, pl = R.plan;
+    UI.dialog({
+      name: '阿凱', lines: [q.dialogue.start, q.description],
+      choices: [
+        {
+          t: '放下槍幫他包紮', cls: 'go', fn: function () {
+            W.setMode('ui');
+            MG.run('first_aid', {}, function (raw) {
+              if (!R || R.plan !== pl) return;
+              var out = E.newOut(), res = E.minigameResult(G, q.id, 'first_aid', raw, out);
+              G.beach.aidScore = res.score; G.beach.tough = false;
+              UI.card({ kicker: '包紮止血', title: res.score >= 60 ? (res.score >= 85 ? '處理得很漂亮' : '血止住了') : '手忙腳亂', body: [q.dialogue.progress, '表現 ' + res.raw + ' 分，總分 ' + res.score + '（60 分以上阿凱只會受傷）。'], fx: out.fx, buttons: [{ t: '繼續', fn: function () { stepSuccess(); } }], sfx: res.score >= 60 ? 'success' : 'fail' });
+            });
+          }
+        },
+        { t: '叫他自己壓住，繼續射擊（阿凱陣亡機率 +15%）', fn: function () { G.beach.tough = true; G.beach.aidScore = null; E.addXp(G, 5, E.newOut()); UI.toast('阿凱咬著牙：「我、我自己來……」'); stepSuccess(); } }
+      ]
+    });
+  }
+  function cmdDecide() {
+    var q = R.q, pl = R.plan, opts = q.objectives[0].options;
+    UI.dialog({
+      name: '代理指揮', lines: [q.dialogue.progress, '王班長倒在擔架上，所有人都在看你。選擇會改變敵人的數量，也會影響王班長的生死。'],
+      choices: opts.map(function (o) {
+        var tip = o.id === 'hold' ? '（敵人 ×1.0，軍紀 +2、榮譽假 +1）' : o.id === 'fallback' ? '（敵人 ×0.7，經無線電回報後退守第二線）' : '（敵人 ×1.2，經驗 ×1.3，體能 +2、袍澤 +1）';
+        return {
+          t: o.label + tip, cls: o.id === 'hold' ? 'go' : '', fn: function () {
+            var out = E.newOut(); G.beach.cmd = o.id;
+            if (o.id === 'hold') { E.addAttr(G, 'd', 2, out, q.id); G.honor = Math.min(10, G.honor + 1); }
+            else if (o.id === 'fallback') { G.flags.beach_fallback = 1; }
+            else { E.addAttr(G, 'b', 2, out, q.id); E.addAttr(G, 'o', 1, out, q.id); }
+            UI.toastFx(out.fx); refreshHud();
+            if (R && R.plan === pl) stepSuccess();
+          }
+        };
+      })
+    });
+  }
+  function memorialDecide() {
+    var q = R.q, pl = R.plan;
+    UI.dialog({
+      name: '追思', lines: [q.dialogue.progress],
+      choices: [
+        { t: '上台說幾句', cls: 'go', fn: function () { var out = E.newOut(); E.addAttr(G, 'm', 2, out, q.id); E.addAttr(G, 'o', 1, out, q.id); UI.toastFx(out.fx); if (R && R.plan === pl) stepSuccess(); } },
+        { t: '默默敬禮', fn: function () { var out = E.newOut(); E.addAttr(G, 'm', 1, out, q.id); UI.toastFx(out.fx); if (R && R.plan === pl) stepSuccess(); } }
+      ]
+    });
+  }
+  function fateStep() {
+    var q = R.q, pl = R.plan, out = E.newOut();
+    if (pl.which === 'akai') {
+      var res = E.akaiFate(G, G.beach.aidScore, !!G.beach.tough, out);
+      if (res.kia) {
+        W.hideNpc('npc_akai', true);
+        blackRadio(['（黑畫面）', q.dialogue.fail.replace('［黑畫面］', ''), '「……阿凱。」'], function () { failQuest('阿凱沒有撐過來。'); });
+      } else UI.dialog({ name: '阿凱', lines: [q.dialogue.complete], btn: '繼續', done: function () { if (R && R.plan === pl) stepSuccess(); } });
+    } else {
+      var rw = E.wangFate(G, out);
+      W.setNpcLying('npc_sgt_wang', false);
+      if (rw.kia) {
+        W.hideNpc('npc_sgt_wang', true);
+        blackRadio(['（黑畫面）', q.dialogue.fail.replace('［黑畫面］', ''), '連長：「……收到。所有人，繼續守住。」'], function () { if (R && R.plan === pl) stepSuccess(); });
+      } else UI.dialog({ name: '王班長', lines: [q.dialogue.complete], btn: '繼續', done: function () { if (R && R.plan === pl) stepSuccess(); } });
+    }
+  }
+  function chooseCrates() {
+    var pl = R.plan;
+    UI.dialog({
+      name: '王班長', lines: [R.q.dialogue.start, '每搬一箱，稍後多 1 個彈匣，但疲勞 +8。目前疲勞 ' + G.fatigue + '，疲勞太高準心會晃得更厲害。要搬幾箱到碉堡？'],
+      choices: [
+        { t: '2 箱（建議）', cls: 'go', fn: function () { crateChosen(2); } }, { t: '4 箱（最多）', fn: function () { crateChosen(4); } },
+        { t: '3 箱', fn: function () { crateChosen(3); } }, { t: '1 箱', fn: function () { crateChosen(1); } }, { t: '不搬', fn: function () { crateChosen(0); } }
+      ]
+    });
+    void pl;
+  }
+  function crateChosen(n) {
+    var pl = R.plan; R.crateChosen = true; pl.qty = n;
+    if (n === 0) { G.beach.crates = 0; G.beach.mags = D.fps.ammo.startMagsBase; stepSuccess(); return; }
+    setupCarry();
+  }
+  function crateDelivered() {
+    var pl = R.plan, n = pl.qty;
+    G.beach.crates = n; G.beach.mags = Math.min(D.fps.ammo.maxMags, D.fps.ammo.startMagsBase + n * D.fps.ammo.fromCarry.perCrate);
+    var out = E.newOut(); E.addFatigue(G, n * D.fps.ammo.fromCarry.fatiguePerCrate, out, true); UI.toastFx(out.fx);
+    UI.toast('碉堡裡現在有 ' + G.beach.mags + ' 個彈匣', 'up');
+  }
+  function radarReport(cb) {
+    var q = R.q; Sfx.sfx('alarm');
+    UI.dialog({ name: '無線電', lines: [q.dialogue.start, q.dialogue.progress], btn: '全員戰備', done: function () { Sfx.sfx('alarm'); cb(); } });
+  }
+  function rollCall(cb) {
+    var q = R.q, lines = [q.dialogue.start, q.dialogue.progress], F = G.flags;
+    lines.push(F.akai_kia ? '「阿凱。」……沒有人回答。' : '「阿凱！」「到……」他在擔架上舉起了手。');
+    lines.push(F.sgt_wang_kia ? '「王班長。」……沒有人回答。' : '「王班長！」「……到。」他的聲音很小，但全連都聽見了。');
+    if (F.civilian_hurt) lines.push('海邊阿伯坐在救護車旁，腿上包著紗布，對你揮了揮手。');
+    UI.dialog({ name: '點名', lines: lines, btn: '繼續', done: cb });
+  }
+  function reliefSummary() {
+    var F = G.flags, s = [];
+    s.push(F.akai_kia ? '阿凱沒有回來。' : '阿凱活下來了，腿上留了傷。');
+    s.push(F.sgt_wang_kia ? '王班長沒有撐過來。' : '王班長被送上直升機，活下來了。');
+    s.push(F.saved_civilian ? '海邊阿伯被你揹回了碉堡。' : (F.civilian_hurt ? '阿伯受了傷，但還活著。' : '阿伯平安無事。'));
+    s.push(F.radio_fixed ? '通訊接通，砲兵支援及時抵達。' : '通訊沒有接通，沒能叫到砲兵支援。');
+    if (F.beach_hero) s.push('你被記了大功，連長說要在退伍那天公開表揚你。');
+    return s;
   }
 
   /* ---------- 啟動 ---------- */
@@ -1077,6 +1422,9 @@
       onNear: function () { updateAct(); },
       onInteractKey: function () { if (!overlays()) W.interact(); },
       onPickup: onPickup, onTick: onTick,
+      onFrame: function (dt) { FPS.update(dt); }, onCombatKey: function (c) { FPS.onKey(c); },
+      onFireDown: function () { FPS.fireDown(); }, onFireUp: function () { FPS.fireUp(); }, onAim: function (dx, dy, t) { FPS.onAim(dx, dy, t); },
+      onAds: function (v) { FPS.setAds(v); }, onAimJoy: function (x, y, dt) { FPS.onAimJoy(x, y, dt); },
       onStep: function () { Sfx.sfx('step'); },
       onLost: function () { $('#lost').hidden = false; },
       onRestored: function () { $('#lost').hidden = true; rebuildInteract(); }
@@ -1099,8 +1447,8 @@
     setInterval(function () {
       if (phase === 'play' && W.ok) {
         var ov = overlays();
-        if (!ov && W.S.mode === 'ui') { W.setMode('world'); }
-        else if (ov && W.S.mode === 'world') W.setMode('ui');
+        if (!ov && W.S.mode === 'ui') { W.setMode(W.S.fps.on ? 'fps' : 'world'); }
+        else if (ov && (W.S.mode === 'world' || W.S.mode === 'fps')) W.setMode('ui');
         updateAct();
       }
     }, 120);
@@ -1108,10 +1456,11 @@
   }
   function boot() {
     bindUi();
-    var files = ['story', 'rpg-system', 'tuning'];
+    var files = ['story', 'rpg-system', 'tuning', 'fps-system', 'story_beach'];
     Promise.all(files.map(function (f) { return fetch('data/' + f + '.json').then(function (r) { if (!r.ok) throw new Error(f); return r.json(); }); })).then(function (a) {
-      E.init(a[0], a[1], a[2]); D = E.data(); W.story = D.story;
+      E.init(a[0], a[1], a[2], { fps: a[3], beach: a[4] }); D = E.data(); D.beach = a[4]; W.story = D.story;
       if (!initWorld()) { $('#glerr').hidden = false; return; }
+      installBeachHooks(); applyFlagWorld();
       if (/[?&]auto=1/.test(location.search)) MG.auto = true;
       title();
     }).catch(function (e) { fatal('資料檔讀取失敗（' + (e && e.message) + '）。'); });
@@ -1119,7 +1468,7 @@
 
   /* 測試用介面 */
   root.__game = {
-    get G() { return G; }, get R() { return R; }, E: E, P: P, W: W, MG: MG, UI: UI,
+    get G() { return G; }, get R() { return R; }, FPS: FPS, startTracked: function () { startTracked(); }, beachStart: function () { return maybeStartBeach(); }, blackRadio: blackRadio, E: E, P: P, W: W, MG: MG, UI: UI,
     phase: function () { return phase; }, map: function () { return mapNow; }, busy: function () { return busy + (overlays() ? 1 : 0); },
     overlays: overlays, track: trackTarget, save: saveGame, load: loadGame, title: title,
     auto: function (v) { MG.auto = !!v; },

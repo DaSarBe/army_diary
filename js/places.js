@@ -46,7 +46,13 @@
     village: { label: '受災街區', unit: [21, -46.5] },
     levee: { label: '堤防', unit: [14, -45] },
 
-    armory: { label: '軍械室', unit: [24, -24.4] },
+    armory: { label: '軍械室', unit: [24, -24.4], beach: [-16, 19.4] },
+    coast_outpost: { label: '海岸據點', beach: [0, 19] },
+    bunker: { label: '沙灘碉堡', beach: [-10, -5.9] },
+    beach: { label: '灘頭', beach: [12, -16] },
+    comm_trench: { label: '通訊壕', beach: [-31, 8] },
+    radar: { label: '雷達站', beach: [10, 21.6] },
+    roll_call: { label: '點名處', beach: [0, 15] },
     obstacle_course: { label: '障礙場', unit: [24, -34.5] },
     gun_park: { label: '砲兵陣地', unit: [21, -25] },
     ammo_depot: { label: '彈藥庫', unit: [30, -27.2] },
@@ -83,6 +89,10 @@
       npc_sgt_lin: [3, -17.6, Math.PI, 'sgt']
     }
   };
+  NPCSPOT.beach = {
+    npc_sgt_wang: [-7.5, -3.4, Math.PI, 'sgt'], npc_akai: [-3.5, -3.2, Math.PI, 'kai'], npc_signal_lin: [-32.8, 8.4, Math.PI / 2, 'rec'],
+    npc_uncle_fisher: [14, -19.4, 0, 'gpa'], npc_captain_huang: [3.6, 21.2, Math.PI, 'cpt'], npc_counselor_lee: [-3.2, 20.6, Math.PI, 'cpt']
+  };
   var UNIT_NPC = {
     infantry: { npc_sgt_kuo: [24, -22.6, Math.PI, 'sgt'] },
     artillery: { npc_sgt_kuo: [22.6, -23.2, Math.PI, 'sgt'] },
@@ -112,7 +122,9 @@
     pushup: '伏地挺身', shooting: '射擊', lottery: '抽籤', fold_blanket: '折棉被', rifle_assembly: '步槍分解結合',
     fire_calc: '射擊諸元計算', inventory_count: '庫存清點', duty_roster: '勤務排班', cooking: '伙房幫廚', essay: '寫心得',
     rehab: '復健', rope_coil: '收纜繩',
-    visit_route: '懇親路線', village: '受災街區', units: '各單位', sickbay: '醫務室', base_tour: '營區參觀'
+    sandbag_line: '沙包線', radar_contact: '雷達上的不明光點', it_t91: 'T91 步槍', load_magazines: '壓彈', it_ammo_crate: '彈藥箱', bunker: '沙灘碉堡',
+    beach_line: '灘頭防線', artillery_call: '砲兵支援', roll_call: '點名', command_choice: '指揮決定', memorial_words: '追思致詞', first_aid: '包紮止血', coast_outpost: '海岸據點',
+    npc_signal_lin: '小林', visit_route: '懇親路線', village: '受災街區', units: '各單位', sickbay: '醫務室', base_tour: '營區參觀'
   };
   var TEMP_NPC = {
     recruits: { preset: 'rec', name: '新兵' }, range_officer: { preset: 'cpt', name: '靶場官' },
@@ -150,12 +162,12 @@
     track_3000: 'assembly_ground', military_song: 'assembly_ground', gun_commands: 'gun_park', dress_up: 'barracks',
     emplace_gun: 'gun_park', watch_duty: 'ship_deck', objective: 'training_field', position: 'exercise_field',
     sign_contract: 'classroom', duty_officer: 'sentry_post', handover_items: 'unit_base', sandbag: 'unit_base',
-    supplies: 'unit_base'
+    supplies: 'unit_base', load_magazines: 'armory', it_t91: 'armory', first_aid: 'bunker', equipment_list: 'coast_outpost'
   };
   var MG_ANCH = {
     pushup: 'training_field', shooting: 'shooting_range', fold_blanket: 'barracks', rifle_assembly: 'armory',
     fire_calc: 'fdc', inventory_count: 'warehouse', duty_roster: 'unit_base', cooking: 'kitchen', essay: 'classroom',
-    rehab: 'infirmary', rope_coil: 'ship_deck', lottery: 'assembly_ground'
+    rehab: 'infirmary', rope_coil: 'ship_deck', lottery: 'assembly_ground', first_aid: 'bunker'
   };
 
   function hash(str) { var h = 7; for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; }
@@ -163,7 +175,7 @@
     var p = PL[id];
     if (!p) return null;
     if (p[map]) return { map: map, x: p[map][0], z: p[map][1], label: p.label, id: id };
-    var ks = ['home', 'camp1', 'unit'].filter(function (k) { return p[k]; });
+    var ks = ['home', 'camp1', 'unit', 'beach'].filter(function (k) { return p[k]; });
     if (!ks.length) return null;
     return { map: ks[0], x: p[ks[0]][0], z: p[ks[0]][1], label: p.label, id: id };
   }
@@ -184,8 +196,45 @@
   function pt(x, z, label, extra) { return Object.assign({ x: x, z: z, label: label }, extra || {}); }
   function npcName(D, id) { return D.npc[id] ? D.npc[id].name : id; }
 
+
+  var WAVE_AT = { wave1: 'bunker', wave2: 'beach', wave3: 'comm_trench', wave4: 'bunker' };
+  function beachPlan(q, idx, ctx) {
+    var o = q.objectives[idx], key = q.id + '#' + idx, D = ctx.D;
+    function base(extra) { return Object.assign({ q: q, idx: idx, type: o.type, target: o.target, count: 1, limit: null, map: 'beach', pts: [] }, extra); }
+    function at(id, dz) { var p = placeOf(id, 'beach'); return pt(p.x, p.z + (dz || 0), p.label); }
+    var st;
+    switch (key) {
+      case 'ch4_beach_prep#0':
+        st = base({ kind: 'inspect', verb: '檢查', count: 6, text: '檢查：沙包線（6）' });
+        st.pts = [-26, -20, -2, 4, 10, 16].map(function (x, k) { return pt(x, -3.2, '沙包線 ' + (k + 1)); });
+        return st;
+      case 'ch4_beach_alert#0':
+        st = base({ kind: 'inspect', verb: '回報', special: 'radar', text: '回報：雷達上的不明光點' }); st.pts = [at('radar')]; return st;
+      case 'ch4_beach_armory#2':
+        st = base({ kind: 'carry', crates: true, item: 'it_ammo_crate', itemName: '彈藥箱', qty: 0, dstNpc: false, text: '決定搬幾箱彈藥到碉堡' });
+        var a = placeOf('armory', 'beach'), b = placeOf('bunker', 'beach');
+        st.pickup = pt(a.x + 4, a.z - 1.5, '彈藥箱', { free: true, prop: 'pile' }); st.dst = pt(b.x, b.z + 1.5, '沙灘碉堡'); return st;
+      case 'ch4_beach_wave1#0': case 'ch4_beach_rescue#0': case 'ch4_beach_radio#0': case 'ch4_beach_command#1':
+        var wid = { 'ch4_beach_wave1#0': 'wave1', 'ch4_beach_rescue#0': 'wave2', 'ch4_beach_radio#0': 'wave3', 'ch4_beach_command#1': 'wave4' }[key];
+        st = base({ kind: 'wave', wave: wid, rescue: wid === 'wave2', text: '進入戰鬥位置' });
+        var wp = placeOf(WAVE_AT[wid], 'beach'); st.pts = [pt(wp.x, wp.z, wp.label)]; return st;
+      case 'ch4_beach_rescue#1': case 'ch4_beach_radio#1': st = base({ kind: 'auto', text: '' }); return st;
+      case 'ch4_beach_radio#2': st = base({ kind: 'radio', text: '呼叫砲兵支援' }); return st;
+      case 'ch4_beach_aid#0': st = base({ kind: 'bdecide', which: 'aid', text: '阿凱中彈了！' }); return st;
+      case 'ch4_beach_aid#1': case 'ch4_beach_command#2': st = base({ kind: 'fate', which: key === 'ch4_beach_aid#1' ? 'akai' : 'wang', text: '' }); return st;
+      case 'ch4_beach_command#0': st = base({ kind: 'bdecide', which: 'command', text: '代理指揮' }); return st;
+      case 'ch4_beach_relief#0':
+        st = base({ kind: 'inspect', verb: '點名', special: 'rollcall', text: '點名' }); st.pts = [at('roll_call')]; return st;
+      case 'ch4_beach_relief#3':
+        st = base({ kind: 'rest', home: false, days: 0, verb: '休息', text: '到帳篷裡休息' }); st.pts = [at('coast_outpost', 2)]; return st;
+      case 'ch5_beach_memorial#2': st = base({ kind: 'bdecide', which: 'memorial', text: '追思致詞' }); return st;
+    }
+    return null;
+  }
+
   /* 規劃單一步驟。ctx: {D:資料, S:狀態, map:目前所在地圖, unit:單位, prev:{map,x,z}|null} */
   function plan(q, idx, ctx) {
+    if (q.id.indexOf('ch4_beach_') === 0 || q.id === 'ch5_beach_memorial') { var bpl = beachPlan(q, idx, ctx); if (bpl) return bpl; }
     var D = ctx.D, o = q.objectives[idx], prevO = idx > 0 ? q.objectives[idx - 1] : null;
     var cm = ctx.map, unit = ctx.unit, t = o.target, n = typeof o.count === 'number' ? o.count : 1;
     var limit = typeof o.timeLimit === 'number' ? Math.max(25, Math.min(90, Math.round(o.timeLimit / 9))) : null;
@@ -205,7 +254,7 @@
           var sp = npcSpot(t, cm, unit);
           var mp = cm;
           if (!sp) {
-            var other = ['home', 'camp1', 'unit'].filter(function (m) { return npcSpot(t, m, unit); })[0];
+            var other = ['home', 'camp1', 'unit', 'beach'].filter(function (m) { return npcSpot(t, m, unit); })[0];
             if (qloc && qloc.map !== cm && npcSpot(t, qloc.map, unit)) { mp = qloc.map; sp = npcSpot(t, mp, unit); }
             else if (other && false) { mp = other; }
           }
@@ -225,7 +274,7 @@
           S.kind = 'talk'; S.map = a.map; S.count = tn; S.temp = true;
           S.pts = ps.map(function (p, k) {
             var tp = TEMP_NPC[t] || { preset: 'rec', name: tl(t) };
-            if (t === 'farewell_npcs') { var f = FAREWELL[k % 5]; tp = { preset: f[0], name: f[1] }; }
+            if (t === 'farewell_npcs') { var f = FAREWELL[k % 5]; if (ctx.S && ctx.S.flags && ctx.S.flags.akai_kia && f[1] === '阿凱') f = ['rec', '同梯']; tp = { preset: f[0], name: f[1] }; }
             return pt(p[0], p[1], tp.name, { tempNpc: tp, free: true });
           });
           S.text = '與' + tl(t) + '交談（' + tn + '）';
@@ -369,7 +418,7 @@
   }
 
   return {
-    PL: PL, NPCSPOT: NPCSPOT, UNIT_NPC: UNIT_NPC, TL: TL, ROUTES: ROUTES,
+    WAVE_AT: WAVE_AT, PL: PL, NPCSPOT: NPCSPOT, UNIT_NPC: UNIT_NPC, TL: TL, ROUTES: ROUTES,
     placeOf: placeOf, npcSpot: npcSpot, tl: tl, plan: plan, ring: ring, hash: hash,
     mapPlaces: function (map) {
       return Object.keys(PL).filter(function (k) { return PL[k][map]; }).map(function (k) { return { id: k, x: PL[k][map][0], z: PL[k][map][1], label: PL[k].label, post: PL[k].post }; });
