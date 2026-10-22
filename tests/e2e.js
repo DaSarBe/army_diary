@@ -26,8 +26,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log(`[${mode}]`, ...a);
 
 async function main() {
+  const BASE = process.env.BASE_URL;
   const port = 8800 + Math.floor(Math.random() * 100);
-  const srv = await serve(port);
+  const srv = BASE ? { close() {} } : await serve(port);
   const browser = await puppeteer.launch({
     executablePath: CHROME, headless: 'new',
     args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required']
@@ -44,7 +45,7 @@ async function main() {
   page.on('requestfailed', r => errors.push('REQFAIL: ' + r.url()));
   page.on('response', r => { if (r.status() >= 400) errors.push('HTTP ' + r.status() + ' ' + r.url()); });
 
-  await page.goto(`http://localhost:${port}/index.html?auto=1`, { waitUntil: 'load' });
+  await page.goto(BASE ? BASE + (BASE.includes('?') ? '&' : '?') + 'auto=1' : `http://localhost:${port}/index.html?auto=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__game && __game.phase() === 'title', { timeout: 20000 });
   await sleep(600);
   await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-01-title.png`) });
@@ -110,6 +111,7 @@ async function main() {
     const t0 = Date.now(); let moved = 0;
     if (mobile) {
       const box = await (await page.$('#joy')).boundingBox();
+      if (!box) return 0;
       const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
       const th = await page.touchscreen.touchStart(cx, cy);
       try {
@@ -143,8 +145,40 @@ async function main() {
   let stats = { steps: 0, cards: 0, dialogs: 0, quests: new Set(), shots: 0 };
   let last = '', lastChange = Date.now(), failTested = false, shotDone = {};
   const shot = async (name) => { if (shotDone[name]) return; shotDone[name] = 1; await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-${name}.png`) }); };
+  const R0 = s => !!s.R;
   const t0 = Date.now(), LIMIT = 28 * 60 * 1000;
-  let sleepRound = 0;
+  let sleepRound = 0, toured = 0, shopped = false;
+  async function closePanelIfAny() { await page.evaluate(() => __game.UI.closePanel()); await sleep(150); }
+  async function panelsTour() {
+    // 技能：把所有技能點花掉（優先「做人圓融」）；背包：使用一個消耗品；角色與日誌：確認能開啟
+    await tap(await page.$('#side button[data-p="skills"]')); await sleep(250);
+    for (let k = 0; k < 12; k++) {
+      const hs = await page.$$('#pBody button[data-s]');
+      let pick = null;
+      for (const h of hs) { const info = await h.evaluate(b => ({ d: b.disabled, s: b.dataset.s })); if (!info.d && (!pick || info.s === 'sk_social')) pick = h; if (!info.d && info.s === 'sk_social') break; }
+      if (!pick) break;
+      await tap(pick); await sleep(120);
+    }
+    await shot(`06-skills`);
+    await closePanelIfAny();
+    await tap(await page.$('#side button[data-p="bag"]')); await sleep(250);
+    await shot(`07-bag`);
+    const use = await page.$('#pBody button[data-a="use"]');
+    if (use) { await tap(use); await sleep(300); }
+    await closePanelIfAny();
+    await tap(await page.$('#side button[data-p="char"]')); await sleep(250); await shot('08-char'); await closePanelIfAny();
+    await tap(await page.$('#side button[data-p="journal"]')); await sleep(250); await shot('09-journal'); await closePanelIfAny();
+  }
+  async function shopTour(s) {
+    const a = s.npcs['npc_auntie']; if (!a) return;
+    await tp(a.x, a.z + 1.0); await interact(); await sleep(300);
+    const opened = await clickIn('#dBtns', b => /買東西/.test(b.t));
+    if (!opened) { await clickIn('#dBtns', b => /離開/.test(b.t)); return; }
+    await sleep(300);
+    await shot('10-shop');
+    for (let k = 0; k < 3; k++) { const hs = await page.$$('#pBody button[data-i]'); let done = false; for (const h of hs) { const d = await h.evaluate(b => b.disabled); if (!d) { await tap(h); done = true; break; } } if (!done) break; await sleep(200); }
+    await closePanelIfAny(); shopped = true;
+  }
 
   while (Date.now() - t0 < LIMIT) {
     const s = await snap();
@@ -181,6 +215,8 @@ async function main() {
     }
     if (s.panel) { await page.evaluate(() => __game.UI.closePanel()); continue; }
     if (s.busy || s.hold) { await sleep(150); continue; }
+    if (!R0(s) && s.level >= 3 && toured < Math.floor(s.level / 3)) { toured = Math.floor(s.level / 3); await panelsTour(); continue; }
+    if (!R0(s) && !shopped && s.level >= 3 && s.npcs['npc_auntie']) { await shopTour(s); continue; }
 
     const R = s.R;
     // 測試失敗後果：第一個有時限的任務故意不做，等時間到
