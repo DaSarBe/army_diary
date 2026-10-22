@@ -93,12 +93,12 @@
   },
   "endingOverrides": {
     "bad_injury": "flag hospitalized 且 b < 40",
-    "exemplar": "d>=51 && b>=48 && o>=57 && m>=52 && demerit==0",
+    "exemplar": "d>=50 && b>=47 && o>=55 && m>=50 && demerit==0",
     "brother": "o>=82",
     "iron": "b>=74",
-    "rule": "d>=57 && demerit<=1",
+    "rule": "d>=55 && demerit<=1",
     "sunny": "m>=77",
-    "calm": "b+m+d+o>=226 && demerit<=2",
+    "calm": "b+m+d+o>=220 && demerit<=2",
     "vstar": "d>=68 && b>=55 && level>=9",
     "vlead": "o>=62 && skill sk_social>=2"
   },

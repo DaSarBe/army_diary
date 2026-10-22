@@ -60,9 +60,10 @@ async function main() {
       let n = 0;
       const orig = __game.MG.run.bind(__game.MG);
       __game.MG.run = function (id, opts, cb) {
-        if (id === 'rehab') {
+        const q = __game.R && __game.R.q && __game.R.q.id;
+        if (id === 'rehab' && q === 'ch5_beach_rehab') {
           n++;
-          __game.MG.forceScore = (mode === 'retry-pass' && n > 1) ? 85 : 20;
+          __game.MG.forceScore = (mode === 'retry-pass' && n > 1) ? 85 : 0;
         } else __game.MG.forceScore = null;
         return orig(id, opts, cb);
       };
@@ -210,6 +211,17 @@ async function main() {
     if (s.beachFlags && s.beachFlags.medevac && s.fps) {
       throw new Error('後送後戰鬥沒停：queue=' + (s.fpsInfo && s.fpsInfo.q) + ' hp=' + (s.fpsInfo && s.fpsInfo.hp));
     }
+    if (FATE) {
+      if (s.R && s.R.kind === 'fate' && rngSet !== 'on') {
+        rngSet = 'on';
+        await page.evaluate((f) => __game.E.setRng(f === 'kia' ? () => 0.0 : () => 0.999), FATE);
+        log('FATE rng on ' + FATE);
+      } else if (rngSet === 'on' && !(s.R && s.R.kind === 'fate')) {
+        await page.evaluate(() => __game.E.setRng(Math.random));
+        rngSet = 'off';
+        log('FATE rng off');
+      }
+    }
     if (STOP) {
       const stopNow = await page.evaluate((stop) => {
         const G = __game.G, E = __game.E;
@@ -243,9 +255,9 @@ async function main() {
       stats.cards++;
       const title = await page.$eval('#cIn h2', e => e.textContent).catch(() => '');
       const body = await page.$eval('#cIn', e => e.innerText).catch(() => '');
-      if (/今天先休息，腳會記得/.test(body)) global.__retryOffer = true;
-      if (/睡一覺就不一樣了/.test(body)) global.__retryPass = true;
-      if (/這次先不勉強/.test(body)) global.__finalFail = true;
+      if (/今天先休息，腳會記得/.test(body)) { global.__retryOffer = true; await shot('31-retry-offer'); }
+      if (/睡一覺就不一樣了/.test(body)) { global.__retryPass = true; await shot('32-retry-pass'); }
+      if (/這次先不勉強/.test(body)) { global.__finalFail = true; await shot('33-final-fail'); }
       if (/結局|第.*章|任務|升/.test(title)) { /* ok */ }
       if (s.level >= 3) await shot('05-card-sample');
       const r = await clickIn('#cIn', (b, i) => (/硬派/.test(b.t) ? DIFF === 'hardcore' : /^標準/.test(b.t) ? DIFF === 'standard' : /^劇情向/.test(b.t) ? DIFF === 'story' : true));
@@ -327,7 +339,6 @@ async function main() {
           break;
         }
         case 'wave': {
-          if (FATE && !rngSet) { rngSet = true; await page.evaluate((f) => __game.E.setRng(f === 'kia' ? () => 0.0 : () => 0.999), FATE); }
           if (s.fps) {
             if (R.rescueCarry && STOP !== 'rescue') await tp(-10, -5.95);
             if (R.rescueCarry && STOP === 'rescue' && !global.__carryShot) {
@@ -426,9 +437,10 @@ async function main() {
         if (REHAB === 'retry-fail' && (!fin.retryOffer || !fin.finalFail)) throw new Error('缺少 retryOffer/finalFail 台詞');
       }
       if (FATE === 'kia') {
+        if (!fin.rehab) throw new Error('沒走到復健（結局 ' + fin.ending + ' day ' + fin.day + '）');
         if (!/小林/.test(fin.visitor || '')) throw new Error('阿凱陣亡應生成小林探病，實際：' + fin.visitor);
-      } else if (FATE === 'live' || AID === 'treat') {
-        if (fin.visitor && !/阿凱/.test(fin.visitor) && /小林/.test(fin.visitor)) throw new Error('阿凱活著不應生成小林：' + fin.visitor);
+      } else if (fin.visitor && FATE !== 'kia' && /小林/.test(fin.visitor) && !/阿凱/.test(fin.visitor)) {
+        throw new Error('阿凱活著不應只生成小林：' + fin.visitor);
       }
     }
     const bad = errors.filter(e => !/favicon/.test(e));

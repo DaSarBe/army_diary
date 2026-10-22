@@ -408,7 +408,9 @@
     Sfx.sfx('fail');
     E.fail(G, q.id, out);
     resetRunner();
-    var lines = [reason || '任務沒有完成。', (q.dialogue && q.dialogue.fail) || ''];
+    var failLine = q.dialogue && q.dialogue.fail;
+    if (q.id === 'ch5_beach_rehab' && q.dialogue && q.dialogue.finalFail && G.quests[q.id] && G.quests[q.id].rehabTries) failLine = '';
+    var lines = [reason || '任務沒有完成。', failLine || ''];
     UI.card({ kicker: '任務失敗', title: qTitle(q), body: lines.filter(Boolean), fx: out.fx, buttons: [{ t: '繼續', fn: function () { presentOut(out, { noFx: true, day: true }, function () { afterQuestEnd(); }); } }], sfx: 'fail' });
   }
   function afterQuestEnd() {

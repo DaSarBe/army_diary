@@ -11,10 +11,10 @@ Engine.init(story, rpg, tuning, { fps: fpsSys, beach: beachStory });
 var D = Engine.data();
 
 var POLICIES = {
-  random: { pDo: 0.55, pMain: 0.7, mu: 55, sigma: 25, pTimer: 0.85, pVol: 0.5, pContra: 0.45, smart: 0, pDown: 0.22, pRetry: 0.75, pCarry: 0.6, pTreat: 0.9, pCourt: 0.04, pRehabFail: 0.42 },
-  casual: { pDo: 0.35, pMain: 0.6, mu: 45, sigma: 25, pTimer: 0.75, pVol: 0.4, pContra: 0.35, smart: 0, pDown: 0.32, pRetry: 0.65, pCarry: 0.5, pTreat: 0.72, pCourt: 0.045, pRehabFail: 0.55 },
-  diligent: { pDo: 0.9, pMain: 1, mu: 70, sigma: 18, pTimer: 0.95, pVol: 0.5, pContra: 0.12, smart: 1, pDown: 0.12, pRetry: 0.85, pCarry: 0.85, pTreat: 0.92, pCourt: 0.032, pRehabFail: 0.28 },
-  reckless: { pDo: 0.8, pMain: 0.5, mu: 50, sigma: 25, pTimer: 0.8, pVol: 0.5, pContra: 0.85, smart: 0, pDown: 0.3, pRetry: 0.45, pCarry: 0.5, pTreat: 0.55, pCourt: 0.05, pRehabFail: 0.6 }
+  random: { pDo: 0.55, pMain: 0.7, mu: 55, sigma: 25, pTimer: 0.85, pVol: 0.5, pContra: 0.42, smart: 0, pDown: 0.2, pRetry: 0.78, pCarry: 0.62, pTreat: 0.9, pCourt: 0.036, pRehabFail: 0.4 },
+  casual: { pDo: 0.35, pMain: 0.6, mu: 45, sigma: 25, pTimer: 0.75, pVol: 0.4, pContra: 0.32, smart: 0, pDown: 0.3, pRetry: 0.68, pCarry: 0.52, pTreat: 0.72, pCourt: 0.04, pRehabFail: 0.52 },
+  diligent: { pDo: 0.9, pMain: 1, mu: 70, sigma: 18, pTimer: 0.95, pVol: 0.5, pContra: 0.1, smart: 1, pDown: 0.11, pRetry: 0.86, pCarry: 0.86, pTreat: 0.93, pCourt: 0.03, pRehabFail: 0.26 },
+  reckless: { pDo: 0.8, pMain: 0.5, mu: 50, sigma: 25, pTimer: 0.8, pVol: 0.5, pContra: 0.82, smart: 0, pDown: 0.28, pRetry: 0.48, pCarry: 0.5, pTreat: 0.55, pCourt: 0.045, pRehabFail: 0.58 }
 };
 var BGS = ['uni', 'office', 'site', 'gamer'];
 
@@ -182,9 +182,12 @@ function playOne(seed, P) {
       else Engine.sleep(s, o);
     } else Engine.sleep(s, o);
   }
-  // 志願役選擇如果完全沒遇到（例如錯過說明會），視為未簽
-  var e = s.ending || Engine.evalEnding(s);
-  return { end: e, s: s };
+  // 復健沒過的人體能回不來，較容易走到因傷退伍（b<40）。須在 evalEnding 之前改 b。
+  if (s.flags.hospitalized && !s.flags.rehab_done && r() < 0.7) {
+    s.a.b = Math.min(s.a.b, 28 + Math.floor(r() * 12));
+  }
+  s.ending = Engine.evalEnding(s);
+  return { end: s.ending, s: s };
 }
 
 function run(n, P, name) {
