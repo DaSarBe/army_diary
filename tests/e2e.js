@@ -1,0 +1,336 @@
+/* headless Chrome E2E：用真實 UI 從頭玩到結局。
+ * 用法：node e2e.js desktop|mobile [sign|decline] [sideRate]
+ * 小遊戲啟用內建自動遊玩（走同一套輸入處理函式），其餘動作都透過畫面上的按鈕與互動完成。 */
+const puppeteer = require('puppeteer-core');
+const http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = path.join(__dirname, '..');
+const CHROME = process.env.CHROME || '/usr/local/bin/google-chrome';
+const mode = process.argv[2] || 'desktop';
+const volChoice = process.argv[3] || (mode === 'desktop' ? 'sign' : 'decline');
+const sideRate = +(process.argv[4] || (mode === 'desktop' ? 0.5 : 0.3));
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
+
+function serve(port) {
+  return new Promise(res => {
+    const s = http.createServer((q, r) => {
+      let f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
+      if (f.endsWith('/')) f += 'index.html';
+      fs.readFile(f, (e, d) => {
+        if (e) { r.writeHead(404); r.end('nf'); return; }
+        r.writeHead(200, { 'content-type': (MIME[path.extname(f)] || 'application/octet-stream') + '; charset=utf-8' }); r.end(d);
+      });
+    }).listen(port, () => res(s));
+  });
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const log = (...a) => console.log(`[${mode}]`, ...a);
+
+async function main() {
+  const port = 8800 + Math.floor(Math.random() * 100);
+  const srv = await serve(port);
+  const browser = await puppeteer.launch({
+    executablePath: CHROME, headless: 'new',
+    args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required']
+  });
+  const page = await browser.newPage();
+  const mobile = mode === 'mobile';
+  if (mobile) await page.emulate({ viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }, userAgent: 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36' });
+  else await page.setViewport({ width: 1280, height: 800 });
+  const errors = [];
+  page.on('console', m => { const t = m.type(); if (t === 'error' || t === 'warning') errors.push(t + ': ' + m.text()); });
+  page.on('pageerror', e => { errors.push('PAGEERROR: ' + e.message); log('PAGEERROR', e.message, (e.stack || '').split('\n').slice(0, 4).join(' / ')); });
+  page.on('error', e => log('PAGE CRASH', e.message));
+  page.on('framenavigated', f => { if (f === page.mainFrame()) log('NAVIGATED', f.url()); });
+  page.on('requestfailed', r => errors.push('REQFAIL: ' + r.url()));
+  page.on('response', r => { if (r.status() >= 400) errors.push('HTTP ' + r.status() + ' ' + r.url()); });
+
+  await page.goto(`http://localhost:${port}/index.html?auto=1`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__game && __game.phase() === 'title', { timeout: 20000 });
+  await sleep(600);
+  await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-01-title.png`) });
+
+  const tap = async (el) => { if (mobile) await el.tap(); else await el.click(); };
+  let act = '';
+  async function clickIn(sel, pred) {
+    act = 'clickIn ' + sel;
+    const hs = await page.$$(sel + ' button'); act = 'clickIn-got ' + hs.length;
+    const info = await Promise.all(hs.map(h => h.evaluate(b => ({ t: b.textContent, c: b.className, d: b.disabled, vis: !!(b.offsetWidth || b.offsetHeight) }))));
+    let idx = -1;
+    for (let i = 0; i < info.length; i++) if (!info[i].d && info[i].vis && pred(info[i], i, info)) { idx = i; break; }
+    if (idx < 0) return false;
+    act = 'tapping ' + info[idx].t; await tap(hs[idx]); act = 'tapped'; return info[idx].t;
+  }
+
+  if (process.env.START_DAY) {
+    const day = +process.env.START_DAY;
+    await page.evaluate((day) => {
+      const E = __game.E, G = E.newState('除錯', 'uni');
+      G.day = day; G.unit = 'infantry'; const lv = day > 200 ? 8 : 4; G.level = lv; G.xp = E.xpTotalFor(lv); G.flags.unit_assigned = 1; G.sp = 3;
+      G.items.it_camo = 1; G.equip.body = 'it_camo';
+      localStorage.setItem('abg2-save-0', JSON.stringify({ G, map: E.baseMap(G), pos: { x: -2, z: 10.5 }, t: Date.now() }));
+    }, day);
+    await page.evaluate(() => __game.load(0));
+    await page.waitForFunction(() => __game.phase() === 'play', { timeout: 10000 });
+    log('從第 ' + day + ' 天的存檔開始（除錯用）');
+  } else {
+  // 輸入名字、選背景，開始新遊戲
+  await page.$eval('#nm', el => { el.value = ''; });
+  await page.type('#nm', '測試兵');
+  await tap(await page.$(mobile ? '#bg-gamer' : '#bg-site'));
+  await sleep(200);
+  await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-02-title-filled.png`) });
+  await clickIn('#cIn', b => /開始新遊戲/.test(b.t));
+  await page.waitForFunction(() => __game.phase() === 'play', { timeout: 10000 });
+  log('開始新遊戲');
+  }
+
+  const snap = () => page.evaluate(() => {
+    const g = __game, G = g.G, R = g.R, vis = s => { const e = document.querySelector(s); return !!e && !e.hidden; };
+    let av = [];
+    if (G) av = g.E.listAvailable(G).map(q => ({ id: q.id, type: q.type, giver: q.giver, here: g.W.hasNpc(q.giver) }));
+    return {
+      phase: g.phase(), busy: g.busy(), map: g.map(), card: vis('#card'), dlg: vis('#dlg'), panel: vis('#panel'), mg: vis('#mg'), hold: g.holdOn(),
+      day: G && G.day, period: G && G.period, level: G && G.level, over: G && G.over, ending: G && G.ending, active: G ? g.E.activeQuests(G).map(q => q.id) : [],
+      av, track: G && G.track,
+      R: R && {
+        q: R.q.id, ready: !!R.ready, kind: R.plan && R.plan.kind, idx: R.idx, phase: R.phase, timer: R.timer && Math.round(R.timer.left), giver: R.q.giver,
+        pts: (R.pts || []).map(p => ({ x: p.x, z: p.z, done: p.done, npc: p.npc || null })),
+        inter: (R.inter || []).map(i => ({ x: i.x, z: i.z, label: i.label })), dst: R.plan && R.plan.dst && { x: R.plan.dst.x, z: R.plan.dst.z, npc: R.plan.dst.npc || null }, dstNpc: R.plan && R.plan.dstNpc,
+        pickup: R.pickupPt || null, seq: R.plan && R.plan.seq, tmap: R.plan && R.plan.map
+      },
+      pos: g.W.pos(), pickups: g.W.S.pickups.map(p => ({ x: p.x, z: p.z })),
+      npcs: Object.keys(g.W.S.npcs).filter(k => !g.W.S.npcs[k].deco).reduce((o, k) => { o[k] = { x: g.W.S.npcs[k].x, z: g.W.S.npcs[k].z }; return o; }, {})
+    };
+  });
+  const tp = async (x, z) => { await page.evaluate((x, z) => __game.teleport(x, z), x, z); await sleep(110); };
+  const interact = () => page.evaluate(() => { const n = __game.near(); __game.interact(); return n && n.label; });
+
+  // 真實走路：以鍵盤（桌機）或虛擬搖桿（手機）朝目標走，逾時就瞬移補上
+  async function walkTo(x, z, maxMs) {
+    const t0 = Date.now(); let moved = 0;
+    if (mobile) {
+      const box = await (await page.$('#joy')).boundingBox();
+      const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+      const th = await page.touchscreen.touchStart(cx, cy);
+      try {
+        while (Date.now() - t0 < maxMs) {
+          const s = await page.evaluate((x, z) => { const W = __game.W, p = W.pos(); W.S.yaw = Math.atan2(-(x - p.x), -(z - p.z)); W.S.pitch = 0.5; return Math.hypot(x - p.x, z - p.z); }, x, z);
+          if (s < 2.0) break;
+          await th.move(cx, cy - 45); await sleep(80); moved++;
+        }
+      } finally { await th.end(); }
+    } else {
+      await page.keyboard.down('KeyW');
+      try {
+        while (Date.now() - t0 < maxMs) {
+          const s = await page.evaluate((x, z) => { const W = __game.W, p = W.pos(); W.S.yaw = Math.atan2(-(x - p.x), -(z - p.z)); W.S.pitch = 0.5; return Math.hypot(x - p.x, z - p.z); }, x, z);
+          if (s < 2.0) break;
+          await sleep(60); moved++;
+        }
+      } finally { await page.keyboard.up('KeyW'); }
+    }
+    return moved;
+  }
+  let walkBudget = 8;
+  async function goTo(x, z) {
+    if (walkBudget > 0) {
+      const d = await page.evaluate((x, z) => { const p = __game.W.pos(); return Math.hypot(x - p.x, z - p.z); }, x, z);
+      if (d < 22) { walkBudget--; await walkTo(x, z, 900 + d / 5.4 * 1700); }
+    }
+    await tp(x, z);
+  }
+
+  let stats = { steps: 0, cards: 0, dialogs: 0, quests: new Set(), shots: 0 };
+  let last = '', lastChange = Date.now(), failTested = false, shotDone = {};
+  const shot = async (name) => { if (shotDone[name]) return; shotDone[name] = 1; await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-${name}.png`) }); };
+  const t0 = Date.now(), LIMIT = 28 * 60 * 1000;
+  let sleepRound = 0;
+
+  while (Date.now() - t0 < LIMIT) {
+    const s = await snap();
+    const key = JSON.stringify([s.day, s.period, s.active, s.R && [s.R.q, s.R.idx, s.R.phase, s.R.pts.filter(p => p.done).length], s.card, s.dlg, s.panel, s.mg, s.phase, s.level]);
+    if (key !== last) { last = key; lastChange = Date.now(); }
+    if (Date.now() - (global.__lp || 0) > 15000) { global.__lp = Date.now(); log('進度 day', s.day, 'p', s.period, 'lv', s.level, 'active', s.active.join(','), 'R', s.R ? s.R.q + '#' + s.R.idx + ':' + s.R.kind : '-', 'card', s.card, 'dlg', s.dlg, 'mg', s.mg, 'busy', s.busy, 'act', act); }
+    if (Date.now() - lastChange > 45000) { log('卡住了', JSON.stringify(s).slice(0, 1500)); await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-stuck.png`) }); throw new Error('stuck'); }
+    if (s.phase === 'end' && s.card) break;
+    if (s.phase === 'end') { await sleep(500); continue; }
+    if (s.mg) { await sleep(200); continue; }
+    if (s.card) {
+      stats.cards++;
+      const title = await page.$eval('#cIn h2', e => e.textContent).catch(() => '');
+      if (/結局|第.*章|任務|升/.test(title)) { /* ok */ }
+      if (s.level >= 3) await shot('05-card-sample');
+      const r = await clickIn('#cIn', (b, i) => true);
+      if (!r) await sleep(100);
+      await sleep(80); continue;
+    }
+    if (s.dlg) {
+      stats.dialogs++;
+      const names = await page.$eval('#dName', e => e.textContent);
+      if (names === '志願役說明會' || /簽，還是不簽/.test(names) || (s.R && s.R.q === 'ch4_main_07' && s.R.kind === 'decide')) {
+        let r0 = await clickIn('#dBtns', b => volChoice === 'sign' ? /簽志願役/.test(b.t) : /^不簽/.test(b.t));
+        if (!r0) await clickIn('#dBtns', b => /go/.test(b.c));
+      } else {
+        let r = await clickIn('#dBtns', b => /^接受任務/.test(b.t));
+        if (!r) r = await clickIn('#dBtns', b => /go/.test(b.c) && !/放進去/.test(b.t));
+        if (!r) r = await clickIn('#dBtns', b => !/dim/.test(b.c) && !/離開|聊聊/.test(b.t));
+        if (!r) r = await clickIn('#dBtns', b => /離開/.test(b.t));
+        if (!r) r = await clickIn('#dBtns', b => true);
+      }
+      await sleep(60); continue;
+    }
+    if (s.panel) { await page.evaluate(() => __game.UI.closePanel()); continue; }
+    if (s.busy || s.hold) { await sleep(150); continue; }
+
+    const R = s.R;
+    // 測試失敗後果：第一個有時限的任務故意不做，等時間到
+    if (R && R.timer != null && !failTested && R.q === 'ch1_main_02') {
+      failTested = true; log('測試失敗路徑：故意讓「' + R.q + '」逾時');
+      await shot('03-timer');
+      const hp0 = await page.evaluate(() => ({ d: __game.G.a.d, m: __game.G.a.m }));
+      let n = 0;
+      while (n++ < 400) { await sleep(500); const t = await page.evaluate(() => __game.R && __game.R.timer ? Math.round(__game.R.timer.left) : null); if (t == null) break; }
+      await sleep(600);
+      const q = await page.evaluate(() => __game.G.quests['ch1_main_02'] && __game.G.quests['ch1_main_02'].state);
+      const hp1 = await page.evaluate(() => ({ d: __game.G.a.d, m: __game.G.a.m }));
+      log('逾時結果：任務狀態=' + q + '，軍紀 ' + hp0.d + '→' + hp1.d);
+      if (q !== 'failed') throw new Error('逾時沒有導致任務失敗：' + q);
+      await shot('04-fail-card');
+      continue;
+    }
+    if (R && R.ready) {
+      const n = s.npcs[R.giver];
+      if (n) { await goTo(n.x, n.z + 1.0); await interact(); await sleep(200); }
+      else await sleep(300);
+      continue;
+    }
+    if (R) {
+      stats.quests.add(R.q);
+      const pend = R.pts.filter(p => !p.done);
+      const near = async (x, z, dz) => { await goTo(x, z + (dz == null ? 0.9 : dz)); };
+      switch (R.kind) {
+        case 'reach': case 'escort': {
+          const p = (R.seq ? pend[0] : pend[0]); if (p) await goTo(p.x, p.z); else await sleep(200);
+          break;
+        }
+        case 'collect': {
+          if (s.pickups.length) { const p = s.pickups[0]; await tp(p.x, p.z); } else await sleep(200);
+          break;
+        }
+        case 'talk': {
+          const p = pend[0];
+          if (!p) { await sleep(200); break; }
+          if (p.npc) { const n = s.npcs[p.npc]; await near(n.x, n.z, 1.0); }
+          else { await near(p.x, p.z, 1.0); }
+          await interact(); await sleep(150); break;
+        }
+        case 'phone': case 'inspect': case 'overlay': case 'rest': case 'decide': {
+          const it = R.inter[0];
+          if (!it) { await sleep(200); break; }
+          await near(it.x, it.z, 0.8); await interact(); await sleep(150);
+          break;
+        }
+        case 'carry': {
+          if (R.phase === 1 && R.pickup) { await tp(R.pickup.x, R.pickup.z); await sleep(200); }
+          else if (R.dst) {
+            if (R.dstNpc) { const n = s.npcs[R.dst.npc]; await near(n.x, n.z, 1.0); await interact(); await sleep(200); }
+            else { await tp(R.dst.x, R.dst.z); await sleep(200); }
+          } else await sleep(200);
+          break;
+        }
+        default: await sleep(250);
+      }
+      stats.steps++;
+      continue;
+    }
+    // 沒有執行中的任務：接任務或休息
+    const activeN = s.active.length;
+    const cands = s.av.filter(q => q.type === 'main' || Math.random() < sideRate);
+    if (cands.length && activeN < 3) {
+      cands.sort((a, b) => (a.type === 'main' ? 0 : 1) - (b.type === 'main' ? 0 : 1));
+      const q = cands[0];
+      if (q.here) { const n = s.npcs[q.giver]; await goTo(n.x, n.z + 1.0); await interact(); }
+      else {
+        const b = await page.evaluate(() => { const i = __game.inter().filter(x => x.label === '布告欄')[0]; return i; });
+        await goTo(b.x, b.z); await interact();
+      }
+      await sleep(200); continue;
+    }
+    if (activeN) { await sleep(300); continue; }
+    // 去寢室
+    const bed = await page.evaluate(() => __game.inter().filter(x => /寢室/.test(x.label))[0]);
+    await goTo(bed.x, bed.z); await interact(); await sleep(250);
+    if (await page.evaluate(() => !document.querySelector('#dlg').hidden)) {
+      sleepRound++;
+      const hasAvail = s.av.length > 0 && sleepRound % 3 !== 0;
+      let r = await clickIn('#dBtns', b => hasAvail ? /^睡覺/.test(b.t) : /^快轉/.test(b.t));
+      if (!r) r = await clickIn('#dBtns', b => /睡覺|快轉/.test(b.t));
+    }
+    await sleep(300);
+  }
+
+  // 結局
+  const fin = await page.evaluate(() => ({ ending: __game.G.ending, day: __game.G.day, level: __game.G.level, a: __game.G.a, stats: __game.G.stats, flags: Object.keys(__game.G.flags), demerit: __game.G.demerit, title: document.querySelector('#cIn h2').textContent }));
+  await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-99-ending.png`) });
+  log('抵達結局：', JSON.stringify(fin), '，完成的任務(經手)數 ', stats.quests.size, '，用時 ' + Math.round((Date.now() - t0) / 1000) + ' 秒');
+
+  // 結局後：回到標題
+  await clickIn('#cIn', b => /再服一次役/.test(b.t));
+  await page.waitForFunction(() => __game.phase() === 'title', { timeout: 8000 });
+  log('結局後可回到標題');
+
+  // 其他檢查：靜音、存讀檔、WebGL context lost
+  await clickIn('#cIn', b => /開始新遊戲/.test(b.t));
+  await page.waitForFunction(() => __game.phase() === 'play', { timeout: 8000 });
+  await sleep(1500);
+  while (await page.evaluate(() => !document.querySelector('#card').hidden)) { await clickIn('#cIn', () => true); await sleep(300); }
+  await page.evaluate(() => { document.querySelector('#mute').click(); });
+  const muted = await page.evaluate(() => ({ t: document.querySelector('#mute').textContent, ls: localStorage.getItem('abg2-mute') }));
+  await page.evaluate(() => { document.querySelector('#mute').click(); });
+  log('靜音開關：', JSON.stringify(muted));
+  if (muted.t !== '音效關' || muted.ls !== '1') throw new Error('靜音開關異常');
+  const saved = await page.evaluate(() => __game.save(1));
+  const hasSave = await page.evaluate(() => !!localStorage.getItem('abg2-save-1'));
+  log('存檔：', saved, hasSave);
+  await page.evaluate(() => {
+    const gl = document.querySelector('#gl').getContext('webgl2') || document.querySelector('#gl').getContext('webgl');
+    window.__ext = gl.getExtension('WEBGL_lose_context'); window.__ext.loseContext();
+  });
+  await sleep(500);
+  const lostShown = await page.evaluate(() => !document.querySelector('#lost').hidden);
+  await page.evaluate(() => window.__ext.restoreContext());
+  await sleep(1200);
+  const lostHidden = await page.evaluate(() => document.querySelector('#lost').hidden);
+  log('WebGL context lost 提示：', lostShown, '恢復後隱藏：', lostHidden);
+  if (!lostShown || !lostHidden) throw new Error('context lost 處理異常');
+  await page.screenshot({ path: path.join(__dirname, 'out', `${mode}-98-after-restore.png`) });
+
+  // 版面：對話面板高度、面板捲動重設
+  const lay = await page.evaluate(async () => {
+    const out = {};
+    __game.UI.dialog({ name: '測試', lines: ['這是一段很長的測試文字。'.repeat(30)], btn: '好' });
+    await new Promise(r => setTimeout(r, 300));
+    out.dlgH = document.querySelector('#dlg').offsetHeight; out.vh = window.innerHeight;
+    __game.UI.closeDialog();
+    document.querySelector('#side button[data-p="journal"]').click();
+    await new Promise(r => setTimeout(r, 200));
+    const b = document.querySelector('#pBody'); b.innerHTML += '<div style="height:3000px"></div>'; b.scrollTop = 500;
+    const before = b.scrollTop;
+    document.querySelectorAll('#pTabs button')[1].click();
+    await new Promise(r => setTimeout(r, 200));
+    out.scrollBefore = before; out.scrollAfter = document.querySelector('#pBody').scrollTop;
+    __game.UI.closePanel();
+    out.hudH = document.querySelector('#hud').offsetHeight;
+    return out;
+  });
+  log('版面：', JSON.stringify(lay));
+  if (lay.dlgH > lay.vh * 0.46) throw new Error('對話面板太高 ' + lay.dlgH + '/' + lay.vh);
+  if (lay.scrollAfter !== 0) throw new Error('切換分頁後沒有捲回頂端');
+
+  await browser.close(); srv.close();
+  const bad = errors.filter(e => !/favicon/.test(e));
+  log('console error/warning 數：', bad.length); bad.slice(0, 10).forEach(e => log('  ', e));
+  if (bad.length) { process.exitCode = 2; }
+  fs.writeFileSync(path.join(__dirname, 'out', `${mode}-result.json`), JSON.stringify({ mode, volChoice, fin, errors: bad, steps: stats.steps, quests: stats.quests.size, seconds: Math.round((Date.now() - t0) / 1000), layout: lay }, null, 1));
+}
+main().catch(e => { console.error('E2E 失敗：', e); process.exit(1); });

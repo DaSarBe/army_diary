@@ -1,0 +1,105 @@
+{
+  "_desc": "實作端補充與微調。story.json 與 rpg-system.json 保持原樣，所有預設值與數值調整都集中在這個檔案，方便對照。",
+  "aliases": {
+    "npc_cpl_chou": "npc_senior_chou"
+  },
+  "backgrounds": {
+    "uni": {
+      "n": "剛畢業的大學生",
+      "hint": "適應快，體能普通",
+      "s": {
+        "b": 45,
+        "m": 55,
+        "d": 50,
+        "o": 45
+      }
+    },
+    "office": {
+      "n": "上班族",
+      "hint": "守時守規矩，體力偏弱",
+      "s": {
+        "b": 40,
+        "m": 45,
+        "d": 60,
+        "o": 40
+      }
+    },
+    "site": {
+      "n": "工地學徒",
+      "hint": "體力好，話不多",
+      "s": {
+        "b": 62,
+        "m": 48,
+        "d": 40,
+        "o": 45
+      }
+    },
+    "gamer": {
+      "n": "電競宅男",
+      "hint": "手指快，體能堪憂",
+      "s": {
+        "b": 30,
+        "m": 60,
+        "d": 45,
+        "o": 35
+      }
+    }
+  },
+  "badges": {
+    "strong": "體能達人",
+    "marksman": "神射手",
+    "helper": "患難見真情",
+    "rescuer": "救災英雄",
+    "mentor": "學長風範",
+    "sprinter": "操場飛人",
+    "legacy": "留下一張卡片"
+  },
+  "tempItems": {
+    "gear_bag": "裝備袋",
+    "pen": "原子筆",
+    "canteen": "水壺",
+    "snack_bag": "零食袋",
+    "sandbag": "沙包",
+    "supplies": "補給品",
+    "package": "包裹",
+    "practice_shell": "訓練彈",
+    "extinguisher": "滅火器",
+    "ingredients": "食材",
+    "handover_items": "交接物品",
+    "returned_gear": "繳回的裝備",
+    "drinks": "飲料"
+  },
+  "extraRewards": {
+    "ch4_side_02": {
+      "items": [
+        "it_camo_ironed"
+      ]
+    }
+  },
+  "attrCapTotalPerQuest": 8,
+  "checkClamp": [
+    5,
+    95
+  ],
+  "daily": {
+    "routineHp": 10,
+    "routineFatigue": 8,
+    "demeritBase": 0.0025,
+    "demeritSlope": 0.0001,
+    "demeritMin": 0.001,
+    "demeritMax": 0.02,
+    "heatChance": 0.08,
+    "routineBEvery": 25
+  },
+  "endingOverrides": {
+    "bad_injury": "flag hospitalized 且 b < 60",
+    "exemplar": "d>=54 && b>=54 && o>=58 && m>=58 && demerit==0",
+    "brother": "o>=72",
+    "iron": "b>=73",
+    "rule": "d>=59 && demerit<=1",
+    "sunny": "m>=73",
+    "calm": "b+m+d+o>=215 && demerit<=2",
+    "vstar": "d>=66 && b>=63 && level>=9",
+    "vlead": "o>=61 && skill sk_social>=2"
+  }
+}

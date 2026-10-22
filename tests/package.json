@@ -1,0 +1,7 @@
+{
+  "name": "army-diary-tests",
+  "private": true,
+  "description": "阿兵哥日記的測試腳本（模擬與 headless Chrome E2E）",
+  "scripts": { "sim": "node sim.js 3000", "e2e": "node e2e.js" },
+  "dependencies": { "puppeteer-core": "^23.0.0" }
+}

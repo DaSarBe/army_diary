@@ -1,0 +1,1043 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-22",
+  "owner": "Dai",
+  "notes": "角色扮演系統第一版。屬性代號沿用原本遊戲的 b/m/d/o，Eve 的任務獎勵與 Sam 的程式請直接用 attributes 與 resources 裡的 key。所有數值都是整數。",
+  "attributes": {
+    "_desc": "四項核心屬性，範圍 0 到 100。成長主要靠任務和訓練，不再由選項直接大幅加分（每次 ±1 到 4，避免通膨）。",
+    "b": {
+      "name": "體能",
+      "min": 0,
+      "max": 100,
+      "affects": [
+        "體力上限",
+        "跑步/伏地挺身/行軍判定",
+        "受傷機率降低"
+      ]
+    },
+    "m": {
+      "name": "士氣",
+      "min": 0,
+      "max": 100,
+      "affects": [
+        "疲勞恢復速度",
+        "社交判定"
+      ],
+      "zeroTrigger": "event_morale_breakdown"
+    },
+    "d": {
+      "name": "軍紀",
+      "min": 0,
+      "max": 100,
+      "affects": [
+        "內務/站哨判定",
+        "被抓違規機率降低",
+        "榮譽假"
+      ]
+    },
+    "o": {
+      "name": "袍澤",
+      "min": 0,
+      "max": 100,
+      "affects": [
+        "NPC 好感加成",
+        "團體任務成功率",
+        "受罰時有人幫忙"
+      ]
+    }
+  },
+  "resources": {
+    "_desc": "會隨時間消耗與恢復的資源。",
+    "hp": {
+      "name": "體力",
+      "min": 0,
+      "maxFormula": "60 + floor(b * 0.4)",
+      "dailyRecover": 40,
+      "zeroTrigger": "event_collapse"
+    },
+    "fatigue": {
+      "name": "疲勞",
+      "min": 0,
+      "max": 100,
+      "dailyDecay": 25,
+      "penalties": [
+        {
+          "atLeast": 60,
+          "effect": {
+            "allChecks": -10
+          },
+          "text": "精神不濟"
+        },
+        {
+          "atLeast": 85,
+          "effect": {
+            "allChecks": -20,
+            "injuryChanceAdd": 15
+          },
+          "text": "快撐不住了"
+        },
+        {
+          "atLeast": 100,
+          "trigger": "event_collapse"
+        }
+      ]
+    },
+    "money": {
+      "name": "薪餉",
+      "unit": "元",
+      "start": 2000,
+      "monthlyPay": 6510,
+      "payNote": "暫定值，尚未查證實際義務役薪資，上線前要再確認"
+    },
+    "honor": {
+      "name": "榮譽假",
+      "unit": "天",
+      "start": 0,
+      "max": 10
+    },
+    "demerit": {
+      "name": "違規點數",
+      "min": 0,
+      "max": 10,
+      "thresholds": [
+        {
+          "atLeast": 3,
+          "trigger": "event_warning",
+          "text": "被輔導長約談"
+        },
+        {
+          "atLeast": 6,
+          "trigger": "event_confinement",
+          "text": "禁閉（悔過）"
+        },
+        {
+          "atLeast": 10,
+          "trigger": "event_court",
+          "text": "移送法辦，導向負面結局"
+        }
+      ]
+    }
+  },
+  "leveling": {
+    "_desc": "等級對應軍階，只影響可接任務、技能點與 NPC 態度，不直接加屬性。",
+    "xpKey": "xp",
+    "maxLevel": 10,
+    "xpToNext": [
+      100,
+      150,
+      200,
+      260,
+      330,
+      410,
+      500,
+      600,
+      720
+    ],
+    "perLevel": {
+      "skillPoints": 1,
+      "hpMaxAdd": 3
+    },
+    "ranks": [
+      {
+        "level": 1,
+        "rank": "二兵"
+      },
+      {
+        "level": 3,
+        "rank": "一兵"
+      },
+      {
+        "level": 6,
+        "rank": "上兵"
+      },
+      {
+        "level": 9,
+        "rank": "下士（僅志願役）",
+        "requires": {
+          "flag": "vol"
+        }
+      }
+    ],
+    "xpSources": {
+      "mainQuest": [
+        40,
+        80
+      ],
+      "sideQuest": [
+        15,
+        40
+      ],
+      "minigamePass": 15,
+      "minigameGreat": 30,
+      "dailyRoutine": 5
+    }
+  },
+  "skills": {
+    "_desc": "每升一級拿 1 點技能點，每個技能最多 3 級。單位專屬技能只有抽到該單位才能點。",
+    "list": [
+      {
+        "id": "sk_endurance",
+        "name": "耐力",
+        "maxRank": 3,
+        "perRank": {
+          "hpMaxAdd": 8,
+          "fatigueGainPct": -10
+        }
+      },
+      {
+        "id": "sk_marksman",
+        "name": "射擊",
+        "maxRank": 3,
+        "perRank": {
+          "shootingSwayPct": -15
+        },
+        "badge": "marksman"
+      },
+      {
+        "id": "sk_tidy",
+        "name": "內務整理",
+        "maxRank": 3,
+        "perRank": {
+          "check.inspection": 8
+        }
+      },
+      {
+        "id": "sk_sentry",
+        "name": "站哨警覺",
+        "maxRank": 3,
+        "perRank": {
+          "check.sentry": 8
+        }
+      },
+      {
+        "id": "sk_social",
+        "name": "做人圓融",
+        "maxRank": 3,
+        "perRank": {
+          "npcAffinityPct": 15
+        }
+      },
+      {
+        "id": "sk_firstaid",
+        "name": "急救",
+        "maxRank": 2,
+        "perRank": {
+          "injuryDaysPct": -25
+        },
+        "badge": "rescuer"
+      },
+      {
+        "id": "sk_inf_march",
+        "name": "行軍老手",
+        "unit": "infantry",
+        "maxRank": 2,
+        "perRank": {
+          "check.march": 10
+        }
+      },
+      {
+        "id": "sk_art_calc",
+        "name": "射擊諸元計算",
+        "unit": "artillery",
+        "maxRank": 2,
+        "perRank": {
+          "check.artillery": 10
+        }
+      },
+      {
+        "id": "sk_air_maint",
+        "name": "機務細心",
+        "unit": "airforce",
+        "maxRank": 2,
+        "perRank": {
+          "check.maintenance": 10
+        }
+      },
+      {
+        "id": "sk_navy_sea",
+        "name": "海上平衡",
+        "unit": "navy",
+        "maxRank": 2,
+        "perRank": {
+          "check.deck": 10,
+          "seasickPct": -30
+        }
+      },
+      {
+        "id": "sk_log_count",
+        "name": "清點達人",
+        "unit": "logistics",
+        "maxRank": 2,
+        "perRank": {
+          "check.inventory": 10
+        }
+      }
+    ]
+  },
+  "units": {
+    "_desc": "抽籤結果對應的單位代號，Eve 的單位專屬任務請用這些 id。",
+    "infantry": {
+      "name": "陸軍步兵營",
+      "start": {
+        "b": 3
+      },
+      "fatigueGainPct": 10
+    },
+    "artillery": {
+      "name": "陸軍砲兵營",
+      "start": {
+        "d": 3
+      }
+    },
+    "airforce": {
+      "name": "空軍基地",
+      "start": {
+        "d": 2,
+        "m": 2
+      }
+    },
+    "navy": {
+      "name": "海軍艦艇",
+      "start": {
+        "o": 3
+      },
+      "fatigueGainPct": 5
+    },
+    "logistics": {
+      "name": "後勤補給單位",
+      "start": {
+        "o": 2,
+        "m": 2
+      },
+      "fatigueGainPct": -5
+    }
+  },
+  "checks": {
+    "_desc": "取代原本的 0 到 40 擲骰。成功率 = base + (屬性 - dc) × 2 + 技能/裝備加成 + 疲勞懲罰，最後夾在 5% 到 95%，不會必過也不會必敗。",
+    "formula": "clamp(base + (attr - dc) * 2 + bonus + fatiguePenalty, 5, 95)",
+    "base": 50,
+    "dcByChapter": {
+      "1": 40,
+      "2": 45,
+      "3": 55,
+      "4": 62,
+      "5": 68
+    },
+    "types": {
+      "check.inspection": {
+        "attr": "d",
+        "name": "內務檢查"
+      },
+      "check.sentry": {
+        "attr": "d",
+        "name": "站哨"
+      },
+      "check.run3000": {
+        "attr": "b",
+        "name": "三千公尺"
+      },
+      "check.march": {
+        "attr": "b",
+        "name": "行軍"
+      },
+      "check.social": {
+        "attr": "o",
+        "name": "交涉"
+      },
+      "check.endure": {
+        "attr": "m",
+        "name": "咬牙撐住"
+      },
+      "check.artillery": {
+        "attr": "d",
+        "name": "砲操"
+      },
+      "check.maintenance": {
+        "attr": "d",
+        "name": "機務保養"
+      },
+      "check.deck": {
+        "attr": "b",
+        "name": "甲板作業"
+      },
+      "check.inventory": {
+        "attr": "d",
+        "name": "清點"
+      }
+    }
+  },
+  "items": {
+    "_desc": "背包上限 12 格。slot 為 equip 的可裝備，consumable 為消耗品。福利社用薪餉購買。",
+    "bagSize": 12,
+    "equipSlots": [
+      "head",
+      "body",
+      "feet",
+      "accessory"
+    ],
+    "list": [
+      {
+        "id": "it_helmet",
+        "name": "鋼盔",
+        "type": "equip",
+        "slot": "head",
+        "issued": true,
+        "effect": {
+          "injuryChanceAdd": -5
+        }
+      },
+      {
+        "id": "it_camo",
+        "name": "迷彩服",
+        "type": "equip",
+        "slot": "body",
+        "issued": true,
+        "effect": {}
+      },
+      {
+        "id": "it_camo_ironed",
+        "name": "燙好的迷彩服",
+        "type": "equip",
+        "slot": "body",
+        "effect": {
+          "check.inspection": 8
+        },
+        "source": "支線任務獎勵"
+      },
+      {
+        "id": "it_boots",
+        "name": "軍靴",
+        "type": "equip",
+        "slot": "feet",
+        "issued": true,
+        "effect": {}
+      },
+      {
+        "id": "it_insole",
+        "name": "氣墊鞋墊",
+        "type": "equip",
+        "slot": "feet",
+        "price": 199,
+        "shop": true,
+        "effect": {
+          "check.run3000": 5,
+          "check.march": 5
+        }
+      },
+      {
+        "id": "it_watch",
+        "name": "電子錶",
+        "type": "equip",
+        "slot": "accessory",
+        "price": 350,
+        "shop": true,
+        "effect": {
+          "check.sentry": 6
+        }
+      },
+      {
+        "id": "it_dogtag",
+        "name": "狗牌",
+        "type": "equip",
+        "slot": "accessory",
+        "issued": true,
+        "effect": {
+          "m": 1
+        }
+      },
+      {
+        "id": "it_familyletter",
+        "name": "家書",
+        "type": "equip",
+        "slot": "accessory",
+        "effect": {
+          "dailyMoraleAdd": 1
+        },
+        "source": "家人來信事件"
+      },
+      {
+        "id": "it_energy",
+        "name": "能量飲料",
+        "type": "consumable",
+        "price": 35,
+        "shop": true,
+        "use": {
+          "hp": 25,
+          "fatigue": 10
+        }
+      },
+      {
+        "id": "it_milktea",
+        "name": "福利社奶茶",
+        "type": "consumable",
+        "price": 25,
+        "shop": true,
+        "use": {
+          "m": 2,
+          "fatigue": -5
+        }
+      },
+      {
+        "id": "it_instant",
+        "name": "泡麵",
+        "type": "consumable",
+        "price": 30,
+        "shop": true,
+        "use": {
+          "hp": 15,
+          "m": 1
+        }
+      },
+      {
+        "id": "it_salonpas",
+        "name": "痠痛貼布",
+        "type": "consumable",
+        "price": 60,
+        "shop": true,
+        "use": {
+          "fatigue": -20
+        }
+      },
+      {
+        "id": "it_shoepolish",
+        "name": "鞋油",
+        "type": "consumable",
+        "price": 45,
+        "shop": true,
+        "use": {
+          "nextCheck.inspection": 10
+        }
+      },
+      {
+        "id": "it_snackbox",
+        "name": "大包零食",
+        "type": "consumable",
+        "price": 120,
+        "shop": true,
+        "use": {
+          "o": 2,
+          "m": 1
+        },
+        "note": "分給同梯"
+      },
+      {
+        "id": "it_phonecard",
+        "name": "電話卡",
+        "type": "consumable",
+        "price": 100,
+        "shop": true,
+        "use": {
+          "m": 4
+        },
+        "note": "打電話回家"
+      },
+      {
+        "id": "it_contraband",
+        "name": "私帶違禁品",
+        "type": "consumable",
+        "use": {
+          "m": 5
+        },
+        "risk": {
+          "caughtChance": 35,
+          "demerit": 3
+        },
+        "note": "誘惑選項"
+      },
+      {
+        "id": "it_draft_notice",
+        "name": "兵單",
+        "type": "quest",
+        "effect": {},
+        "note": "任務道具，不占背包格"
+      },
+      {
+        "id": "it_photo_album",
+        "name": "爺爺的相簿",
+        "type": "quest",
+        "effect": {},
+        "note": "任務道具；story.json 的 photo_album 請改成這個 id"
+      }
+    ],
+    "questItemRule": "carry 目標裡沒有 it_ 前綴的東西（canteen、sandbag 等）一律視為臨時任務道具，type quest，不占背包格、任務結束自動移除，不需要另外定義。"
+  },
+  "fatigueCosts": {
+    "_desc": "常見活動的體力與疲勞消耗，Sam 實作每日行程時使用。",
+    "run3000": {
+      "hp": -20,
+      "fatigue": 15
+    },
+    "march": {
+      "hp": -30,
+      "fatigue": 25
+    },
+    "sentry": {
+      "hp": -5,
+      "fatigue": 12
+    },
+    "inspection": {
+      "hp": -5,
+      "fatigue": 5
+    },
+    "training": {
+      "hp": -15,
+      "fatigue": 10
+    },
+    "detail": {
+      "hp": -10,
+      "fatigue": 10,
+      "note": "公差"
+    },
+    "rest": {
+      "hp": 20,
+      "fatigue": -20
+    },
+    "leave": {
+      "hp": 60,
+      "fatigue": -60,
+      "m": 5,
+      "note": "放假回家"
+    }
+  },
+  "questRewards": {
+    "_desc": "任務獎勵格式。Eve 在 story.json 每個任務寫 reward 與 failure，用下面的 key。tier 可直接引用預設值，也可以自訂。",
+    "schema": {
+      "reward": {
+        "xp": "int",
+        "b|m|d|o": "int（建議 1 到 4）",
+        "money": "int",
+        "honor": "int",
+        "items": [
+          "item id"
+        ],
+        "flags": [
+          "flag 名稱"
+        ],
+        "badge": "TAGS 裡的 key"
+      },
+      "failure": {
+        "hp|m|d|o": "負整數",
+        "demerit": "int",
+        "injury": "injury id",
+        "trigger": "event id"
+      }
+    },
+    "tiers": {
+      "small": {
+        "xp": 15,
+        "attrTotal": 2
+      },
+      "medium": {
+        "xp": 30,
+        "attrTotal": 4,
+        "money": 100
+      },
+      "main": {
+        "xp": 60,
+        "attrTotal": 6,
+        "honor": 1
+      },
+      "big": {
+        "xp": 80,
+        "attrTotal": 8,
+        "honor": 2
+      }
+    },
+    "attrCapPerQuest": 4,
+    "badges": [
+      "strong",
+      "marksman",
+      "helper",
+      "rescuer",
+      "mentor",
+      "sprinter",
+      "legacy"
+    ],
+    "repeatable": {
+      "_desc": "repeatable:true 的任務可重複完成，但獎勵遞減，避免刷數值",
+      "decay": [
+        1.0,
+        0.5,
+        0.25,
+        0
+      ],
+      "cooldownDays": 3,
+      "attrCapTotal": 6
+    },
+    "decisionFlags": {
+      "_desc": "讓玩家選擇是否設定 flag 的寫法，取代 vol?",
+      "format": {
+        "choice": [
+          {
+            "label": "簽志願役",
+            "flags": [
+              "vol"
+            ]
+          },
+          {
+            "label": "不簽",
+            "flags": [
+              "declined"
+            ]
+          }
+        ]
+      },
+      "appliesTo": "ch4_main_07"
+    }
+  },
+  "failure": {
+    "_desc": "失敗與後果。這些事件需要 Eve 寫對應劇情，id 已固定。",
+    "injuries": [
+      {
+        "id": "inj_sprain",
+        "name": "腳踝扭傷",
+        "days": 7,
+        "effect": {
+          "b": -3
+        },
+        "blocks": [
+          "run3000",
+          "march"
+        ]
+      },
+      {
+        "id": "inj_heatstroke",
+        "name": "中暑",
+        "days": 3,
+        "effect": {
+          "b": -2,
+          "m": -3
+        },
+        "chanceWhen": "夏季訓練且疲勞 >= 60"
+      },
+      {
+        "id": "inj_fracture",
+        "name": "骨折住院",
+        "days": 30,
+        "effect": {
+          "b": -8,
+          "m": -6
+        },
+        "flag": "hospitalized"
+      }
+    ],
+    "events": {
+      "event_collapse": {
+        "name": "體力不支倒下",
+        "effect": {
+          "hp": "set:30",
+          "fatigue": "set:50",
+          "m": -5
+        },
+        "injuryChance": 30
+      },
+      "event_morale_breakdown": {
+        "name": "士氣崩潰",
+        "effect": {
+          "m": "set:20"
+        },
+        "note": "強制觸發輔導長/心輔官談話劇情，連續兩次記 flag broken"
+      },
+      "event_warning": {
+        "name": "輔導長約談",
+        "effect": {
+          "m": -3
+        }
+      },
+      "event_confinement": {
+        "name": "禁閉",
+        "days": 7,
+        "effect": {
+          "m": -10,
+          "o": -5,
+          "honor": "set:0"
+        },
+        "flag": "confined"
+      },
+      "event_court": {
+        "name": "移送法辦",
+        "flag": "court",
+        "note": "直接導向負面結局 bad_court"
+      }
+    }
+  },
+  "endings": {
+    "_desc": "結局條件改寫。依序判定，取第一個符合的。數值通膨壓下來後，門檻已調低，負面結局放最前面。",
+    "conscript": [
+      {
+        "id": "bad_court",
+        "n": "提前離營",
+        "new": true,
+        "if": "flag court"
+      },
+      {
+        "id": "bad_injury",
+        "n": "因傷提早退伍",
+        "new": true,
+        "if": "flag hospitalized 且 b < 35"
+      },
+      {
+        "id": "exemplar",
+        "n": "模範役男",
+        "if": "d>=62 && b>=58 && o>=58 && m>=55 && demerit==0"
+      },
+      {
+        "id": "brother",
+        "n": "一輩子的戰友",
+        "if": "o>=68"
+      },
+      {
+        "id": "iron",
+        "n": "鋼鐵之軀",
+        "if": "b>=68"
+      },
+      {
+        "id": "rule",
+        "n": "軍紀典範",
+        "if": "d>=68 && demerit<=1"
+      },
+      {
+        "id": "sunny",
+        "n": "陽光大兵",
+        "if": "m>=68"
+      },
+      {
+        "id": "calm",
+        "n": "平安退伍",
+        "if": "b+m+d+o>=200 && demerit<=2"
+      },
+      {
+        "id": "phew",
+        "n": "終於撐過來了",
+        "if": "true"
+      }
+    ],
+    "volunteer": [
+      {
+        "id": "vstar",
+        "n": "志願役新星",
+        "if": "d>=64 && b>=56 && level>=9"
+      },
+      {
+        "id": "vlead",
+        "n": "帶兵的人",
+        "if": "o>=62 && skill sk_social>=2"
+      },
+      {
+        "id": "vstep",
+        "n": "一步一腳印",
+        "if": "true"
+      }
+    ],
+    "targetDistribution": "隨機遊玩時每個義務役正常結局至少 3%，負面結局合計 3% 到 8%。Sam 模擬後若偏離，告訴我再調整門檻。"
+  },
+  "balance": {
+    "_desc": "平衡原則與預期數值走向。",
+    "startingStats": "沿用四種背景（uni/office/site/gamer）的初始值，總和 170 到 195。",
+    "expectedEndTotal": "認真玩約 230 到 260，隨便玩約 190 到 215，常犯錯約 150 到 180。",
+    "rules": [
+      "單一選項或任務對單一屬性最多 +4，總和最多 +8。",
+      "每章至少有 2 個會扣分的失敗後果，扣分幅度要和加分相當。",
+      "高屬性的好處透過判定成功率體現，不額外直接加分，避免滾雪球。",
+      "疲勞會逼玩家取捨：多接支線就要多休息或花錢買補給。",
+      "薪餉夠買必需品，但不夠全部都買，讓福利社有選擇。"
+    ]
+  },
+  "minigames": {
+    "_desc": "小遊戲通用規則：表現分 0-100。>=60 及格，>=85 優秀。屬性與技能提供 assist（每 10 點屬性超過 50 給 +3 分）。不及格套用任務 failure。",
+    "pushup": {
+      "name": "伏地挺身",
+      "attr": "b",
+      "check": null,
+      "cost": "training",
+      "passReward": {
+        "xp": 15,
+        "b": 1
+      },
+      "greatReward": {
+        "xp": 30,
+        "b": 2,
+        "badge": "strong"
+      }
+    },
+    "shooting": {
+      "name": "射擊",
+      "attr": "d",
+      "check": "sk_marksman",
+      "cost": "training",
+      "passReward": {
+        "xp": 15,
+        "d": 1
+      },
+      "greatReward": {
+        "xp": 30,
+        "d": 2,
+        "badge": "marksman"
+      }
+    },
+    "lottery": {
+      "name": "抽籤",
+      "attr": null,
+      "note": "純隨機分發 units，不計分"
+    },
+    "fold_blanket": {
+      "name": "折棉被（豆腐乾）",
+      "attr": "d",
+      "check": "sk_tidy",
+      "cost": "inspection",
+      "passReward": {
+        "xp": 15,
+        "d": 1
+      },
+      "greatReward": {
+        "xp": 25,
+        "d": 2
+      }
+    },
+    "rifle_assembly": {
+      "name": "步槍分解結合",
+      "attr": "d",
+      "check": "sk_marksman",
+      "cost": "training",
+      "passReward": {
+        "xp": 15,
+        "d": 1
+      },
+      "greatReward": {
+        "xp": 25,
+        "d": 2
+      },
+      "timeLimitSec": 60
+    },
+    "fire_calc": {
+      "name": "射擊諸元計算",
+      "attr": "d",
+      "check": "sk_art_calc",
+      "cost": "training",
+      "passReward": {
+        "xp": 15,
+        "d": 1
+      },
+      "greatReward": {
+        "xp": 30,
+        "d": 2
+      },
+      "unit": "artillery"
+    },
+    "inventory_count": {
+      "name": "庫存清點",
+      "attr": "d",
+      "check": "sk_log_count",
+      "cost": "detail",
+      "passReward": {
+        "xp": 15,
+        "o": 1
+      },
+      "greatReward": {
+        "xp": 25,
+        "d": 1,
+        "o": 1
+      },
+      "unit": "logistics"
+    },
+    "duty_roster": {
+      "name": "勤務排班",
+      "attr": "o",
+      "check": "sk_social",
+      "cost": "detail",
+      "passReward": {
+        "xp": 15,
+        "o": 1
+      },
+      "greatReward": {
+        "xp": 25,
+        "o": 2
+      }
+    },
+    "cooking": {
+      "name": "伙房幫廚",
+      "attr": "o",
+      "check": null,
+      "cost": "detail",
+      "passReward": {
+        "xp": 10,
+        "o": 1
+      },
+      "greatReward": {
+        "xp": 20,
+        "o": 1,
+        "m": 1
+      }
+    },
+    "essay": {
+      "name": "寫心得/莒光作文",
+      "attr": "m",
+      "check": null,
+      "cost": "rest",
+      "passReward": {
+        "xp": 10,
+        "m": 1
+      },
+      "greatReward": {
+        "xp": 20,
+        "m": 2
+      }
+    },
+    "rehab": {
+      "name": "復健",
+      "attr": "b",
+      "check": null,
+      "cost": "rest",
+      "passReward": {
+        "xp": 10,
+        "b": 1
+      },
+      "greatReward": {
+        "xp": 20,
+        "b": 2
+      },
+      "note": "受傷期間可縮短 injury days 30%"
+    },
+    "rope_coil": {
+      "name": "收纜繩",
+      "attr": "b",
+      "check": "sk_navy_sea",
+      "cost": "detail",
+      "passReward": {
+        "xp": 15,
+        "b": 1
+      },
+      "greatReward": {
+        "xp": 25,
+        "b": 1,
+        "o": 1
+      },
+      "unit": "navy"
+    },
+    "rhythm": {
+      "name": "節奏遊戲（軍歌、砲操口令）",
+      "attr": "m",
+      "check": null,
+      "cost": "training",
+      "passReward": {
+        "xp": 10,
+        "m": 1
+      },
+      "greatReward": {
+        "xp": 20,
+        "m": 1,
+        "o": 1
+      },
+      "targets": [
+        "military_song",
+        "gun_commands"
+      ]
+    },
+    "timed": {
+      "name": "限時任務（著裝、放列、站哨）",
+      "attr": "d",
+      "check": "check.sentry",
+      "note": "超時算失敗；dress_up 用 d，emplace_gun 用 check.artillery，watch_duty 用 check.sentry"
+    }
+  }
+}

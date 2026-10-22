@@ -1,0 +1,3298 @@
+{
+ "version": "1.0",
+ "attributeSource": "rpg-system.json",
+ "attributeKeysUsed": [
+  "b",
+  "m",
+  "d",
+  "o",
+  "hp",
+  "fatigue",
+  "money",
+  "honor",
+  "demerit",
+  "xp",
+  "items",
+  "flags",
+  "badge",
+  "tier",
+  "injury",
+  "trigger"
+ ],
+ "chapters": [
+  {
+   "id": 1,
+   "title": "平民",
+   "dayRange": [
+    0,
+    3
+   ],
+   "summary": "兵單到來，與家人朋友度過最後幾天。",
+   "maps": [
+    "home_street"
+   ],
+   "mainQuests": [
+    "ch1_main_01",
+    "ch1_main_02",
+    "ch1_main_03"
+   ],
+   "sideQuests": [
+    "ch1_side_01",
+    "ch1_side_02",
+    "ch1_side_03"
+   ]
+  },
+  {
+   "id": 2,
+   "title": "入伍",
+   "dayRange": [
+    4,
+    5
+   ],
+   "summary": "報到、領裝、第一夜。",
+   "maps": [
+    "training_center"
+   ],
+   "mainQuests": [
+    "ch2_main_01",
+    "ch2_main_02",
+    "ch2_main_03"
+   ],
+   "sideQuests": [
+    "ch2_side_01",
+    "ch2_side_02"
+   ]
+  },
+  {
+   "id": 3,
+   "title": "新訓",
+   "dayRange": [
+    5,
+    30
+   ],
+   "summary": "起床號、內務、體測、射擊、懇親會、抽籤。",
+   "maps": [
+    "training_center"
+   ],
+   "mainQuests": [
+    "ch3_main_01",
+    "ch3_main_02",
+    "ch3_main_03",
+    "ch3_main_04",
+    "ch3_main_05",
+    "ch3_main_06",
+    "ch3_main_07"
+   ],
+   "sideQuests": [
+    "ch3_side_01",
+    "ch3_side_02",
+    "ch3_side_03",
+    "ch3_side_04",
+    "ch3_side_05"
+   ]
+  },
+  {
+   "id": 4,
+   "title": "下部隊",
+   "dayRange": [
+    31,
+    285
+   ],
+   "summary": "依單位執行專屬任務、放假收假、救災、裝檢、演習、志願役抉擇。",
+   "maps": [
+    "unit_base",
+    "outside_gate"
+   ],
+   "mainQuests": [
+    "ch4_main_01",
+    "ch4_main_02",
+    "ch4_main_03",
+    "ch4_main_04",
+    "ch4_main_05",
+    "ch4_main_06",
+    "ch4_main_07"
+   ],
+   "sideQuests": [
+    "ch4_side_01",
+    "ch4_side_02",
+    "ch4_side_03",
+    "ch4_side_04",
+    "ch4_side_infantry_01",
+    "ch4_side_infantry_02",
+    "ch4_side_infantry_03",
+    "ch4_side_artillery_01",
+    "ch4_side_artillery_02",
+    "ch4_side_artillery_03",
+    "ch4_side_airforce_01",
+    "ch4_side_airforce_02",
+    "ch4_side_airforce_03",
+    "ch4_side_navy_01",
+    "ch4_side_navy_02",
+    "ch4_side_navy_03",
+    "ch4_side_logistics_01",
+    "ch4_side_logistics_02",
+    "ch4_side_logistics_03"
+   ]
+  },
+  {
+   "id": 5,
+   "title": "退伍",
+   "dayRange": [
+    286,
+    364
+   ],
+   "summary": "洞八之後成為老兵、帶學弟、交接、退伍令。",
+   "maps": [
+    "unit_base",
+    "home_street",
+    "outside_gate"
+   ],
+   "mainQuests": [
+    "ch5_main_01",
+    "ch5_main_02",
+    "ch5_main_03",
+    "ch5_main_04",
+    "ch5_main_05"
+   ],
+   "sideQuests": [
+    "ch5_side_01",
+    "ch5_side_02",
+    "ch5_side_03",
+    "ch5_side_04",
+    "ch5_side_05",
+    "ch5_side_06"
+   ]
+  }
+ ],
+ "quests": [
+  {
+   "id": "ch1_main_01",
+   "chapter": 1,
+   "type": "main",
+   "title": "一封掛號信",
+   "dayRange": [
+    0,
+    0
+   ],
+   "giver": "npc_mom",
+   "location": "home",
+   "description": "兵單寄到了。到家門口簽收掛號信，拿給爸爸看。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "npc_postman"
+    },
+    {
+     "type": "carry",
+     "target": "it_draft_notice:npc_dad"
+    },
+    {
+     "type": "talk",
+     "target": "npc_dad"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "m": 1,
+    "o": 1
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "郵差在樓下按電鈴，說是你的掛號。",
+    "progress": "信封上寫著「國防部」……",
+    "complete": "爸爸看完點點頭：「該來的總會來。」",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch1_main_02",
+   "chapter": 1,
+   "type": "main",
+   "title": "行李清單",
+   "dayRange": [
+    1,
+    2
+   ],
+   "giver": "npc_mom",
+   "location": "home",
+   "description": "依入營須知收拾行李，在限時內把清單上的東西從房間各處找齊放進背包，別帶違禁品。",
+   "objectives": [
+    {
+     "type": "collect",
+     "target": "packing_list",
+     "count": 8,
+     "timeLimit": 180
+    },
+    {
+     "type": "inspect",
+     "target": "bag"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {
+    "note": "若放入 it_contraband 則在 ch2_main_01 被搜出，觸發 event_warning"
+   },
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "d": 2
+   },
+   "failure": {
+    "flags": [
+     "missing_item"
+    ],
+    "d": -1
+   },
+   "dialogue": {
+    "start": "入營須知上寫得很清楚，照著收。",
+    "progress": "牙刷、拖鞋、印章、健保卡……還差幾樣？",
+    "complete": "齊了，背包拉鍊拉上那一刻突然很真實。",
+    "fail": "好像漏了東西，到時候再跟同梯借吧。"
+   }
+  },
+  {
+   "id": "ch1_main_03",
+   "chapter": 1,
+   "type": "main",
+   "title": "最後的自由時光",
+   "dayRange": [
+    2,
+    3
+   ],
+   "giver": "npc_friend_chen",
+   "location": "street",
+   "description": "入伍前一晚跟朋友吃宵夜、回家前去探望爺爺。午夜前要回到家。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "night_market"
+    },
+    {
+     "type": "talk",
+     "target": "npc_friend_chen"
+    },
+    {
+     "type": "goto",
+     "target": "grandpa_house",
+     "count": null,
+     "timeLimit": null
+    },
+    {
+     "type": "goto",
+     "target": "home",
+     "count": null,
+     "timeLimit": "23:59"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "m": 2
+   },
+   "failure": {
+    "fatigue": 20,
+    "m": -1
+   },
+   "dialogue": {
+    "start": "阿陳：「最後一攤我請，吃完你就是國家的了。」",
+    "progress": "先去爺爺家坐一下，他等你很久了。",
+    "complete": "躺在自己床上，天花板看起來特別陌生。",
+    "fail": "玩太晚了，明天報到要撐住。"
+   }
+  },
+  {
+   "id": "ch1_side_01",
+   "chapter": 1,
+   "type": "side",
+   "title": "體能預備",
+   "dayRange": [
+    0,
+    3
+   ],
+   "giver": "npc_friend_chen",
+   "location": "park",
+   "description": "在公園跑完 3 圈並做伏地挺身練習，先讓身體適應。",
+   "objectives": [
+    {
+     "type": "run",
+     "target": "park_loop",
+     "count": 3,
+     "timeLimit": 600
+    },
+    {
+     "type": "minigame",
+     "target": "pushup"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "b": 2
+   },
+   "failure": {
+    "injury": "inj_sprain",
+    "chance": 10
+   },
+   "dialogue": {
+    "start": "聽說新訓第一週就要跑三千。",
+    "progress": "喘歸喘，再一圈。",
+    "complete": "腿痠但心裡踏實了點。",
+    "fail": "腳一拐……還好只是小扭到。"
+   }
+  },
+  {
+   "id": "ch1_side_02",
+   "chapter": 1,
+   "type": "side",
+   "title": "爺爺的老照片",
+   "dayRange": [
+    1,
+    3
+   ],
+   "giver": "npc_grandpa",
+   "location": "grandpa_house",
+   "description": "幫爺爺從儲藏室找出他當兵時的相簿，聽他說當年的事。",
+   "objectives": [
+    {
+     "type": "inspect",
+     "target": "storage_boxes",
+     "count": 3
+    },
+    {
+     "type": "carry",
+     "target": "it_photo_album:npc_grandpa"
+    },
+    {
+     "type": "talk",
+     "target": "npc_grandpa"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "m": 1,
+    "o": 1,
+    "items": [
+     "it_familyletter"
+    ]
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "爺爺：「我那本相簿在箱子裡，幫我找找。」",
+    "progress": "是這本嗎？封面都褪色了。",
+    "complete": "爺爺：「當兵苦是苦，但那些人你會記一輩子。」",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch1_side_03",
+   "chapter": 1,
+   "type": "side",
+   "title": "理個平頭",
+   "dayRange": [
+    1,
+    3
+   ],
+   "giver": "npc_barber",
+   "location": "street",
+   "description": "到巷口理髮店剃短頭髮。報到前剃好可以省事。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "barber_shop"
+    },
+    {
+     "type": "talk",
+     "target": "npc_barber"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 10,
+    "d": 1
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "老闆：「要當兵喔？我懂，三分頭。」",
+    "progress": "推刀嗡嗡響。",
+    "complete": "摸起來刺刺的，鏡子裡像換了個人。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch2_main_01",
+   "chapter": 2,
+   "type": "main",
+   "title": "營門口",
+   "dayRange": [
+    4,
+    4
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "training_gate",
+   "description": "到新訓中心報到：跟家人道別、排隊點名、接受行李檢查。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "npc_mom"
+    },
+    {
+     "type": "goto",
+     "target": "checkin_line"
+    },
+    {
+     "type": "inspect",
+     "target": "bag_check"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 20,
+    "d": 1
+   },
+   "failure": {
+    "trigger": "event_warning",
+    "m": -3
+   },
+   "dialogue": {
+    "start": "媽媽：「錢夠不夠？要記得打電話。」",
+    "progress": "前面的人一個一個被叫進去，排好。",
+    "complete": "林班長：「行李沒問題，下一個！」",
+    "fail": "林班長：「這是什麼？違禁品。你的名字我記住了。」"
+   }
+  },
+  {
+   "id": "ch2_main_02",
+   "chapter": 2,
+   "type": "main",
+   "title": "領裝",
+   "dayRange": [
+    4,
+    4
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "supply_room",
+   "description": "在限時內到各櫃台領取迷彩服、鞋子、鋼盔等裝備並搬回寢室。",
+   "objectives": [
+    {
+     "type": "collect",
+     "target": "issued_gear",
+     "count": 6,
+     "timeLimit": 240
+    },
+    {
+     "type": "carry",
+     "target": "gear_bag:barracks_bunk"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 20,
+    "items": [
+     "it_camo",
+     "it_helmet",
+     "it_boots"
+    ]
+   },
+   "failure": {
+    "d": -1,
+    "hp": -10
+   },
+   "dialogue": {
+    "start": "林班長：「動作快！五分鐘後寢室前集合！」",
+    "progress": "尺寸不合先拿著，之後再換。",
+    "complete": "裝備全部攤在床上，比想像中多。",
+    "fail": "遲到的跟我去罰站。"
+   }
+  },
+  {
+   "id": "ch2_main_03",
+   "chapter": 2,
+   "type": "main",
+   "title": "第一個夜晚",
+   "dayRange": [
+    4,
+    4
+   ],
+   "giver": "npc_akai",
+   "location": "barracks",
+   "description": "熄燈前完成盥洗、整理床位，熄燈後別發出聲音。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "washroom",
+     "count": null,
+     "timeLimit": 600
+    },
+    {
+     "type": "inspect",
+     "target": "bunk"
+    },
+    {
+     "type": "stealth",
+     "target": "lights_out",
+     "count": null,
+     "timeLimit": 120
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "o": 2
+   },
+   "failure": {
+    "d": -1
+   },
+   "dialogue": {
+    "start": "阿凱：「欸你也是台北來的？以後一起。」",
+    "progress": "盥洗只有十分鐘，搶水龍頭。",
+    "complete": "黑暗裡有人在小聲哭，你假裝沒聽見。",
+    "fail": "手電筒照過來：「誰在講話？」"
+   }
+  },
+  {
+   "id": "ch2_side_01",
+   "chapter": 2,
+   "type": "side",
+   "title": "借你一支筆",
+   "dayRange": [
+    4,
+    5
+   ],
+   "giver": "npc_akai",
+   "location": "barracks",
+   "description": "阿凱忘了帶筆和印章，幫他向其他同梯借到。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "recruits",
+     "count": 2
+    },
+    {
+     "type": "carry",
+     "target": "pen:npc_akai"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "o": 2
+   },
+   "failure": {
+    "o": -1
+   },
+   "dialogue": {
+    "start": "阿凱：「完了我印章沒帶，等下要蓋資料。」",
+    "progress": "問問隔壁床。",
+    "complete": "阿凱：「欠你一次，真的。」",
+    "fail": "阿凱只好被班長唸了一頓。"
+   }
+  },
+  {
+   "id": "ch2_side_02",
+   "chapter": 2,
+   "type": "side",
+   "title": "第一通電話",
+   "dayRange": [
+    5,
+    6
+   ],
+   "giver": "npc_mom",
+   "location": "phone_booth",
+   "description": "用公共電話時段排隊打電話回家報平安，限時三分鐘。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "phone_booth"
+    },
+    {
+     "type": "talk",
+     "target": "npc_mom",
+     "count": null,
+     "timeLimit": 180
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {
+    "items": [
+     "it_phonecard"
+    ],
+    "note": "實際可能為手機管制時段，見 notes"
+   },
+   "reward": {
+    "xp": 10,
+    "m": 2
+   },
+   "failure": {
+    "m": -1
+   },
+   "dialogue": {
+    "start": "隊伍排得好長。",
+    "progress": "媽媽：「吃得飽嗎？睡得著嗎？」",
+    "complete": "掛電話後鼻子有點酸。",
+    "fail": "輪到你時時段結束了。"
+   }
+  },
+  {
+   "id": "ch3_main_01",
+   "chapter": 3,
+   "type": "main",
+   "title": "起床號",
+   "dayRange": [
+    5,
+    7
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "barracks",
+   "description": "起床號響後在時限內著裝、折棉被、到集合場報數。",
+   "objectives": [
+    {
+     "type": "timed",
+     "target": "dress_up",
+     "count": null,
+     "timeLimit": 180
+    },
+    {
+     "type": "goto",
+     "target": "assembly_ground",
+     "count": null,
+     "timeLimit": 300
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 20,
+    "d": 2
+   },
+   "failure": {
+    "d": -2,
+    "demerit": 0,
+    "hp": -10
+   },
+   "dialogue": {
+    "start": "（起床號）林班長：「起床！三分鐘集合！」",
+    "progress": "鞋帶！鞋帶還沒綁！",
+    "complete": "林班長：「勉強可以，明天要更快。」",
+    "fail": "最後一個到的，全班陪你交互蹲跳。"
+   }
+  },
+  {
+   "id": "ch3_main_02",
+   "chapter": 3,
+   "type": "main",
+   "title": "豆腐塊",
+   "dayRange": [
+    6,
+    10
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "barracks",
+   "description": "學會內務：把棉被折成豆腐塊、擺好鞋子和臉盆，通過班長的內務檢查。",
+   "objectives": [
+    {
+     "type": "minigame",
+     "target": "fold_blanket"
+    },
+    {
+     "type": "inspect",
+     "target": "locker"
+    },
+    {
+     "type": "check",
+     "target": "check.inspection"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 3,
+    "items": []
+   },
+   "failure": {
+    "d": -2,
+    "m": -1
+   },
+   "dialogue": {
+    "start": "林班長：「棉被要有稜有角，像豆腐一樣。」",
+    "progress": "壓、折、捏線……再來一次。",
+    "complete": "林班長點頭：「這才像話。」",
+    "fail": "棉被被丟到地上：「重折！」"
+   }
+  },
+  {
+   "id": "ch3_main_03",
+   "chapter": 3,
+   "type": "main",
+   "title": "體能測驗：伏地挺身與三千",
+   "dayRange": [
+    10,
+    20
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "training_field",
+   "description": "完成伏地挺身小遊戲與三千公尺跑步。疲勞過高容易受傷。",
+   "objectives": [
+    {
+     "type": "minigame",
+     "target": "pushup"
+    },
+    {
+     "type": "run",
+     "target": "track_3000",
+     "count": 1,
+     "timeLimit": 960
+    },
+    {
+     "type": "check",
+     "target": "check.run3000"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "b": 3,
+    "d": 1,
+    "honor": 1
+   },
+   "failure": {
+    "b": -1,
+    "injury": "inj_heatstroke",
+    "chance": "fatigue>=60"
+   },
+   "dialogue": {
+    "start": "林班長：「測驗不過的假日留下來加強。」",
+    "progress": "呼吸，配速，不要停。",
+    "complete": "林班長：「及格！不錯。」",
+    "fail": "眼前一黑……醫務兵跑過來。"
+   }
+  },
+  {
+   "id": "ch3_main_04",
+   "chapter": 3,
+   "type": "main",
+   "title": "實彈射擊",
+   "dayRange": [
+    20,
+    25
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "shooting_range",
+   "description": "完成基本教練、領彈、射擊、退彈檢查。安全程序錯誤會直接失敗。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "range_officer"
+    },
+    {
+     "type": "minigame",
+     "target": "shooting"
+    },
+    {
+     "type": "inspect",
+     "target": "empty_chamber"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "d": 2,
+    "b": 1,
+    "badge": "marksman"
+   },
+   "failure": {
+    "trigger": "event_warning",
+    "d": -3,
+    "note": "槍口方向錯誤等嚴重違規"
+   },
+   "dialogue": {
+    "start": "靶場官：「口令沒下不准動。」",
+    "progress": "穩住準心，慢慢壓。",
+    "complete": "靶紙拿回來，彈孔還算集中。",
+    "fail": "槍口不准對人！你給我出來！"
+   }
+  },
+  {
+   "id": "ch3_main_05",
+   "chapter": 3,
+   "type": "main",
+   "title": "懇親會",
+   "dayRange": [
+    14,
+    16
+   ],
+   "giver": "npc_mom",
+   "location": "training_gate",
+   "description": "懇親會當天帶家人參觀營區、吃飯，在結束前送他們到門口。",
+   "objectives": [
+    {
+     "type": "escort",
+     "target": "family",
+     "count": "visit_route"
+    },
+    {
+     "type": "talk",
+     "target": "npc_dad"
+    },
+    {
+     "type": "goto",
+     "target": "training_gate",
+     "count": null,
+     "timeLimit": "16:00"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "m": 4,
+    "items": [
+     "it_snackbox"
+    ]
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "媽媽帶了一大袋滷味。",
+    "progress": "爸爸：「你曬黑了。」",
+    "complete": "看著車子開走，又要回去了。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch3_main_06",
+   "chapter": 3,
+   "type": "main",
+   "title": "莒光日",
+   "dayRange": [
+    7,
+    28
+   ],
+   "giver": "npc_counselor_wang",
+   "location": "classroom",
+   "description": "週四莒光日：觀看教學節目、寫心得，並在討論中發言。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "classroom"
+    },
+    {
+     "type": "minigame",
+     "target": "essay"
+    },
+    {
+     "type": "talk",
+     "target": "npc_counselor_wang"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 15,
+    "d": 1,
+    "m": 1
+   },
+   "failure": {
+    "d": -1
+   },
+   "dialogue": {
+    "start": "王輔導長：「今天的節目看完要寫心得。」",
+    "progress": "打瞌睡會被點名，撐住。",
+    "complete": "王輔導長：「寫得很誠懇。」",
+    "fail": "睡著了，心得一片空白。"
+   }
+  },
+  {
+   "id": "ch3_main_07",
+   "chapter": 3,
+   "type": "main",
+   "title": "結訓與抽籤",
+   "dayRange": [
+    28,
+    30
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "assembly_ground",
+   "description": "參加結訓典禮，抽籤決定下部隊單位（infantry/artillery/airforce/navy/logistics）。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "assembly_ground"
+    },
+    {
+     "type": "minigame",
+     "target": "lottery"
+    }
+   ],
+   "prerequisites": [
+    "ch3_main_03",
+    "ch3_main_04"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "flags": [
+     "unit_assigned"
+    ]
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "林班長：「你們是我帶過最吵的一梯，但都過了。」",
+    "progress": "手伸進籤筒……",
+    "complete": "結果出來了，命運就這樣決定。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch3_side_01",
+   "chapter": 3,
+   "type": "side",
+   "title": "少了一個水壺",
+   "dayRange": [
+    8,
+    15
+   ],
+   "giver": "npc_akai",
+   "location": "barracks",
+   "description": "阿凱的水壺不見了，裝檢前要找回來。去寢室、餐廳、集合場找。",
+   "objectives": [
+    {
+     "type": "inspect",
+     "target": "search_spots",
+     "count": 3,
+     "timeLimit": 600
+    },
+    {
+     "type": "carry",
+     "target": "canteen:npc_akai"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 20,
+    "o": 3
+   },
+   "failure": {
+    "o": -2,
+    "note": "阿凱裝檢被記一次"
+   },
+   "dialogue": {
+    "start": "阿凱：「完了，等下裝檢我水壺不見。」",
+    "progress": "餐廳桌下？集合場角落？",
+    "complete": "阿凱：「你是我的神。」",
+    "fail": "時間到，阿凱被叫出列。"
+   }
+  },
+  {
+   "id": "ch3_side_02",
+   "chapter": 3,
+   "type": "side",
+   "title": "福利社採買",
+   "dayRange": [
+    7,
+    28
+   ],
+   "giver": "npc_auntie",
+   "location": "px",
+   "description": "幫班上跑腿去福利社買東西，在休息時間結束前回來，錢要算對。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "px"
+    },
+    {
+     "type": "talk",
+     "target": "npc_auntie"
+    },
+    {
+     "type": "carry",
+     "target": "snack_bag:barracks",
+     "count": null,
+     "timeLimit": 600
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "o": 2,
+    "money": -50
+   },
+   "failure": {
+    "o": -1
+   },
+   "dialogue": {
+    "start": "同梯：「幫我帶一瓶運動飲料！」",
+    "progress": "阿姨：「又是你喔，這次要什麼？」",
+    "complete": "大家搶著分零食。",
+    "fail": "休息時間結束，東西還在你手上。"
+   }
+  },
+  {
+   "id": "ch3_side_03",
+   "chapter": 3,
+   "type": "side",
+   "title": "夜間站哨",
+   "dayRange": [
+    15,
+    28
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "sentry_post",
+   "description": "新兵夜間衛哨：記住口令、巡查並在交班時正確交接。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "sentry_post"
+    },
+    {
+     "type": "patrol",
+     "target": "sentry_route",
+     "count": 3
+    },
+    {
+     "type": "check",
+     "target": "check.sentry"
+    },
+    {
+     "type": "talk",
+     "target": "next_sentry"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {
+    "fatigue": "<85"
+   },
+   "reward": {
+    "xp": 25,
+    "d": 3
+   },
+   "failure": {
+    "trigger": "event_warning",
+    "d": -2,
+    "note": "打瞌睡被查哨抓到"
+   },
+   "dialogue": {
+    "start": "林班長：「今晚口令記好，不准睡。」",
+    "progress": "遠方有手電筒光，是查哨的嗎？",
+    "complete": "交班：「哨所一切正常！」",
+    "fail": "查哨官：「你剛剛在睡覺？」"
+   }
+  },
+  {
+   "id": "ch3_side_04",
+   "chapter": 3,
+   "type": "side",
+   "title": "軍歌比賽",
+   "dayRange": [
+    20,
+    27
+   ],
+   "giver": "npc_squad_leader_hsu",
+   "location": "assembly_ground",
+   "description": "練唱軍歌並跟上隊形，比賽時走位正確。",
+   "objectives": [
+    {
+     "type": "rhythm",
+     "target": "military_song"
+    },
+    {
+     "type": "goto",
+     "target": "formation_marks",
+     "count": 4
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 25,
+    "o": 3,
+    "m": 1
+   },
+   "failure": {
+    "o": -1
+   },
+   "dialogue": {
+    "start": "許班兵：「大聲一點！要讓評審聽到！」",
+    "progress": "左轉彎，踏步……",
+    "complete": "我們拿到第二名！",
+    "fail": "有人走錯拍，整排跟著亂。"
+   }
+  },
+  {
+   "id": "ch3_side_05",
+   "chapter": 3,
+   "type": "side",
+   "title": "喉嚨痛",
+   "dayRange": [
+    10,
+    25
+   ],
+   "giver": "npc_medic",
+   "location": "infirmary",
+   "description": "感冒不舒服，去醫務室看病、拿藥，休息一天再回訓練。可選擇硬撐（不接此任務會累積疲勞）。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "infirmary"
+    },
+    {
+     "type": "talk",
+     "target": "npc_medic"
+    },
+    {
+     "type": "rest",
+     "target": "barracks",
+     "count": 1
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 10,
+    "hp": 20,
+    "fatigue": -20
+   },
+   "failure": {
+    "fatigue": 20
+   },
+   "dialogue": {
+    "start": "喉嚨像吞刀片。",
+    "progress": "醫官：「發燒了，先休息一天。」",
+    "complete": "睡了一覺好多了。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch4_main_01",
+   "chapter": 4,
+   "type": "main",
+   "title": "下部隊",
+   "dayRange": [
+    31,
+    33
+   ],
+   "giver": "npc_cpl_chou",
+   "location": "unit_base",
+   "description": "抵達新單位：向連長報到、認識學長、找到自己的床位與負責的公差區域。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "npc_captain_huang"
+    },
+    {
+     "type": "talk",
+     "target": "npc_senior_chou"
+    },
+    {
+     "type": "goto",
+     "target": "assigned_bunk"
+    },
+    {
+     "type": "inspect",
+     "target": "duty_area"
+    }
+   ],
+   "prerequisites": [
+    "ch3_main_07"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "o": 2,
+    "d": 2
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "周學長：「新來的？跟我走，先帶你認路。」",
+    "progress": "這裡是你的掃區，每天早上要弄乾淨。",
+    "complete": "黃連長：「好好做，有事找輔導長。」",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch4_main_02",
+   "chapter": 4,
+   "type": "main",
+   "title": "第一次放假",
+   "dayRange": [
+    35,
+    40
+   ],
+   "giver": "npc_mom",
+   "location": "home",
+   "description": "放假日：在時限內出營門趕車回家，假期最後一天依時收假，遲到會被記。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "unit_gate"
+    },
+    {
+     "type": "goto",
+     "target": "station",
+     "count": null,
+     "timeLimit": 1800
+    },
+    {
+     "type": "rest",
+     "target": "home",
+     "count": 2
+    },
+    {
+     "type": "goto",
+     "target": "unit_gate",
+     "count": null,
+     "timeLimit": "21:00"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "m": 4,
+    "hp": 60,
+    "fatigue": -60
+   },
+   "failure": {
+    "trigger": "event_warning",
+    "demerit": 1,
+    "note": "收假遲到"
+   },
+   "dialogue": {
+    "start": "終於可以出去了！",
+    "progress": "媽媽：「你要吃什麼我去買。」",
+    "complete": "收假的路上整車都是阿兵哥，大家都很安靜。",
+    "fail": "超過收假時間了……"
+   }
+  },
+  {
+   "id": "ch4_main_03",
+   "chapter": 4,
+   "type": "main",
+   "title": "輔導長找你聊聊",
+   "dayRange": [
+    60,
+    90
+   ],
+   "giver": "npc_counselor_lee",
+   "location": "counselor_office",
+   "description": "李輔導長約你談話。如實回答壓力狀況，可以解鎖心輔支援。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "npc_counselor_lee"
+    },
+    {
+     "type": "check",
+     "target": "check.social"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 20,
+    "m": 3
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "李輔導長：「坐，最近還好嗎？」",
+    "progress": "有什麼困難可以說，不會記到你頭上。",
+    "complete": "李輔導長：「有事隨時來找我。」",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch4_main_04",
+   "chapter": 4,
+   "type": "main",
+   "title": "颱風過後",
+   "dayRange": [
+    120,
+    140
+   ],
+   "giver": "npc_captain_huang",
+   "location": "unit_base",
+   "description": "颱風過後協助營區與附近社區救災：搬沙包、清倒木、送物資給居民。限時完成。",
+   "objectives": [
+    {
+     "type": "carry",
+     "target": "sandbag:levee",
+     "count": 10,
+     "timeLimit": 900
+    },
+    {
+     "type": "clear",
+     "target": "fallen_trees",
+     "count": 5
+    },
+    {
+     "type": "escort",
+     "target": "supply_cart",
+     "count": "village"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "big",
+    "xp": 80,
+    "b": 3,
+    "o": 3,
+    "honor": 2
+   },
+   "failure": {
+    "injury": "inj_sprain",
+    "chance": 20,
+    "hp": -20
+   },
+   "dialogue": {
+    "start": "黃連長：「全連出動，動作要快但注意安全。」",
+    "progress": "雨衣裡全是汗。",
+    "complete": "阿伯塞了一瓶飲料給你：「辛苦了少年仔。」",
+    "fail": "踩到泥坑，腳踝一扭……"
+   }
+  },
+  {
+   "id": "ch4_main_05",
+   "chapter": 4,
+   "type": "main",
+   "title": "裝備檢查",
+   "dayRange": [
+    150,
+    170
+   ],
+   "giver": "npc_captain_huang",
+   "location": "unit_base",
+   "description": "上級裝檢：整理武器、裝備帳冊，打掃營區每個角落，檢查當天站好自己的位置。",
+   "objectives": [
+    {
+     "type": "inspect",
+     "target": "equipment_list",
+     "count": 12
+    },
+    {
+     "type": "clean",
+     "target": "camp_areas",
+     "count": 4,
+     "timeLimit": 1800
+    },
+    {
+     "type": "check",
+     "target": "check.inspection"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "d": 4,
+    "honor": 1
+   },
+   "failure": {
+    "d": -3,
+    "demerit": 1,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "黃連長：「這次裝檢關係到全連的假。」",
+    "progress": "帳冊數量和實物要對得起來。",
+    "complete": "檢查官：「這個連整理得不錯。」",
+    "fail": "缺件！連長臉色很難看。"
+   }
+  },
+  {
+   "id": "ch4_main_06",
+   "chapter": 4,
+   "type": "main",
+   "title": "戰備演練",
+   "dayRange": [
+    180,
+    200
+   ],
+   "giver": "npc_captain_huang",
+   "location": "exercise_field",
+   "description": "參加年度演習：夜間行軍到指定陣地、構工、待命，依單位不同負責不同任務。",
+   "objectives": [
+    {
+     "type": "march",
+     "target": "night_route",
+     "count": 1,
+     "timeLimit": 3600
+    },
+    {
+     "type": "check",
+     "target": "check.march"
+    },
+    {
+     "type": "defend",
+     "target": "position",
+     "count": null,
+     "timeLimit": 1200
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {
+    "note": "injury 期間不可參加"
+   },
+   "reward": {
+    "tier": "big",
+    "xp": 80,
+    "b": 3,
+    "d": 3,
+    "honor": 2
+   },
+   "failure": {
+    "injury": "inj_fracture",
+    "chance": "hp<20 時 15%",
+    "trigger": "event_collapse"
+   },
+   "dialogue": {
+    "start": "黃連長：「演習開始，各班依計畫行動。」",
+    "progress": "背包越來越重，看不到前面的人了。",
+    "complete": "演習結束，連長難得笑了。",
+    "fail": "腳下一空，跌進溝裡……"
+   }
+  },
+  {
+   "id": "ch4_main_07",
+   "chapter": 4,
+   "type": "main",
+   "title": "志願役說明會",
+   "dayRange": [
+    270,
+    285
+   ],
+   "giver": "npc_recruiter",
+   "location": "classroom",
+   "description": "參加志願役說明會，與招募員和家人談過，到第 285 天簽或不簽。簽下設定 flag vol。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "classroom"
+    },
+    {
+     "type": "talk",
+     "target": "npc_recruiter"
+    },
+    {
+     "type": "talk",
+     "target": "npc_dad"
+    },
+    {
+     "type": "decide",
+     "target": "sign_contract"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 20,
+    "choice": {
+     "sign": {
+      "flags": [
+       "vol"
+      ]
+     },
+     "decline": {
+      "flags": [
+       "declined"
+      ]
+     }
+    }
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "招募員：「待遇、加給、進修，我都講清楚。」",
+    "progress": "爸爸：「你自己決定，我們都支持。」",
+    "complete": "做出決定了。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch4_side_01",
+   "chapter": 4,
+   "type": "side",
+   "title": "公差時間",
+   "dayRange": [
+    33,
+    280
+   ],
+   "giver": "npc_senior_chou",
+   "location": "unit_base",
+   "description": "每日重複：被派公差搬運物資、打掃或除草。完成可得少量 xp，太多會累。",
+   "objectives": [
+    {
+     "type": "carry",
+     "target": "supplies:warehouse",
+     "count": 5,
+     "timeLimit": 600
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 5,
+    "o": 1,
+    "repeatable": true
+   },
+   "failure": {
+    "fatigue": 10
+   },
+   "dialogue": {
+    "start": "周學長：「兩個人跟我來，搬東西。」",
+    "progress": "一箱、兩箱……",
+    "complete": "周學長：「辛苦，去喝水。」",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch4_side_02",
+   "chapter": 4,
+   "type": "side",
+   "title": "學長的請託",
+   "dayRange": [
+    40,
+    120
+   ],
+   "giver": "npc_senior_chou",
+   "location": "unit_base",
+   "description": "周學長請你幫他代買東西帶回營（不可帶違禁品）。拒絕違禁品不會失分；帶進來被查到會觸發禁閉。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "px_outside"
+    },
+    {
+     "type": "carry",
+     "target": "package:npc_senior_chou"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "o": 2
+   },
+   "failure": {
+    "trigger": "event_confinement",
+    "demerit": 2,
+    "note": "若攜帶 it_contraband 被查獲"
+   },
+   "dialogue": {
+    "start": "周學長：「放假回來幫我帶個東西好不好？」",
+    "progress": "要帶什麼，自己要想清楚。",
+    "complete": "周學長：「夠意思。」",
+    "fail": "安檢查到了。"
+   }
+  },
+  {
+   "id": "ch4_side_03",
+   "chapter": 4,
+   "type": "side",
+   "title": "剩一百天：破百",
+   "dayRange": [
+    264,
+    266
+   ],
+   "giver": "npc_akai",
+   "location": "unit_base",
+   "description": "破百那天，和同梯在晚點名後偷偷慶祝（別被值星官抓）。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "rooftop"
+    },
+    {
+     "type": "stealth",
+     "target": "duty_officer_patrol",
+     "count": null,
+     "timeLimit": 300
+    },
+    {
+     "type": "talk",
+     "target": "npc_akai"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "m": 3,
+    "o": 2
+   },
+   "failure": {
+    "d": -2,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "阿凱傳紙條：「今晚破百！」",
+    "progress": "值星官的腳步聲……",
+    "complete": "剩九十九顆饅頭！",
+    "fail": "值星官：「你們幾個在這幹嘛？」"
+   }
+  },
+  {
+   "id": "ch4_side_04",
+   "chapter": 4,
+   "type": "side",
+   "title": "體能加強",
+   "dayRange": [
+    33,
+    280
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "training_field",
+   "description": "自主訓練：跑步與重訓，每週一次。",
+   "objectives": [
+    {
+     "type": "run",
+     "target": "base_track",
+     "count": 1,
+     "timeLimit": 900
+    },
+    {
+     "type": "minigame",
+     "target": "pushup"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 10,
+    "b": 2,
+    "repeatable": true
+   },
+   "failure": {
+    "injury": "inj_sprain",
+    "chance": "fatigue>=85"
+   },
+   "dialogue": {
+    "start": "想提升體能就自己練。",
+    "progress": "還差一圈。",
+    "complete": "體能又進步了一點。",
+    "fail": "用力過猛……"
+   }
+  },
+  {
+   "id": "ch4_side_infantry_01",
+   "chapter": 4,
+   "type": "side",
+   "title": "步槍保養與五百公尺障礙",
+   "dayRange": [
+    73,
+    280
+   ],
+   "giver": "npc_sgt_kuo",
+   "location": "armory",
+   "description": "拆解、保養步槍並通過障礙場。",
+   "objectives": [
+    {
+     "type": "minigame",
+     "target": "rifle_assembly",
+     "count": null,
+     "timeLimit": 120
+    },
+    {
+     "type": "run",
+     "target": "obstacle_course",
+     "count": 1,
+     "timeLimit": 300
+    },
+    {
+     "type": "check",
+     "target": "check.endure"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "b": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "b": -2,
+    "injury": "inj_sprain"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "infantry"
+  },
+  {
+   "id": "ch4_side_infantry_02",
+   "chapter": 4,
+   "type": "side",
+   "title": "班攻擊模擬",
+   "dayRange": [
+    113,
+    280
+   ],
+   "giver": "npc_sgt_kuo",
+   "location": "training_field",
+   "description": "跟班長完成班攻擊模擬：躍進、掩護、佔領目標。",
+   "objectives": [
+    {
+     "type": "move",
+     "target": "cover_points",
+     "count": 5,
+     "timeLimit": 240
+    },
+    {
+     "type": "defend",
+     "target": "objective",
+     "count": null,
+     "timeLimit": 120
+    },
+    {
+     "type": "check",
+     "target": "check.march"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "b": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "b": -2,
+    "injury": "inj_sprain"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "infantry"
+  },
+  {
+   "id": "ch4_side_infantry_03",
+   "chapter": 4,
+   "type": "side",
+   "title": "營區夜哨與突發狀況",
+   "dayRange": [
+    153,
+    280
+   ],
+   "giver": "npc_sgt_kuo",
+   "location": "sentry_post",
+   "description": "站夜哨時遇到可疑人員接近營區，依程序盤查並回報。",
+   "objectives": [
+    {
+     "type": "patrol",
+     "target": "sentry_route",
+     "count": 3
+    },
+    {
+     "type": "talk",
+     "target": "suspect"
+    },
+    {
+     "type": "report",
+     "target": "duty_officer"
+    },
+    {
+     "type": "check",
+     "target": "check.sentry"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "d": -2,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "infantry"
+  },
+  {
+   "id": "ch4_side_artillery_01",
+   "chapter": 4,
+   "type": "side",
+   "title": "砲班口令",
+   "dayRange": [
+    73,
+    280
+   ],
+   "giver": "npc_sgt_kuo",
+   "location": "gun_park",
+   "description": "學會砲班口令與分工，限時完成放列。",
+   "objectives": [
+    {
+     "type": "rhythm",
+     "target": "gun_commands"
+    },
+    {
+     "type": "timed",
+     "target": "emplace_gun",
+     "count": null,
+     "timeLimit": 180
+    },
+    {
+     "type": "check",
+     "target": "check.artillery"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "d": -2,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "artillery"
+  },
+  {
+   "id": "ch4_side_artillery_02",
+   "chapter": 4,
+   "type": "side",
+   "title": "彈藥搬運",
+   "dayRange": [
+    113,
+    280
+   ],
+   "giver": "npc_sgt_kuo",
+   "location": "ammo_depot",
+   "description": "依安全規定搬運訓練彈，不得碰撞。",
+   "objectives": [
+    {
+     "type": "carry",
+     "target": "practice_shell:gun_park",
+     "count": 6,
+     "timeLimit": 600
+    },
+    {
+     "type": "check",
+     "target": "check.endure"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "b": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "b": -2,
+    "injury": "inj_sprain"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "artillery"
+  },
+  {
+   "id": "ch4_side_artillery_03",
+   "chapter": 4,
+   "type": "side",
+   "title": "射擊指揮所",
+   "dayRange": [
+    153,
+    280
+   ],
+   "giver": "npc_sgt_kuo",
+   "location": "fdc",
+   "description": "協助計算諸元並回報，錯誤會讓整班重來。",
+   "objectives": [
+    {
+     "type": "minigame",
+     "target": "fire_calc"
+    },
+    {
+     "type": "talk",
+     "target": "npc_sgt_kuo"
+    },
+    {
+     "type": "check",
+     "target": "check.artillery"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "d": -2,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "artillery"
+  },
+  {
+   "id": "ch4_side_airforce_01",
+   "chapter": 4,
+   "type": "side",
+   "title": "跑道異物巡查",
+   "dayRange": [
+    73,
+    280
+   ],
+   "giver": "npc_ground_crew_tsai",
+   "location": "runway",
+   "description": "清晨列隊徒步巡跑道（FOD Walk），找出所有異物。",
+   "objectives": [
+    {
+     "type": "inspect",
+     "target": "fod_items",
+     "count": 8,
+     "timeLimit": 600
+    },
+    {
+     "type": "check",
+     "target": "check.maintenance"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "d": -2,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "airforce"
+  },
+  {
+   "id": "ch4_side_airforce_02",
+   "chapter": 4,
+   "type": "side",
+   "title": "機棚支援",
+   "dayRange": [
+    113,
+    280
+   ],
+   "giver": "npc_ground_crew_tsai",
+   "location": "hangar",
+   "description": "協助地勤搬運工具與清點，工具一件都不能少。",
+   "objectives": [
+    {
+     "type": "collect",
+     "target": "tools",
+     "count": 10
+    },
+    {
+     "type": "inspect",
+     "target": "tool_board"
+    },
+    {
+     "type": "check",
+     "target": "check.maintenance"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "d": -2,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "airforce"
+  },
+  {
+   "id": "ch4_side_airforce_03",
+   "chapter": 4,
+   "type": "side",
+   "title": "基地警戒",
+   "dayRange": [
+    153,
+    280
+   ],
+   "giver": "npc_ground_crew_tsai",
+   "location": "base_perimeter",
+   "description": "基地警戒任務：巡邏並在警報時到達指定位置。",
+   "objectives": [
+    {
+     "type": "patrol",
+     "target": "perimeter",
+     "count": 4
+    },
+    {
+     "type": "goto",
+     "target": "alert_post",
+     "count": null,
+     "timeLimit": 120
+    },
+    {
+     "type": "check",
+     "target": "check.sentry"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "o": 3,
+    "m": 1,
+    "money": 100
+   },
+   "failure": {
+    "o": -2
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "airforce"
+  },
+  {
+   "id": "ch4_side_navy_01",
+   "chapter": 4,
+   "type": "side",
+   "title": "甲板清潔",
+   "dayRange": [
+    73,
+    280
+   ],
+   "giver": "npc_bosun_yang",
+   "location": "ship_deck",
+   "description": "刷甲板、整理纜繩，在長官巡視前完成。",
+   "objectives": [
+    {
+     "type": "clean",
+     "target": "deck_sections",
+     "count": 6,
+     "timeLimit": 900
+    },
+    {
+     "type": "minigame",
+     "target": "rope_coil"
+    },
+    {
+     "type": "check",
+     "target": "check.deck"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "b": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "b": -2,
+    "injury": "inj_sprain"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "navy"
+  },
+  {
+   "id": "ch4_side_navy_02",
+   "chapter": 4,
+   "type": "side",
+   "title": "出港與暈船",
+   "dayRange": [
+    113,
+    280
+   ],
+   "giver": "npc_bosun_yang",
+   "location": "ship_deck",
+   "description": "第一次出港：在搖晃的艦上完成值更，撐住不吐。",
+   "objectives": [
+    {
+     "type": "timed",
+     "target": "watch_duty",
+     "count": null,
+     "timeLimit": 1200
+    },
+    {
+     "type": "check",
+     "target": "check.endure"
+    },
+    {
+     "type": "check",
+     "target": "check.endure"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "m": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "m": -2
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "navy"
+  },
+  {
+   "id": "ch4_side_navy_03",
+   "chapter": 4,
+   "type": "side",
+   "title": "損管演練",
+   "dayRange": [
+    153,
+    280
+   ],
+   "giver": "npc_bosun_yang",
+   "location": "ship_corridor",
+   "description": "火災損管演練：拿滅火器、關水密門、救出「傷員」。",
+   "objectives": [
+    {
+     "type": "carry",
+     "target": "extinguisher:fire_point"
+    },
+    {
+     "type": "inspect",
+     "target": "watertight_doors",
+     "count": 3,
+     "timeLimit": 180
+    },
+    {
+     "type": "escort",
+     "target": "dummy_casualty",
+     "count": "sickbay"
+    },
+    {
+     "type": "check",
+     "target": "check.deck"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "o": 3,
+    "m": 1,
+    "money": 100
+   },
+   "failure": {
+    "o": -2
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "navy"
+  },
+  {
+   "id": "ch4_side_logistics_01",
+   "chapter": 4,
+   "type": "side",
+   "title": "倉庫盤點",
+   "dayRange": [
+    73,
+    280
+   ],
+   "giver": "npc_supply_sgt_hung",
+   "location": "warehouse",
+   "description": "盤點物資，帳卡與實物要一致。",
+   "objectives": [
+    {
+     "type": "inspect",
+     "target": "shelves",
+     "count": 10
+    },
+    {
+     "type": "minigame",
+     "target": "inventory_count"
+    },
+    {
+     "type": "check",
+     "target": "check.inventory"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "d": 3,
+    "o": 1,
+    "money": 100
+   },
+   "failure": {
+    "d": -2,
+    "trigger": "event_warning"
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "logistics"
+  },
+  {
+   "id": "ch4_side_logistics_02",
+   "chapter": 4,
+   "type": "side",
+   "title": "補給車隊",
+   "dayRange": [
+    113,
+    280
+   ],
+   "giver": "npc_supply_sgt_hung",
+   "location": "motor_pool",
+   "description": "押運補給車到各單位，按時送達。",
+   "objectives": [
+    {
+     "type": "escort",
+     "target": "supply_truck",
+     "count": "units",
+     "timeLimit": null
+    },
+    {
+     "type": "talk",
+     "target": "receivers",
+     "count": 3
+    },
+    {
+     "type": "check",
+     "target": "check.social"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "o": 3,
+    "m": 1,
+    "money": 100
+   },
+   "failure": {
+    "o": -2
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "logistics"
+  },
+  {
+   "id": "ch4_side_logistics_03",
+   "chapter": 4,
+   "type": "side",
+   "title": "炊事班救援",
+   "dayRange": [
+    153,
+    280
+   ],
+   "giver": "npc_supply_sgt_hung",
+   "location": "kitchen",
+   "description": "炊事班人手不足，幫忙在開飯前備好全連的飯菜。",
+   "objectives": [
+    {
+     "type": "carry",
+     "target": "ingredients:kitchen",
+     "count": 6
+    },
+    {
+     "type": "minigame",
+     "target": "cooking",
+     "count": null,
+     "timeLimit": 900
+    },
+    {
+     "type": "check",
+     "target": "check.inventory"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "medium",
+    "xp": 30,
+    "o": 3,
+    "m": 1,
+    "money": 100
+   },
+   "failure": {
+    "o": -2
+   },
+   "dialogue": {
+    "start": "照我做一次，看好。",
+    "progress": "慢一點沒關係，但不能錯。",
+    "complete": "做得好，有你的。",
+    "fail": "這樣不行，重來。"
+   },
+   "unit": "logistics"
+  },
+  {
+   "id": "ch5_main_01",
+   "chapter": 5,
+   "type": "main",
+   "title": "洞八之後",
+   "dayRange": [
+    286,
+    300
+   ],
+   "giver": "npc_senior_chou",
+   "location": "unit_base",
+   "description": "周學長退伍了，你成為資深的那一個。接下他的勤務分配工作，安排一週公差。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "npc_senior_chou"
+    },
+    {
+     "type": "minigame",
+     "target": "duty_roster"
+    },
+    {
+     "type": "talk",
+     "target": "squad_members",
+     "count": 3
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "o": 3,
+    "d": 2
+   },
+   "failure": {
+    "o": -3
+   },
+   "dialogue": {
+    "start": "周學長：「我走了，之後這裡交給你。」",
+    "progress": "誰站哪班哨、誰掃哪區，要公平。",
+    "complete": "大家沒什麼怨言，你算過關了。",
+    "fail": "學弟抱怨不公平，鬧到班長那裡。"
+   }
+  },
+  {
+   "id": "ch5_main_02",
+   "chapter": 5,
+   "type": "main",
+   "title": "學弟來了",
+   "dayRange": [
+    300,
+    320
+   ],
+   "giver": "npc_junior_hsiao",
+   "location": "unit_base",
+   "description": "新學弟報到。帶他認路、教內務、陪他第一次站哨。",
+   "objectives": [
+    {
+     "type": "escort",
+     "target": "npc_junior_hsiao",
+     "count": "base_tour"
+    },
+    {
+     "type": "inspect",
+     "target": "junior_bunk"
+    },
+    {
+     "type": "goto",
+     "target": "sentry_post"
+    }
+   ],
+   "prerequisites": [
+    "ch5_main_01"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "o": 4,
+    "honor": 1
+   },
+   "failure": {
+    "o": -2,
+    "m": -1
+   },
+   "dialogue": {
+    "start": "蕭學弟：「學長好！請問寢室在哪？」",
+    "progress": "當年周學長也是這樣帶你的。",
+    "complete": "蕭學弟：「學長，謝謝你。」",
+    "fail": "學弟站哨出包，你也被連帶唸。"
+   }
+  },
+  {
+   "id": "ch5_main_03",
+   "chapter": 5,
+   "type": "main",
+   "title": "交接",
+   "dayRange": [
+    330,
+    350
+   ],
+   "giver": "npc_captain_huang",
+   "location": "unit_base",
+   "description": "把自己負責的裝備、帳冊、鑰匙一一點交給學弟，簽完交接清冊。",
+   "objectives": [
+    {
+     "type": "carry",
+     "target": "handover_items:npc_junior_hsiao",
+     "count": 6
+    },
+    {
+     "type": "inspect",
+     "target": "handover_list"
+    },
+    {
+     "type": "talk",
+     "target": "npc_captain_huang"
+    }
+   ],
+   "prerequisites": [
+    "ch5_main_02"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "main",
+    "xp": 60,
+    "d": 3
+   },
+   "failure": {
+    "demerit": 1,
+    "d": -2,
+    "note": "缺件須賠償"
+   },
+   "dialogue": {
+    "start": "黃連長：「交接要清楚，你走了東西不能少。」",
+    "progress": "鑰匙、帳冊、工具箱。",
+    "complete": "清冊上簽下名字。",
+    "fail": "少了一把鑰匙，翻遍了也找不到。"
+   }
+  },
+  {
+   "id": "ch5_main_04",
+   "chapter": 5,
+   "type": "main",
+   "title": "最後一夜",
+   "dayRange": [
+    363,
+    363
+   ],
+   "giver": "npc_akai",
+   "location": "barracks",
+   "description": "退伍前一晚：把東西打包、跟每個人道別、最後一次站在寢室窗邊。",
+   "objectives": [
+    {
+     "type": "collect",
+     "target": "personal_items",
+     "count": 6
+    },
+    {
+     "type": "talk",
+     "target": "farewell_npcs",
+     "count": 5
+    }
+   ],
+   "prerequisites": [
+    "ch5_main_03"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "small",
+    "xp": 20,
+    "m": 3,
+    "o": 2
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "阿凱：「明天就是平民了，不習慣吧。」",
+    "progress": "一張張臉，都記住了。",
+    "complete": "最後一次熄燈號。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch5_main_05",
+   "chapter": 5,
+   "type": "main",
+   "title": "退伍令",
+   "dayRange": [
+    364,
+    364
+   ],
+   "giver": "npc_captain_huang",
+   "location": "unit_gate",
+   "description": "領退伍令、繳回裝備，走出營門。結局在此判定。",
+   "objectives": [
+    {
+     "type": "talk",
+     "target": "npc_captain_huang"
+    },
+    {
+     "type": "carry",
+     "target": "returned_gear:supply_room"
+    },
+    {
+     "type": "goto",
+     "target": "unit_gate"
+    }
+   ],
+   "prerequisites": [
+    "ch5_main_04"
+   ],
+   "requirements": {},
+   "reward": {
+    "tier": "big",
+    "xp": 80,
+    "flags": [
+     "discharged"
+    ]
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "黃連長：「這一年辛苦了。」",
+    "progress": "迷彩服摺好放回去。",
+    "complete": "營門外，家人在等你。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch5_side_01",
+   "chapter": 5,
+   "type": "side",
+   "title": "最後一次莒光日",
+   "dayRange": [
+    290,
+    350
+   ],
+   "giver": "npc_counselor_lee",
+   "location": "classroom",
+   "description": "在莒光日分享役期心得給學弟聽。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "classroom"
+    },
+    {
+     "type": "talk",
+     "target": "juniors",
+     "count": 2
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "o": 1,
+    "m": 1
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "李輔導長：「老兵分享一下吧。」",
+    "progress": "講什麼好呢？",
+    "complete": "學弟們拍手了。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch5_side_02",
+   "chapter": 5,
+   "type": "side",
+   "title": "退伍後的第一件事",
+   "dayRange": [
+    300,
+    360
+   ],
+   "giver": "npc_dad",
+   "location": "home",
+   "description": "放假回家，用電話/面談安排退伍後的工作或升學，去找履歷資料。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "home"
+    },
+    {
+     "type": "talk",
+     "target": "npc_dad"
+    },
+    {
+     "type": "inspect",
+     "target": "desk_documents"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 20,
+    "m": 3,
+    "flags": [
+     "future_plan"
+    ]
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "爸爸：「之後有什麼打算？」",
+    "progress": "翻出畢業證書和舊履歷。",
+    "complete": "心裡有了方向。",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch5_side_03",
+   "chapter": 5,
+   "type": "side",
+   "title": "最後一顆饅頭",
+   "dayRange": [
+    355,
+    362
+   ],
+   "giver": "npc_auntie",
+   "location": "px",
+   "description": "把剩下的錢花在福利社，請同梯和學弟喝飲料，跟阿姨道別。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "px"
+    },
+    {
+     "type": "talk",
+     "target": "npc_auntie"
+    },
+    {
+     "type": "carry",
+     "target": "drinks:barracks",
+     "count": 6
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "o": 3,
+    "money": -300
+   },
+   "failure": {},
+   "dialogue": {
+    "start": "阿姨：「要退了喔？時間過得真快。」",
+    "progress": "一人一杯，學弟也有。",
+    "complete": "大家舉杯：「退伍快樂！」",
+    "fail": ""
+   }
+  },
+  {
+   "id": "ch5_side_04",
+   "chapter": 5,
+   "type": "side",
+   "title": "學長的最後一班哨",
+   "dayRange": [
+    340,
+    360
+   ],
+   "giver": "npc_junior_hsiao",
+   "location": "sentry_post",
+   "description": "陪學弟站最後一班哨，把你的經驗都告訴他。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "sentry_post"
+    },
+    {
+     "type": "patrol",
+     "target": "sentry_route",
+     "count": 2
+    },
+    {
+     "type": "talk",
+     "target": "npc_junior_hsiao"
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {},
+   "reward": {
+    "xp": 15,
+    "d": 1,
+    "o": 2
+   },
+   "failure": {
+    "trigger": "event_warning",
+    "d": -1
+   },
+   "dialogue": {
+    "start": "蕭學弟：「學長，最後一班了。」",
+    "progress": "夜很靜，星星很多。",
+    "complete": "蕭學弟：「我會記得的。」",
+    "fail": "聊太大聲被查哨聽到。"
+   }
+  },
+  {
+   "id": "ch5_side_05",
+   "chapter": 5,
+   "type": "side",
+   "title": "重回新訓中心（志願役）",
+   "dayRange": [
+    290,
+    360
+   ],
+   "giver": "npc_sgt_lin",
+   "location": "training_center",
+   "description": "簽了志願役後回新訓中心協訓，帶一班新兵完成起床號與內務。",
+   "objectives": [
+    {
+     "type": "escort",
+     "target": "recruit_squad",
+     "count": "assembly_ground",
+     "timeLimit": 300
+    },
+    {
+     "type": "inspect",
+     "target": "recruit_bunks",
+     "count": 6
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {
+    "flags": [
+     "vol"
+    ]
+   },
+   "reward": {
+    "xp": 40,
+    "d": 2,
+    "o": 2
+   },
+   "failure": {
+    "o": -2
+   },
+   "dialogue": {
+    "start": "林班長：「現在換你站在隊伍前面了。」",
+    "progress": "當年我也是這樣手忙腳亂。",
+    "complete": "新兵：「班長好！」",
+    "fail": "有個新兵跟不上，你得重來。"
+   }
+  },
+  {
+   "id": "ch5_side_06",
+   "chapter": 5,
+   "type": "side",
+   "title": "復健之路",
+   "dayRange": [
+    286,
+    364
+   ],
+   "giver": "npc_medic",
+   "location": "infirmary",
+   "description": "若曾受傷，完成復健課程恢復體能。",
+   "objectives": [
+    {
+     "type": "goto",
+     "target": "infirmary"
+    },
+    {
+     "type": "minigame",
+     "target": "rehab",
+     "count": 3
+    }
+   ],
+   "prerequisites": [],
+   "requirements": {
+    "note": "有 hospitalized 或 injury 記錄時出現"
+   },
+   "reward": {
+    "xp": 15,
+    "b": 3
+   },
+   "failure": {
+    "m": -2
+   },
+   "dialogue": {
+    "start": "醫官：「慢慢來，別急。」",
+    "progress": "又能走快一點了。",
+    "complete": "腳恢復得差不多了。",
+    "fail": "太勉強，又痛了。"
+   }
+  }
+ ],
+ "npcs": [
+  {
+   "id": "npc_mom",
+   "name": "媽媽",
+   "role": "家人",
+   "personality": "嘮叨但溫柔，總怕你吃不飽",
+   "location": "home",
+   "lines": [
+    "有吃飯嗎？",
+    "衣服帶夠沒？"
+   ]
+  },
+  {
+   "id": "npc_dad",
+   "name": "爸爸",
+   "role": "家人",
+   "personality": "話少，用行動表達關心，自己也當過兵",
+   "location": "home",
+   "lines": [
+    "男人要扛得住。",
+    "有事打電話回來。"
+   ]
+  },
+  {
+   "id": "npc_grandpa",
+   "name": "爺爺",
+   "role": "家人",
+   "personality": "老兵，愛講當年",
+   "location": "grandpa_house",
+   "lines": [
+    "我們那時候當三年咧。"
+   ]
+  },
+  {
+   "id": "npc_friend_chen",
+   "name": "阿陳",
+   "role": "入伍前好友",
+   "personality": "嘴砲但講義氣",
+   "location": "street",
+   "lines": [
+    "放假記得找我。"
+   ]
+  },
+  {
+   "id": "npc_barber",
+   "name": "理髮店老闆",
+   "role": "鄰居",
+   "personality": "見過無數役男",
+   "location": "street",
+   "lines": [
+    "三分頭最涼。"
+   ]
+  },
+  {
+   "id": "npc_postman",
+   "name": "郵差",
+   "role": "路人",
+   "personality": "準時、冷淡",
+   "location": "street",
+   "lines": [
+    "掛號，簽這裡。"
+   ]
+  },
+  {
+   "id": "npc_sgt_lin",
+   "name": "林班長",
+   "role": "新訓班長",
+   "personality": "嚴格兇悍，私底下會關心新兵",
+   "location": "training_center",
+   "lines": [
+    "動作快！",
+    "你們這梯還可以。"
+   ]
+  },
+  {
+   "id": "npc_squad_leader_hsu",
+   "name": "許班兵",
+   "role": "新訓班兵（同梯幹部）",
+   "personality": "熱血、愛出頭",
+   "location": "training_center",
+   "lines": [
+    "大家加油！"
+   ]
+  },
+  {
+   "id": "npc_counselor_wang",
+   "name": "王輔導長",
+   "role": "新訓輔導長",
+   "personality": "和藹、愛說道理",
+   "location": "training_center",
+   "lines": [
+    "有困難隨時說。"
+   ]
+  },
+  {
+   "id": "npc_akai",
+   "name": "阿凱",
+   "role": "同梯",
+   "personality": "樂天、粗心，常需要人幫，但最講義氣",
+   "location": "barracks",
+   "lines": [
+    "欸你在幹嘛？",
+    "剩幾顆饅頭了？"
+   ]
+  },
+  {
+   "id": "npc_medic",
+   "name": "醫官",
+   "role": "醫務室",
+   "personality": "冷靜、務實",
+   "location": "infirmary",
+   "lines": [
+    "不舒服就說，別硬撐。"
+   ]
+  },
+  {
+   "id": "npc_auntie",
+   "name": "福利社阿姨",
+   "role": "福利社",
+   "personality": "熱情、記得每個人愛喝什麼",
+   "location": "px",
+   "lines": [
+    "老樣子？",
+    "少年仔多吃一點。"
+   ]
+  },
+  {
+   "id": "npc_captain_huang",
+   "name": "黃連長",
+   "role": "連長",
+   "personality": "重視紀律與成績，賞罰分明",
+   "location": "unit_base",
+   "lines": [
+    "做好你的事。",
+    "全連的榮譽靠大家。"
+   ]
+  },
+  {
+   "id": "npc_counselor_lee",
+   "name": "李輔導長",
+   "role": "下部隊輔導長",
+   "personality": "細心，會察覺士兵情緒",
+   "location": "counselor_office",
+   "lines": [
+    "最近睡得好嗎？"
+   ]
+  },
+  {
+   "id": "npc_senior_chou",
+   "name": "周學長",
+   "role": "學長",
+   "personality": "老鳥，偶爾凹學弟，但會罩人",
+   "location": "unit_base",
+   "lines": [
+    "菜鳥跟緊。",
+    "洞八了，爽。"
+   ]
+  },
+  {
+   "id": "npc_junior_hsiao",
+   "name": "蕭學弟",
+   "role": "學弟",
+   "personality": "緊張、認真",
+   "location": "unit_base",
+   "lines": [
+    "學長好！"
+   ]
+  },
+  {
+   "id": "npc_sgt_kuo",
+   "name": "郭班長",
+   "role": "部隊士官（步兵/砲兵）",
+   "personality": "技術派、話不多",
+   "location": "unit_base",
+   "lines": [
+    "照程序來。"
+   ]
+  },
+  {
+   "id": "npc_ground_crew_tsai",
+   "name": "蔡士官長",
+   "role": "空軍地勤",
+   "personality": "一絲不苟",
+   "location": "hangar",
+   "lines": [
+    "工具少一件誰都別走。"
+   ]
+  },
+  {
+   "id": "npc_bosun_yang",
+   "name": "楊水手長",
+   "role": "海軍艦上士官",
+   "personality": "豪邁、嗓門大",
+   "location": "ship_deck",
+   "lines": [
+    "海上沒有藉口！"
+   ]
+  },
+  {
+   "id": "npc_supply_sgt_hung",
+   "name": "洪補給士",
+   "role": "後勤補給",
+   "personality": "精打細算",
+   "location": "warehouse",
+   "lines": [
+    "帳要對。"
+   ]
+  },
+  {
+   "id": "npc_recruiter",
+   "name": "招募員",
+   "role": "志願役招募",
+   "personality": "口才好，誠懇",
+   "location": "classroom",
+   "lines": [
+    "考慮看看，不勉強。"
+   ]
+  }
+ ],
+ "events": [
+  {
+   "id": "event_collapse",
+   "title": "體力不支倒下",
+   "description": "體力或疲勞到極限，你在操場上眼前一黑倒下，醒來時已在醫務室。",
+   "dialogue": {
+    "start": "醫官：「你太勉強了，躺著。」",
+    "end": "阿凱：「嚇死我們了，你先休息。」"
+   }
+  },
+  {
+   "id": "event_morale_breakdown",
+   "title": "士氣崩潰",
+   "description": "你半夜坐在床邊睡不著，覺得撐不下去。李輔導長（新訓為王輔導長）找你談話，安排心輔官協助。",
+   "dialogue": {
+    "start": "輔導長：「我看你最近很不對勁，我們聊聊好嗎？」",
+    "end": "輔導長：「這不丟臉，撐不住就說，我們一起想辦法。」"
+   }
+  },
+  {
+   "id": "event_warning",
+   "title": "輔導長約談",
+   "description": "違規被抓到，被叫去輔導長室約談並寫報告。",
+   "dialogue": {
+    "start": "輔導長：「說說看是怎麼回事。」",
+    "end": "輔導長：「這次口頭警告，下次就沒這麼簡單。」"
+   }
+  },
+  {
+   "id": "event_confinement",
+   "title": "禁閉",
+   "description": "因嚴重違紀被處以禁閉（以實際法規名稱為準），七天不能放假與參加任務，榮譽假歸零。",
+   "dialogue": {
+    "start": "連長：「你知道你做了什麼嗎？」",
+    "end": "出來那天，周學長拍拍你：「重新開始吧。」"
+   }
+  },
+  {
+   "id": "event_court",
+   "title": "移送法辦",
+   "description": "涉及嚴重違法（如逾假不歸過久、攜帶違禁品），案件移送司法，導向結局「提前離營」。",
+   "dialogue": {
+    "start": "憲兵：「請跟我們走一趟。」",
+    "end": "你回頭看了營區最後一眼。"
+   }
+  },
+  {
+   "id": "inj_sprain",
+   "title": "腳踝扭傷",
+   "description": "腳踝一拐腫起來，七天不能跑步或行軍，只能做公差和文書。",
+   "dialogue": {
+    "start": "醫官：「冰敷，這週別跑了。」",
+    "end": "腳終於不痛了。"
+   }
+  },
+  {
+   "id": "inj_heatstroke",
+   "title": "中暑",
+   "description": "烈日下訓練，頭暈噁心倒下，被抬到樹蔭下降溫，休養三天。",
+   "dialogue": {
+    "start": "班長：「快！拿水來，解開衣服！」",
+    "end": "醫官：「水要喝夠，不舒服要喊。」"
+   }
+  },
+  {
+   "id": "inj_fracture",
+   "title": "骨折住院",
+   "description": "演習或救災時重摔骨折，送國軍醫院住院一個月。若體能過低可能因傷提早退伍。",
+   "dialogue": {
+    "start": "救護車的聲音越來越近。",
+    "end": "同梯帶著卡片來病房看你。"
+   }
+  }
+ ],
+ "endings": [
+  {
+   "id": "bad_court",
+   "title": "提前離營",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "嚴重違紀被移送法辦，你在憲兵陪同下離開營區。這一年沒有走完，留下的是一筆無法抹去的紀錄。"
+  },
+  {
+   "id": "bad_injury",
+   "title": "因傷提早退伍",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "演習中的意外讓你住院許久，最後以因傷提早退伍收場。同梯來看你時，你才知道大家一直記得你。"
+  },
+  {
+   "id": "exemplar",
+   "title": "模範役男",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "體能、紀律、人緣、心態都無可挑剔，連長親手頒給你獎狀，學弟都以你為榜樣。"
+  },
+  {
+   "id": "brother",
+   "title": "一輩子的戰友",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "退伍那天，同梯和學弟擠在營門口送你。這群人，往後十年你們還會一起喝酒。"
+  },
+  {
+   "id": "iron",
+   "title": "鋼鐵之軀",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "這一年把你練成了另一個人，三千公尺跑進全連前幾名，你決定退伍後繼續跑下去。"
+  },
+  {
+   "id": "rule",
+   "title": "軍紀典範",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "你的內務和站哨從沒出過包，交接清冊一筆不差，連長說他最放心的就是你。"
+  },
+  {
+   "id": "sunny",
+   "title": "陽光大兵",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "不管多苦，你都笑得出來。大家說連上最好的事，就是有你在。"
+  },
+  {
+   "id": "calm",
+   "title": "平安退伍",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "沒什麼大起大落，一年就這樣平安地過了。走出營門的陽光很刺眼。"
+  },
+  {
+   "id": "phew",
+   "title": "終於撐過來了",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "跌跌撞撞，被罵過、累過，但你還是撐到了最後一天。這就夠了。"
+  },
+  {
+   "id": "vstar",
+   "title": "志願役新星",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "你在部隊越走越穩，升上下士，長官看好你。"
+  },
+  {
+   "id": "vlead",
+   "title": "帶兵的人",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "你成為學弟們信任的班長，像當年林班長一樣站在隊伍前面。"
+  },
+  {
+   "id": "vstep",
+   "title": "一步一腳印",
+   "conditionsRef": "rpg-system.json endings",
+   "description": "簽下志願役後的路不輕鬆，但你一步一步往前走。"
+  }
+ ],
+ "notes": [
+  "新訓實際可能允許在限定時段使用手機，公共電話/電話卡為示意，可依現況調整。",
+  "「禁閉」在現行法規下名稱與程序可能不同（如悔過），僅為遊戲化處理。",
+  "「洞八」「破百」為役男俗稱，實際各單位用法不一。",
+  "空軍FOD巡查、海軍值更、砲兵放列等細節為通則化描述，不代表特定單位流程。",
+  "颱風救災、演習時程依年度安排，dayRange 僅為遊戲配置。",
+  "月薪餉沿用 rpg-system.json 數值，未查證最新金額。",
+  "reward 中的 tier 引用 rpg-system.json 預設值；明列屬性已控制在每項 ≤ +4。"
+ ]
+}
