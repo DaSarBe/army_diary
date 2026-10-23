@@ -577,7 +577,10 @@
   }
   function boardVehicle(v) {
     if (!v) v = W.nearestVehicle(W.pos().x, W.pos().z, 3.2);
-    if (W.inVehicle()) { W.exitVehicle(); Cbt.refresh(); return; }
+    if (W.inVehicle()) {
+      if (W.inVehicle() === v) { W.exitVehicle(); Cbt.refresh(); return; }
+      W.exitVehicle();
+    }
     if (!v) { Cbt.msg('附近沒有載具', 1200); return; }
     if (HHooks.wantVehicle && v.id !== HHooks.wantVehicle) { Cbt.msg('這不是這次要坐的', 1400); return; }
     W.enterVehicle(v); Cbt.refresh(); Sfx.sfx('confirm');

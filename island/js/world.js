@@ -218,6 +218,7 @@
     if (CG) scene.remove(CG);
     CG = new T.Group(); scene.add(CG);
     S.cols = []; S.covers = []; S.eCovers = []; S.npcs = {}; S.temps = []; S.vehicles = []; S.inter = []; S.near = null;
+    S.veh = null; S.carry = false;
     S.marks = []; S.water = null; SIGNS.length = 0; MATS = {};
     S.bounds = lv.bounds || [-50, 50, -60, 50];
     S.spawn = lv.spawn || [0, 38];
