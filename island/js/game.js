@@ -280,14 +280,14 @@
     var table = (cfg.npcFate && cfg.npcFate.rollTable) || {};
     var n = (level && level.num) || 1;
     if (id === 'lin') {
-      if (auto && q.fate === 'kia') return 'kia';
+      if (auto && (q.fate === 'kia' || q.lin === 'kia' || q.ending === 'silent_a')) return 'kia';
       if (auto) return 'alive';
       var bases = (table.lin && table.lin.base) || { op1: 14, op2: 0, op3: 12, op4: 14, op5: 12 };
       var base = bases['op' + n] != null ? bases['op' + n] : 12;
       return Math.random() * 100 < clamp(base - (o - 50) * 0.4, 2, 30) ? 'kia' : 'alive';
     }
     if (id === 'akai') {
-      if (auto && q.akai === 'kia') return 'kia';
+      if (auto && (q.akai === 'kia' || q.ending === 'silent_a')) return 'kia';
       if (auto) return 'alive';
       var ab = (table.akai && table.akai.base) || { op3: 17, op4: 19, op5: 15 };
       var abase = ab['op' + n] != null ? ab['op' + n] : 17;
@@ -405,8 +405,12 @@
             else if (q.tunnel === 'stealth') pick = choices[0];
             else pick = choices[1] || pick;
           }
+          if (sceneId === 'boat_chat') {
+            if (q.chat === 'wang') pick = choices[2] || pick;
+            else if (q.chat === 'quiet') pick = choices[1] || pick;
+          }
           if (sceneId === 'captives_choice') {
-            var leaveCap = q.captive === 'leave' || q.ending === 'silent';
+            var leaveCap = q.captive === 'leave' || q.ending === 'silent' || q.ending === 'silent_b';
             pick = leaveCap ? (choices[1] || pick) : choices[0];
           }
           if (sceneId === 'hq_choice') {
@@ -416,7 +420,7 @@
             else pick = choices[0];
           }
           if (sceneId === 'commander_choice') {
-            var killBoss = q.boss === 'kill' || q.ending === 'silent' || q.ending === 'nameless';
+            var killBoss = q.boss === 'kill' || q.ending === 'silent' || q.ending === 'silent_b' || q.ending === 'nameless';
             pick = killBoss ? (choices[1] || pick) : choices[0];
           }
           setTimeout(function () { pick && $('#dBtns').querySelectorAll('button')[choices.indexOf(pick)].click(); }, 200);
@@ -508,11 +512,18 @@
       return 'tunnel_outro_walk';
     }
     if (sid === 'hq_camp') {
-      if (fateOf('wang') === 'kia' && fateOf('akai') === 'kia' && linDown) return 'hq_camp_alone';
-      if (fateOf('wang') === 'kia') return 'hq_camp_nowang';
-      if (fateOf('akai') === 'kia') return 'hq_camp_quiet';
-      if (linDown) return 'hq_camp_missing';
-      return sid;
+      var wangK = fateOf('wang') === 'kia', akaiK = fateOf('akai') === 'kia';
+      var picked;
+      if (wangK && akaiK && linDown) picked = 'hq_camp_alone';
+      else if (wangK && akaiK) picked = 'hq_camp_lin_only';
+      else if (wangK && linDown) picked = 'hq_camp_akai_only';
+      else if (akaiK && linDown) picked = 'hq_camp_wang_only';
+      else if (wangK) picked = 'hq_camp_nowang';
+      else if (akaiK) picked = 'hq_camp_quiet';
+      else if (linDown) picked = 'hq_camp_missing';
+      else picked = sid;
+      save._hqCamp = picked; persist();
+      return picked;
     }
     if (sid === 'hq_brief') return weak ? 'hq_brief_weak' : sid;
     return sid;
@@ -544,6 +555,7 @@
       if (b.story === 'wang_found' && W.showNpc) W.showNpc('npc_sgt_wang', true);
       if (b.story === 'commander_choice' && !canCapture()) {
         exclusiveFlags(BOSS_FLAGS, 'isl_commander_killed');
+        save._bossForced = true; persist();
         showLines('commander_choice_forced', function () { nextBeat(); });
         return;
       }
@@ -668,10 +680,18 @@
     }
     return false;
   }
+  function jeepChatterLines(sc) {
+    var lines = ((sc && sc.chatter) || []).slice();
+    if (sc && sc.chatterAkai && fateOf('akai') !== 'kia') lines.push(sc.chatterAkai);
+    if (sc && sc.chatterLin && fateOf('lin') !== 'kia') lines.push(sc.chatterLin);
+    return lines;
+  }
   function armRide(route, sc) {
     HHooks.wantVehicle = route.vehicle;
     HHooks.onBoarded = function () {
-      var lines = (sc.chatter || []).slice(), n = 0;
+      var lines = jeepChatterLines(sc), n = 0;
+      save._jeepChat = lines.map(function (ln) { return (ln.who || '') + ':' + (ln.text || ''); });
+      persist();
       function chat() {
         if (n < lines.length) { toast(lines[n].who + '：「' + lines[n].text + '」'); n++; setTimeout(chat, 3200); }
       }
@@ -927,15 +947,114 @@
   function canCapture() {
     return !hasFlag('isl_killed_scout') || hasFlag('isl_radio_strong');
   }
+  function kiaCount() {
+    var n = 0;
+    if (fateOf('wang') === 'kia') n++;
+    if (fateOf('akai') === 'kia') n++;
+    if (fateOf('lin') === 'kia') n++;
+    return n;
+  }
   function pickEnding() {
-    var kiaN = 0;
-    if (fateOf('wang') === 'kia') kiaN++;
-    if (fateOf('akai') === 'kia') kiaN++;
-    if (fateOf('lin') === 'kia') kiaN++;
+    var kiaN = kiaCount();
     var wangOk = hasFlag('isl_wang_rescued') || hasFlag('isl_key_captive_rescued');
     if (wangOk && hasFlag('isl_captives_rescued') && fateOf('akai') !== 'kia' && fateOf('lin') !== 'kia' && hasFlag('isl_commander_captured')) return 'island_guard';
     if (kiaN >= 2 || (hasFlag('isl_captives_left') && hasFlag('isl_commander_killed'))) return 'silent_island';
     return 'nameless_line';
+  }
+  function buildEndingScene() {
+    var end = save.ending || pickEnding();
+    var linK = fateOf('lin') === 'kia', akaiK = fateOf('akai') === 'kia', wangK = fateOf('wang') === 'kia';
+    var kiaN = (linK ? 1 : 0) + (akaiK ? 1 : 0) + (wangK ? 1 : 0);
+    var lines = [], variant = end;
+    function add(who, text) { lines.push({ who: who || '', text: text }); }
+    if (end === 'island_guard') {
+      add('黃連長', '回來就好。');
+      add('王班長', '便當。說話算話。');
+      add('阿凱', '班長，你終於——');
+      add('小林', '天線我收好了。');
+      if (hasFlag('isl_chat_wang')) {
+        add('王班長', '你那時候說，你是來找人的。');
+        add('王班長', '……找到了？');
+        lines.push({ pause: 1500 });
+        add('王班長', '那就回家去。');
+        variant = 'island_guard_wangchat';
+      }
+      add('黃連長', '指揮官在第二艘船上。沒說話。被俘的人，名單都對上了。');
+      lines.push({ pause: 1200 });
+      add('', '隔天，水電行。');
+      add('客人', '老闆，抽水馬達又壞了。……你是不是那個去過島上的？');
+      add('方子豪', '軸承，我看一下。');
+    } else if (end === 'silent_island' && kiaN >= 2) {
+      variant = 'silent_a';
+      add('黃連長', '名單我會親自簽。');
+      if (linK) { lines.push({ pause: 1500 }); add('黃連長', '小林，南灘通信。位置我收到了。'); }
+      if (akaiK) { lines.push({ pause: 1500 }); add('黃連長', '阿凱，保險業務。他守的那一段，沒有人退。'); }
+      if (wangK) { lines.push({ pause: 1500 }); add('黃連長', '王班長。方子豪的班長。'); }
+      add('電台', '……');
+    } else if (end === 'silent_island') {
+      variant = 'silent_b';
+      add('黃連長', '坑道裡還有三個名字。我也會簽。');
+      add('黃連長', '指揮官死了，地圖上的據點都還在。這不是勝利，只是結束。');
+      add('電台', '……');
+    } else {
+      if (kiaN === 0) {
+        add('黃連長', '指揮官倒下了。地圖上還有別的據點。');
+        variant = 'nameless_none';
+      } else {
+        add('黃連長', '名單上少一個名字，我會親自簽。');
+        if (linK) { add('黃連長', '南灘通信，小林。'); variant = 'nameless_lin'; }
+        if (akaiK) { add('黃連長', '阿凱。他說他還沒簽完那張保單。'); variant = 'nameless_akai'; }
+        if (wangK) { add('黃連長', '班長。他帶過的人，今天站得很穩。'); variant = 'nameless_wang'; }
+      }
+      add('黃連長', '這一程結束了。下一程再說。');
+      lines.push({ pause: 1200 });
+      add('', '隔天，水電行。');
+      add('電視', '離島防務順利恢復。');
+      add('方子豪', '');
+    }
+    save.endingVariant = variant;
+    save.endingLines = lines.filter(function (ln) { return !ln.pause; }).map(function (ln) {
+      return (ln.who || '') + ':' + (ln.text || '');
+    });
+    persist();
+    story.scenes._ending = { lines: lines };
+    return '_ending';
+  }
+  function evalStoryState(opts) {
+    opts = opts || {};
+    if (!save) save = freshSave(opts.name || '方子豪', 'story');
+    save.companionFates = {
+      wang: opts.wang || 'alive',
+      akai: opts.akai || 'alive',
+      lin: opts.lin || 'alive'
+    };
+    save.flags = {};
+    var flags = opts.flags || {};
+    Object.keys(flags).forEach(function (k) { save.flags[k] = flags[k]; });
+    if (opts.wang === 'kia') { save.flags.isl_wang_kia = true; save.flags.isl_wang_rescued = false; }
+    else if (!save.flags.isl_wang_kia) save.flags.isl_wang_rescued = true;
+    if (opts.akai === 'kia') save.flags.isl_akai_kia = true;
+    if (opts.lin === 'kia') save.flags.isl_lin_kia = true;
+    var camp = pickStory('hq_camp');
+    save.ending = opts.ending || pickEnding();
+    buildEndingScene();
+    var campLines = ((story.scenes[camp] || {}).lines || []);
+    var forced = ((story.scenes.commander_choice_forced || {}).lines || []);
+    var hqChoice = ((story.scenes.hq_choice || {}).lines || []);
+    return {
+      camp: camp,
+      campWho: campLines.map(function (l) { return l.who; }),
+      campText: campLines.map(function (l) { return (l.who || '') + ':' + (l.text || ''); }),
+      ending: save.ending,
+      variant: save.endingVariant,
+      lines: save.endingLines,
+      canCapture: canCapture(),
+      jeepChat: jeepChatterLines(story.scenes.vehicle_hq_jeep).map(function (l) {
+        return (l.who || '') + ':' + (l.text || '');
+      }),
+      forced: forced.map(function (l) { return l.text; }),
+      hqChoice: hqChoice.map(function (l) { return l.text; })
+    };
   }
   function finishLevel(b) {
     setFlag(b.setFlag || (level.id === 'op5_hq' ? 'isl_05_clear' : (level.id === 'op4_tunnel' ? 'isl_04_clear' : (level.id === 'op3_ridge' ? 'isl_03_clear' : (level.id === 'op2_radar' ? 'isl_02_clear' : 'isl_01_clear')))));
@@ -962,7 +1081,7 @@
       persist();
     }
     function afterRadio() {
-      var doneStory = (level.id === 'op5_hq' && save.ending) ? ('ending_' + save.ending) : pickStory(b.story);
+      var doneStory = (level.id === 'op5_hq' && save.ending) ? buildEndingScene() : pickStory(b.story);
       showLines(doneStory || pickStory(b.story), function () { showCompleteCard(); });
     }
     if (kiaNow.length) playRollRadios(kiaNow, afterRadio);
@@ -1276,6 +1395,11 @@
     World: W, Combat: Cbt,
     startNew: function (n, d) { startNew(n, d); },
     nextBeat: nextBeat,
-    jumpTo: jumpTo
+    jumpTo: jumpTo,
+    pickStory: pickStory,
+    pickEnding: pickEnding,
+    buildEndingScene: buildEndingScene,
+    evalStoryState: evalStoryState,
+    canCapture: canCapture
   };
 })(typeof self !== 'undefined' ? self : this);

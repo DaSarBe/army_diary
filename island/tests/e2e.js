@@ -39,6 +39,12 @@ async function main() {
   page.on('response', r => { if (r.status() >= 400) errors.push('HTTP ' + r.status() + ' ' + r.url()); });
 
   const extra = process.argv[3] || 'route=bike&antenna=ridge';
+  const params = {};
+  extra.split('&').forEach(p => {
+    if (!p) return;
+    const i = p.indexOf('=');
+    params[i < 0 ? p : p.slice(0, i)] = i < 0 ? '1' : p.slice(i + 1);
+  });
   const url = `http://localhost:${port}/island/index.html?auto=1&diff=story&${extra}`;
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__island, { timeout: 20000 });
@@ -84,6 +90,15 @@ async function main() {
 
   await ch4Shot.catch(() => {});
   await ch5Shot.catch(() => {});
+  try {
+    await page.waitForFunction(() => {
+      const dlg = document.getElementById('dlg');
+      const t = document.getElementById('dText');
+      return dlg && !dlg.hidden && t && t.textContent;
+    }, { timeout: 8000 });
+    await sleep(200);
+    await page.screenshot({ path: path.join(outDir, `${mode}-ending-dlg.png`) });
+  } catch (e) { log('ending dlg shot skipped', e.message); }
   await sleep(500);
   await page.screenshot({ path: path.join(outDir, `${mode}-99-done.png`) });
 
@@ -95,6 +110,11 @@ async function main() {
       fates: s && s.companionFates,
       rolls: s && s.fateRolls,
       ending: s && s.ending,
+      endingVariant: s && s.endingVariant,
+      endingLines: s && s.endingLines,
+      hqCamp: s && s._hqCamp,
+      jeepChat: s && s._jeepChat,
+      bossForced: !!(s && s._bossForced),
       diff: s && s.diff,
       downSeen: !!(s && s.downSeen),
       o: s && s.o,
@@ -115,12 +135,56 @@ async function main() {
   if (!info.flags.isl_04_clear) throw new Error('第 4 關沒有打完');
   if (!info.flags.isl_05_clear) throw new Error('第 5 關沒有打完');
   if (!info.ending) throw new Error('沒有結局');
+  if (!info.endingVariant) throw new Error('沒有結局版本');
+  if (!info.endingLines || !info.endingLines.length) throw new Error('沒有結局對白');
+  if (!info.hqCamp) throw new Error('沒有營區場景');
+  const joined = info.endingLines.join('\n');
+  const campId = info.hqCamp;
+  if (info.fates.wang === 'kia' && info.fates.akai === 'kia' && info.fates.lin === 'kia' && campId !== 'hq_camp_alone') throw new Error('三人陣亡應為 alone，實際 ' + campId);
+  if (info.fates.wang === 'kia' && info.fates.akai === 'kia' && info.fates.lin !== 'kia' && campId !== 'hq_camp_lin_only') throw new Error('只剩小林應為 lin_only，實際 ' + campId);
+  if (info.fates.wang === 'kia' && info.fates.lin === 'kia' && info.fates.akai !== 'kia' && campId !== 'hq_camp_akai_only') throw new Error('只剩阿凱應為 akai_only，實際 ' + campId);
+  if (info.fates.wang !== 'kia' && info.fates.akai === 'kia' && info.fates.lin === 'kia' && campId !== 'hq_camp_wang_only') throw new Error('只剩王班長應為 wang_only，實際 ' + campId);
   if (!info.flags.isl_commander_captured && !info.flags.isl_commander_killed) throw new Error('沒有指揮官旗標');
   if (!info.rolls['lin:op5_hq'] || !info.rolls['akai:op5_hq']) throw new Error('第 5 關小林／阿凱擲骰沒寫入');
-  if (extra.indexOf('ending=silent') >= 0 && info.ending !== 'silent_island') throw new Error('應為沉默的島，實際 ' + info.ending);
-  if (extra.indexOf('ending=nameless') >= 0 && info.ending !== 'nameless_line') throw new Error('應為無名防線，實際 ' + info.ending);
-  if (extra.indexOf('ending=guard') >= 0 && info.ending !== 'island_guard') throw new Error('應為島嶼守衛，實際 ' + info.ending);
-  if (extra.indexOf('ending=') < 0 && extra.indexOf('boss=kill') < 0 && extra.indexOf('captive=leave') < 0 && extra.indexOf('down=1') < 0 && extra.indexOf('fate=kia') < 0 && info.ending !== 'island_guard') throw new Error('預設應為島嶼守衛，實際 ' + info.ending);
+  if (params.ending === 'silent_a' && (info.ending !== 'silent_island' || info.endingVariant !== 'silent_a')) throw new Error('應為沉默的島 A，實際 ' + info.ending + '/' + info.endingVariant);
+  if ((params.ending === 'silent' || params.ending === 'silent_b') && (info.ending !== 'silent_island' || info.endingVariant !== 'silent_b')) throw new Error('應為沉默的島 B，實際 ' + info.ending + '/' + info.endingVariant);
+  if (params.ending === 'nameless' && info.ending !== 'nameless_line') throw new Error('應為無名防線，實際 ' + info.ending);
+  if (params.ending === 'guard' && info.ending !== 'island_guard') throw new Error('應為島嶼守衛，實際 ' + info.ending);
+  if (!params.ending && extra.indexOf('boss=kill') < 0 && extra.indexOf('captive=leave') < 0 && extra.indexOf('down=1') < 0 && extra.indexOf('fate=kia') < 0 && extra.indexOf('akai=kia') < 0 && extra.indexOf('wang=kia') < 0 && extra.indexOf('lin=kia') < 0 && extra.indexOf('scout=kill') < 0 && info.ending !== 'island_guard') throw new Error('預設應為島嶼守衛，實際 ' + info.ending);
+  if (info.ending === 'island_guard') {
+    if (!/回來就好/.test(joined)) throw new Error('島嶼守衛缺少碼頭「回來就好」');
+    if (!/去過島上的/.test(joined)) throw new Error('島嶼守衛缺少水電行客人問句');
+    if (params.chat === 'wang' && !/你是來找人的/.test(joined)) throw new Error('島嶼守衛缺少王班長找人回聲');
+  }
+  if (info.ending === 'nameless_line') {
+    if (!/離島防務順利恢復/.test(joined)) throw new Error('無名防線缺少新聞「離島防務順利恢復」');
+    if (info.fates.lin !== 'kia' && info.fates.akai !== 'kia' && info.fates.wang !== 'kia' && !/指揮官倒下了/.test(joined)) throw new Error('無名防線無人死應有前綴');
+    if (info.fates.lin === 'kia' && info.fates.akai !== 'kia' && info.fates.wang !== 'kia' && !/南灘通信，小林/.test(joined)) throw new Error('無名防線小林陣亡前綴錯誤');
+    if (info.fates.akai === 'kia' && info.fates.lin !== 'kia' && info.fates.wang !== 'kia' && !/還沒簽完那張保單/.test(joined)) throw new Error('無名防線阿凱陣亡前綴錯誤');
+    if (info.fates.wang === 'kia' && info.fates.lin !== 'kia' && info.fates.akai !== 'kia' && !/他帶過的人/.test(joined)) throw new Error('無名防線王班長陣亡前綴錯誤');
+  }
+  if (info.endingVariant === 'silent_a') {
+    if (!/名單我會親自簽/.test(joined)) throw new Error('沉默的島 A 缺少「名單我會親自簽」');
+    if (info.fates.lin === 'kia' && !/小林，南灘通信/.test(joined)) throw new Error('沉默的島 A 沒念小林');
+    if (info.fates.akai === 'kia' && !/阿凱，保險業務/.test(joined)) throw new Error('沉默的島 A 沒念阿凱');
+    if (info.fates.wang === 'kia' && !/王班長。方子豪的班長/.test(joined)) throw new Error('沉默的島 A 沒念王班長');
+  }
+  if (info.endingVariant === 'silent_b') {
+    if (/頻道裡人少了/.test(joined)) throw new Error('沉默的島 B 不該出現「頻道裡人少了」');
+    if (!/坑道裡還有三個名字/.test(joined)) throw new Error('沉默的島 B 缺少俘虜名單');
+    if (!/這不是勝利/.test(joined)) throw new Error('沉默的島 B 缺少「這不是勝利」');
+  }
+  if (params.hq === 'jeep') {
+    if (!info.jeepChat || !info.jeepChat.length) throw new Error('吉普車沒有車上對白');
+    if (info.fates.akai !== 'kia' && !info.jeepChat.some(t => /保險業務車/.test(t))) throw new Error('阿凱活著時吉普車應有阿凱台詞');
+    if (info.fates.lin !== 'kia' && !info.jeepChat.some(t => /天線我抓著/.test(t))) throw new Error('小林活著時吉普車應有小林台詞');
+    if (info.fates.akai === 'kia' && info.jeepChat.some(t => /阿凱/.test(t))) throw new Error('阿凱陣亡不該在吉普車上說話');
+    if (info.fates.lin === 'kia' && info.jeepChat.some(t => /小林/.test(t))) throw new Error('小林陣亡不該在吉普車上說話');
+  }
+  if (params.scout === 'kill' && (params.antenna === 'warehouse' || params.antenna === 'weak')) {
+    if (!info.bossForced) throw new Error('殺斥候且弱訊號應強制擊斃指揮官');
+    if (info.flags.isl_commander_captured) throw new Error('不該能活捉指揮官');
+  }
   if (!info.flags.isl_tunnel_stealth && !info.flags.isl_tunnel_assault && !info.flags.isl_rail_escape && !info.flags.isl_tunnel_jeep) throw new Error('沒有坑道打法旗標');
   if (!info.flags.isl_captives_rescued && !info.flags.isl_captives_left) throw new Error('沒有俘虜旗標');
   if (info.fates.wang !== 'alive' && info.fates.wang !== 'kia') throw new Error('王班長命運沒寫入');

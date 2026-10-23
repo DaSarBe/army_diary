@@ -611,10 +611,10 @@
       var max = ET('commander').hp || 300;
       if (before > max * 2 / 3 && e.hp <= max * 2 / 3) {
         Cbt.reinforce({ rifleman: 3, rusher: 2 }, true);
-        Cbt.msg('指揮官在呼叫援兵', 1800);
+        Cbt.msg('指揮官：（對講機）增援。', 1800);
       } else if (before > max / 3 && e.hp <= max / 3) {
         Cbt.reinforce({ rusher: 3, gunner: 1 }, true);
-        Cbt.msg('指揮官再呼叫一波', 1800);
+        Cbt.msg('指揮官：（對講機）增援。', 1800);
       }
     }
     if (e.hp <= 0) {

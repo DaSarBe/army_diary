@@ -285,7 +285,30 @@
       "reward": "結局判定",
       "vehicles": [
         "jeep"
-      ]
+      ],
+      "boss": {
+        "commander": {
+          "hp": 300,
+          "reinforce": [
+            {
+              "atHpPct": 67,
+              "enemies": {
+                "rifleman": 3,
+                "rusher": 2
+              }
+            },
+            {
+              "atHpPct": 33,
+              "enemies": {
+                "rusher": 3,
+                "gunner": 1
+              }
+            }
+          ]
+        },
+        "captureRule": "若 isl_killed_scout 且非 isl_radio_strong，commander_choice 強制為擊斃（isl_commander_killed）",
+        "note": "依線上實作回寫"
+      }
     }
   ],
   "difficulty": {
