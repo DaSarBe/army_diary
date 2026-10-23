@@ -52,8 +52,7 @@
       "outpostName": "島上指揮所",
       "file": "data/levels/05-hq.json",
       "unlockFlag": "isl_04_clear",
-      "clearFlag": "isl_05_clear",
-      "stub": true
+      "clearFlag": "isl_05_clear"
     }
   ]
 }

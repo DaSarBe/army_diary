@@ -31,7 +31,8 @@
     gunner: { u: '#464b41', v: '#2e332a', h: '#252921', s: '#b98a63' },
     rusher: { u: '#5c5c54', v: '#44443d', h: '#3a3a33', s: '#d1a077' },
     scout: { u: '#4a5244', v: '#32382c', h: '#2a3024', s: '#c9976e' },
-    sniper: { u: '#3e4438', v: '#2a2e26', h: '#1e221c', s: '#c9976e' }
+    sniper: { u: '#3e4438', v: '#2a2e26', h: '#1e221c', s: '#c9976e' },
+    commander: { u: '#3a3e48', v: '#2a2e36', h: '#1a1e26', s: '#c9976e' }
   };
   function buildEnemy(type, e) {
     var P = PAL[type] || PAL.rifleman, g = new T.Group(), hit = [], j = {};
@@ -174,8 +175,18 @@
     banner('引擎聲把人引來了');
     refreshHud();
   };
-  Cbt.reinforce = function (bag) {
-    if (!A || A.reinforced) return;
+  Cbt.alertAll = function () {
+    if (!A) return;
+    A.noiseOn = true; A.alerted = true; A.stealthBroken = true;
+    (A.enemies || []).forEach(function (e) {
+      if (!e || e.state === 'dead') return;
+      e.alerted = true; e.exposed = true;
+      if (e.state === 'cover') { e.state = 'peek'; e.t = 0; e.burst = 3; }
+      else e.state = 'rush';
+    });
+  };
+  Cbt.reinforce = function (bag, force) {
+    if (!A || (A.reinforced && !force)) return;
     A.reinforced = true; A.alerted = true;
     var n = 0;
     Object.keys(bag || {}).forEach(function (k) {
@@ -497,7 +508,7 @@
   function spawnEnemy(type, x, z) {
     var pts = W.S.spawns, bag = (Math.random() < 0.45 ? pts.sea : pts.shore) || pts.sea || [[0, -50]];
     var sp = bag[Math.floor(Math.random() * bag.length)];
-    var e = { type: type, hp: ET(type).hp, state: 'advance', x: x != null ? x : sp[0] + rnd(-3, 3), z: z != null ? z : sp[1] + rnd(-2, 2), t: 0, fireCd: rnd(0.4, 1.2), burst: 0, cover: null, exposed: true, walkT: Math.random() * 6, dieT: 0, flinch: 0, relocT: rnd(4, 6), peekT: 0, crouch: 0 };
+    var e = { type: type, hp: ET(type).hp, state: type === 'commander' ? 'peek' : 'advance', x: x != null ? x : sp[0] + rnd(-3, 3), z: z != null ? z : sp[1] + rnd(-2, 2), t: 0, fireCd: rnd(0.4, 1.2), burst: 0, cover: null, exposed: true, walkT: Math.random() * 6, dieT: 0, flinch: 0, relocT: rnd(4, 6), peekT: 0, crouch: 0 };
     var m = buildEnemy(type, e); e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline;
     e.group.position.set(e.x, 0, e.z); scene.add(e.group);
     pickCover(e);
@@ -594,7 +605,18 @@
   }
   function damageEnemy(e, dmg, head) {
     if (e.state === 'dead') return;
+    var before = e.hp;
     e.hp -= dmg; e.flinch = 0.18;
+    if (e.type === 'commander') {
+      var max = ET('commander').hp || 300;
+      if (before > max * 2 / 3 && e.hp <= max * 2 / 3) {
+        Cbt.reinforce({ rifleman: 3, rusher: 2 }, true);
+        Cbt.msg('指揮官在呼叫援兵', 1800);
+      } else if (before > max / 3 && e.hp <= max / 3) {
+        Cbt.reinforce({ rusher: 3, gunner: 1 }, true);
+        Cbt.msg('指揮官再呼叫一波', 1800);
+      }
+    }
     if (e.hp <= 0) {
       e.state = 'dead'; e.exposed = false; e.dieT = 0; A.killed++;
       if (A.gatherMode) A.gatherKilled = (A.gatherKilled || 0) + 1;
@@ -703,7 +725,9 @@
     if (A.pack.hp >= A.pack.hpMax) { Cbt.msg('體力還夠', 1000); return; }
     A.pack.medkits--;
     A.pack.hp = Math.min(A.pack.hpMax, A.pack.hp + Math.round(A.pack.hpMax * (cfg.health.medkitHealPct || 40) / 100));
-    Sfx.sfx('success'); Cbt.msg('用了急救包', 1400); if (H.onHp) H.onHp(); refreshHud();
+    Sfx.sfx('success'); Cbt.msg('用了急救包', 1400);
+    if (H.onUsedMedkit) H.onUsedMedkit();
+    if (H.onHp) H.onHp(); refreshHud();
   };
   Cbt.setCarrying = function (on) {
     if (!A) return;

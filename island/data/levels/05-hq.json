@@ -1,0 +1,85 @@
+{
+  "id": "op5_hq",
+  "name": "島上指揮所",
+  "outpost": "op5_hq",
+  "tone": "dusk",
+  "bounds": [-40, 42, -8, 92],
+  "spawn": [0, 8],
+  "spawnYaw": 3.1416,
+  "waterZ": -40,
+  "map": {
+    "ground": [
+      { "kind": "grass", "x": 0, "z": 46, "w": 90, "d": 110 }
+    ],
+    "props": [
+      { "kind": "road", "x": 0, "z": 36, "w": 4.2, "d": 56 },
+      { "kind": "bld", "x": 0, "z": 78, "w": 14, "d": 10, "h": 4.2, "wall": "#5a5348", "roof": "#3a3830", "lab": "指揮所" },
+      { "kind": "bld", "x": -16, "z": 70, "w": 6, "d": 5, "h": 2.8, "wall": "#4e5248", "roof": "#2e3228", "lab": "庫房" },
+      { "kind": "bld", "x": 16, "z": 68, "w": 5.5, "d": 5, "h": 2.6, "wall": "#4e5248", "roof": "#2e3228" },
+      { "kind": "crate", "x": -4, "z": 52, "w": 1.1, "h": 0.7, "d": 0.9 },
+      { "kind": "crate", "x": 5, "z": 58, "w": 1.0, "h": 0.7, "d": 0.8 },
+      { "kind": "sign", "x": 0, "z": 14, "y": 2.1, "w": 3.8, "h": 0.65, "txt": "島上指揮所", "bg": "#2c4a2c", "fg": "#f2ecd0" }
+    ],
+    "covers": [
+      { "type": "sandbag", "x": -6, "z": 28, "w": 3.2, "d": 0.9, "h": 1.0, "ax": -6, "az": 29.2 },
+      { "type": "sandbag", "x": 6, "z": 36, "w": 3.2, "d": 0.9, "h": 1.0, "ax": 6, "az": 37.2 },
+      { "type": "sandbag", "x": -4, "z": 50, "w": 3.0, "d": 0.9, "h": 1.0, "ax": -4, "az": 51.2 },
+      { "type": "sandbag", "x": 5, "z": 62, "w": 3.0, "d": 0.9, "h": 1.0, "ax": 5, "az": 63.2 }
+    ],
+    "eCovers": [
+      { "x": -8, "z": 44, "kind": "sand" },
+      { "x": 8, "z": 48, "kind": "sand" },
+      { "x": -6, "z": 64, "kind": "sand" },
+      { "x": 6, "z": 72, "kind": "boat" },
+      { "x": 0, "z": 84, "kind": "boat" }
+    ],
+    "npcs": [
+      { "id": "npc_signal_lin", "preset": "lin", "x": -2, "z": 10, "ry": 3.2, "name": "小林" },
+      { "id": "npc_akai", "preset": "kai", "x": 2, "z": 10.2, "ry": 3.4, "name": "阿凱" },
+      { "id": "npc_sgt_wang", "preset": "sgt", "x": 0, "z": 11.2, "ry": 3.14, "name": "王班長" }
+    ],
+    "vehicles": [
+      { "id": "jeep_hq", "type": "jeep", "x": 6, "z": 10, "yaw": 0 }
+    ],
+    "spawns": {
+      "sea": [[-8, 86], [8, 88], [0, 90]],
+      "shore": [[-8, 40], [8, 46], [-6, 58], [6, 66], [0, 74]]
+    }
+  },
+  "beats": [
+    { "id": "hq_camp", "type": "talk", "story": "hq_camp", "checkpoint": true, "place": [0, 8] },
+    { "id": "hq_brief", "type": "talk", "story": "hq_brief" },
+    { "id": "hq_choice", "type": "choice", "story": "hq_choice" },
+    {
+      "id": "hq_jeep",
+      "type": "vehicle",
+      "ifFlag": "isl_jeep_charge",
+      "routes": {
+        "isl_jeep_charge": {
+          "vehicle": "jeep_hq",
+          "story": "vehicle_hq_jeep",
+          "land": [2, 52],
+          "stay": true,
+          "waypoints": [[6, 10], [2, 28], [2, 52]]
+        }
+      }
+    },
+    {
+      "id": "hq_fight",
+      "type": "combat",
+      "story": "hq_fight",
+      "checkpoint": true,
+      "wave": {
+        "id": "hq",
+        "name": "島上指揮所",
+        "enemies": { "rifleman": 8, "gunner": 3, "sniper": 2, "commander": 1 },
+        "stealthEnemies": { "rifleman": 4, "gunner": 1, "sniper": 1, "commander": 1 },
+        "grace": 1.6,
+        "placed": [{ "type": "commander", "x": 0, "z": 80 }]
+      }
+    },
+    { "id": "hq_office", "type": "talk", "story": "hq_office", "place": [0, 76] },
+    { "id": "commander_choice", "type": "choice", "story": "commander_choice" },
+    { "id": "complete", "type": "complete", "story": "hq_complete", "setFlag": "isl_05_clear" }
+  ]
+}

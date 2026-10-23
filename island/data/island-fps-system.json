@@ -455,7 +455,13 @@
         "island_guard": "約 13%",
         "silent_island": "約 35%",
         "nameless_line": "約 52%"
-      }
+      },
+      "presentation": {
+        "onKiaRoll": "擲出陣亡時，先播黑場加無線電（lin_roll / akai_roll / wang_roll），再播 complete 對白",
+        "inCombatDown": "戰鬥中血量歸零才用 *_down",
+        "noSilentDeath": true
+      },
+      "wangTiming": "op4 逃出（軌道車／吉普車到達）後、tunnel_outro 前擲；因此 vehicle_tunnel_jeep_kia 場景不會觸發，建議刪除或保留為備用，不需另外處理"
     }
   },
   "endingsFlags": {

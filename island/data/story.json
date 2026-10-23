@@ -104,6 +104,21 @@
     "akai_down": {
       "radio": [["黃連長：「阿凱的頻道沒有再開。他守的那一段，沒有人退。」"]]
     },
+    "lin_roll": {
+      "radio": [
+        ["黃連長：「小林，回答。……小林，回答。」", "電台：「……南灘通信，沒有訊號。重複，沒有訊號。」", "黃連長：「他最後一句，是報位置。位置我收到了。」"]
+      ],
+      "radioOp1": ["黃連長：「天線是他架的。訊號一直在。」"]
+    },
+    "akai_roll": {
+      "radio": [
+        ["黃連長：「阿凱的頻道沒有再開。」", "黃連長：「他最後一個訊息，是問燈亮了沒有。」"]
+      ],
+      "radioOp4": ["電台：「……保險單還沒簽完。」"]
+    },
+    "wang_roll": {
+      "radio": [["黃連長：「班長的呼號不再回應。他帶過的人，今天站得很穩。」"]]
+    },
     "lin_live": {
       "lines": [
         { "who": "小林", "text": "我還在。……老方，漁港我看過了，一艘船都沒有，纜繩是被人砍斷的。" }
@@ -551,7 +566,8 @@
     },
     "tunnel_choice": {
       "lines": [
-        { "who": "黃連長", "text": "王班長在最深處。坑道很窄。你可以潛進去，可以清場，可以推軌道車衝出去，外面也停了一台吉普。" }
+        { "who": "黃連長", "text": "王班長在最深處。坑道很窄，聲音會被放大。" },
+        { "who": "黃連長", "text": "潛進去、清場、推軌道車衝出去，外面也停了一台吉普。" }
       ],
       "choices": [
         { "id": "stealth", "text": "潛入救人", "flag": "isl_tunnel_stealth" },
@@ -582,6 +598,13 @@
         { "who": "黃連長", "text": "腿傷了。背他出來。頻道裡人少了，你自己走。" }
       ]
     },
+    "wang_found_personal": {
+      "lines": [
+        { "who": "王班長", "text": "你怎麼來了？我又沒叫你。" },
+        { "who": "", "text": "我是來找你的，班長。" },
+        { "who": "黃連長", "text": "腿傷了。背他出來。" }
+      ]
+    },
     "carry_wang": {
       "hint": "背起王班長。不能瞄準。煙霧會擋對方準頭。",
       "done": "先送到發光的出口。"
@@ -597,7 +620,11 @@
     },
     "rescue_captives": {
       "hint": "解開被俘守軍。他們不能戰鬥，不要誤傷。",
-      "done": "三個人都站起來了。"
+      "done": "三個人都站起來了。",
+      "wang": "王班長：「……你比當年膽子大。」"
+    },
+    "captives_leave": {
+      "wang": "王班長：「不用解釋。我當班長的時候，也做過這種決定。」"
     },
     "vehicle_rail": {
       "hint": "上軌道車。整座坑道會被驚動，終點會有衝鋒兵。",
@@ -612,11 +639,25 @@
         { "who": "黃連長", "text": "聲音太大了。抓好。" }
       ]
     },
+    "vehicle_rail_akai_kia": {
+      "hint": "上軌道車。整座坑道會被驚動，終點會有衝鋒兵。",
+      "chatter": [
+        { "who": "黃連長", "text": "聲音太大了。抓好。" }
+      ]
+    },
     "vehicle_tunnel_jeep": {
       "hint": "上吉普車。載走班長和俘虜。X 可換駕駛、射手、乘客。車載 T75 連射六秒會過熱。",
       "chatter": [
         { "who": "王班長", "text": "誰教你們這樣開車的？我的屁股比腿還痛。" },
         { "who": "阿凱", "text": "班長，你先坐好。" },
+        { "who": "王班長", "text": "我是在坐好啊！" }
+      ]
+    },
+    "vehicle_tunnel_jeep_akai_kia": {
+      "hint": "上吉普車。載走班長和俘虜。",
+      "chatter": [
+        { "who": "王班長", "text": "誰教你們這樣開車的？我的屁股比腿還痛。" },
+        { "who": "黃連長", "text": "班長，你先坐好。" },
         { "who": "王班長", "text": "我是在坐好啊！" }
       ]
     },
@@ -633,26 +674,162 @@
     },
     "tunnel_outro": {
       "lines": [
-        { "who": "王班長", "text": "誰教你們這樣開車的？我的屁股比腿還痛。" },
-        { "who": "阿凱", "text": "班長，你先坐好。" },
-        { "who": "王班長", "text": "我是在坐好啊！" }
+        { "who": "王班長", "text": "停。讓我自己站一下。" },
+        { "who": "王班長", "text": "……腿還在。好。" }
+      ]
+    },
+    "tunnel_outro_rail": {
+      "lines": [
+        { "who": "王班長", "text": "這什麼車？比我當兵時的運煤車還吵。" },
+        { "who": "王班長", "text": "……不過你們來得不算晚。" }
+      ]
+    },
+    "tunnel_outro_akai_kia": {
+      "lines": [
+        { "who": "王班長", "text": "你們幾個……少了一個吧？" },
+        { "who": "黃連長", "text": "少了一個。他的呼號，我收到了。" },
+        { "who": "王班長", "text": "……我知道了。" }
       ]
     },
     "tunnel_outro_walk": {
       "lines": [
         { "who": "王班長", "text": "下一程我自己走。你們先把水喝完。" },
-        { "who": "黃連長", "text": "坑道過了。" }
+        { "who": "黃連長", "text": "慢慢走。" }
       ]
     },
     "tunnel_outro_kia": {
       "lines": [
-        { "who": "黃連長", "text": "……" },
-        { "who": "電台", "text": "……雜訊……" }
+        { "who": "王班長", "text": "……你怎麼來了。我又沒叫你。" },
+        { "pause": 2000 },
+        { "who": "黃連長", "text": "班長的呼號不再回應。他帶過的人，今天站得很穩。" },
+        { "who": "電台", "text": "收到。" }
       ]
     },
     "tunnel_complete": {
       "lines": [
         { "who": "黃連長", "text": "坑道過了。下一目標指揮所。" },
+        { "who": "電台", "text": "收到。" }
+      ]
+    },
+    "hq_camp": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "王班長", "text": "打完這個，我請你們吃真正的便當，不是這種過期的。" },
+        { "who": "阿凱", "text": "班長說話算話？" },
+        { "who": "王班長", "text": "我什麼時候騙過你？" },
+        { "who": "阿凱", "text": "上次你說三個月，結果是十二個月。" }
+      ]
+    },
+    "hq_camp_missing": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "王班長", "text": "打完這個，我請你們吃真正的便當，不是這種過期的。" },
+        { "who": "阿凱", "text": "班長說話算話？" },
+        { "who": "黃連長", "text": "這是最後一個了。" }
+      ]
+    },
+    "hq_camp_quiet": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "王班長", "text": "打完這個，我請你們吃真正的便當。" },
+        { "who": "小林", "text": "無線電我再調一次。" }
+      ]
+    },
+    "hq_camp_nowang": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "阿凱", "text": "打完這個就能回家。便當我請。" },
+        { "who": "小林", "text": "你上次也這樣說。" }
+      ]
+    },
+    "hq_camp_alone": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "黃連長", "text": "這是最後一個了。打完我們就能回家。" },
+        { "who": "黃連長", "text": "頻道裡人少了。我陪你走。" }
+      ]
+    },
+    "hq_brief": {
+      "lines": [
+        { "who": "黃連長", "text": "這是最後一個了，打完我們就能回家。" },
+        { "who": "黃連長", "text": "指揮所牆上貼的是別人的地圖。指揮官在裡面。" }
+      ]
+    },
+    "hq_brief_weak": {
+      "lines": [
+        { "who": "黃連長", "text": "……最後一個……聽得到嗎。" },
+        { "who": "黃連長", "text": "指揮官在裡面。" }
+      ]
+    },
+    "hq_choice": {
+      "lines": [
+        { "who": "黃連長", "text": "正面打進去，或駕吉普衝廣場。側門可以潛入。稜線上那把 T65 夠遠。" }
+      ],
+      "choices": [
+        { "id": "assault", "text": "正面強攻", "flag": "isl_hq_assault" },
+        { "id": "jeep", "text": "吉普車衝廣場", "flag": "isl_jeep_charge" },
+        { "id": "stealth", "text": "側門潛入", "flag": "isl_hq_stealth" },
+        { "id": "dmr", "text": "遠處精準壓制", "flag": "isl_hq_dmr" }
+      ]
+    },
+    "vehicle_hq_jeep": {
+      "hint": "上吉普車。衝進廣場。X 可換射手座，車載 T75 連射六秒會過熱。",
+      "chatter": [
+        { "who": "黃連長", "text": "不要停。壓制外圍。" }
+      ]
+    },
+    "hq_fight": {
+      "lines": [
+        { "who": "指揮官", "text": "你們來得比預期早。" }
+      ]
+    },
+    "hq_office": {
+      "lines": [
+        { "who": "黃連長", "text": "辦公室很普通。桌上有一杯還沒涼的茶。" },
+        { "who": "黃連長", "text": "地圖上還有別的據點。這不是終點。" }
+      ]
+    },
+    "commander_choice": {
+      "lines": [
+        { "who": "黃連長", "text": "他還活著。你們決定。" }
+      ],
+      "choices": [
+        { "id": "capture", "text": "活捉", "flag": "isl_commander_captured", "clear": "isl_commander_killed" },
+        { "id": "kill", "text": "擊斃", "flag": "isl_commander_killed", "clear": "isl_commander_captured" }
+      ]
+    },
+    "commander_choice_forced": {
+      "lines": [
+        { "who": "黃連長", "text": "沒有活捉的條件。結束他。" }
+      ]
+    },
+    "hq_complete": {
+      "lines": [
+        { "who": "黃連長", "text": "指揮所拿下來了。" },
+        { "who": "電台", "text": "收到。" }
+      ]
+    },
+    "ending_island_guard": {
+      "title": "島嶼守衛",
+      "lines": [
+        { "who": "黃連長", "text": "人都在。島還在我們手上。" },
+        { "who": "王班長", "text": "茶還沒涼。先喝完再說。" },
+        { "who": "電台", "text": "收到。這一程結束了。" }
+      ]
+    },
+    "ending_silent_island": {
+      "title": "沉默的島",
+      "lines": [
+        { "who": "黃連長", "text": "頻道裡人少了。" },
+        { "who": "黃連長", "text": "島還在。名單我先記著。" },
+        { "who": "電台", "text": "……" }
+      ]
+    },
+    "ending_nameless_line": {
+      "title": "無名防線",
+      "lines": [
+        { "who": "黃連長", "text": "地圖上還有別的據點。" },
+        { "who": "黃連長", "text": "這一程結束了。下一程再說。" },
         { "who": "電台", "text": "收到。" }
       ]
     }

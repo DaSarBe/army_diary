@@ -82,6 +82,8 @@
   var SCOUT_FLAGS = ['isl_spared_scout', 'isl_killed_scout'];
   var TUNNEL_FLAGS = ['isl_tunnel_stealth', 'isl_tunnel_assault', 'isl_rail_escape', 'isl_tunnel_jeep'];
   var CAPTIVE_FLAGS = ['isl_captives_rescued', 'isl_captives_left'];
+  var HQ_FLAGS = ['isl_hq_assault', 'isl_jeep_charge', 'isl_hq_stealth', 'isl_hq_dmr'];
+  var BOSS_FLAGS = ['isl_commander_captured', 'isl_commander_killed'];
   function exclusiveFlags(group, id) {
     group.forEach(function (f) { save.flags[f] = f === id; });
     persist();
@@ -175,6 +177,22 @@
     }
     step();
   }
+  function pickRollRadio(id) {
+    var sc = story && story.scenes && story.scenes[id + '_roll'];
+    if (id === 'lin' && level && level.num === 1 && sc && sc.radioOp1) return sc.radioOp1;
+    if (id === 'akai' && level && level.num === 4 && sc && sc.radioOp4) return sc.radioOp4;
+    var bag = (sc && sc.radio) || [];
+    if (!bag.length) return pickCompanionRadio(id);
+    return auto ? bag[0] : bag[Math.floor(Math.random() * bag.length)];
+  }
+  function playRollRadios(ids, cb) {
+    function next() {
+      if (!ids.length) { if (cb) cb(); return; }
+      var id = ids.shift();
+      companionRadio(id, pickRollRadio(id), next);
+    }
+    next();
+  }
   function pickCompanionRadio(id) {
     var sc = story && story.scenes && story.scenes[id + '_down'];
     var bag = (sc && sc.radio) || [];
@@ -225,6 +243,7 @@
     return false;
   }
   function hasFirstAid() {
+    if (save && save.usedMedkit) return true;
     if (!save || !save.carryOver) return false;
     try {
       var raw = JSON.parse(localStorage.getItem('abg2-save-0') || 'null');
@@ -318,6 +337,11 @@
       $('#dlg').hidden = false; document.body.classList.add('talking');
       if (i < lines.length) {
         var ln = lines[i];
+        if (ln.pause) {
+          hideDlg();
+          fade('', ln.pause, function () { i++; render(); });
+          return;
+        }
         $('#dName').textContent = ln.who || '';
         $('#dText').textContent = ln.text;
         $('#dBtns').innerHTML = '';
@@ -343,7 +367,13 @@
             else if (c.flag && SCOUT_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(SCOUT_FLAGS, c.flag);
             else if (c.flag && TUNNEL_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(TUNNEL_FLAGS, c.flag);
             else if (c.flag && CAPTIVE_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(CAPTIVE_FLAGS, c.flag);
+            else if (c.flag && HQ_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(HQ_FLAGS, c.flag);
+            else if (c.flag && BOSS_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(BOSS_FLAGS, c.flag);
             else if (c.flag) setFlag(c.flag, true);
+            if (sceneId === 'captives_choice') {
+              var react = (c.flag === 'isl_captives_left') ? (story.scenes.captives_leave && story.scenes.captives_leave.wang) : (story.scenes.rescue_captives && story.scenes.rescue_captives.wang);
+              if (react) toast(react);
+            }
             if (c.driver) exclusiveFlags(DRIVER_FLAGS, c.driver);
             if (c.clear) { save.flags[c.clear] = false; persist(); }
             hideDlg();
@@ -375,7 +405,20 @@
             else if (q.tunnel === 'stealth') pick = choices[0];
             else pick = choices[1] || pick;
           }
-          if (sceneId === 'captives_choice') pick = (q.captive === 'leave') ? (choices[1] || pick) : choices[0];
+          if (sceneId === 'captives_choice') {
+            var leaveCap = q.captive === 'leave' || q.ending === 'silent';
+            pick = leaveCap ? (choices[1] || pick) : choices[0];
+          }
+          if (sceneId === 'hq_choice') {
+            if (q.hq === 'jeep') pick = choices[1] || pick;
+            else if (q.hq === 'stealth') pick = choices[2] || pick;
+            else if (q.hq === 'dmr') pick = choices[3] || pick;
+            else pick = choices[0];
+          }
+          if (sceneId === 'commander_choice') {
+            var killBoss = q.boss === 'kill' || q.ending === 'silent' || q.ending === 'nameless';
+            pick = killBoss ? (choices[1] || pick) : choices[0];
+          }
           setTimeout(function () { pick && $('#dBtns').querySelectorAll('button')[choices.indexOf(pick)].click(); }, 200);
         }
         return;
@@ -444,15 +487,35 @@
       return sid;
     }
     if (sid === 'tunnel_fight') return hasFlag('isl_tunnel_stealth') && story.scenes.tunnel_fight_stealth ? 'tunnel_fight_stealth' : sid;
-    if (sid === 'wang_found') return linDown ? 'wang_found_missing' : sid;
-    if (sid === 'vehicle_rail') return linDown ? 'vehicle_rail_missing' : sid;
-    if (sid === 'vehicle_tunnel_jeep') return fateOf('wang') === 'kia' ? 'vehicle_tunnel_jeep_kia' : sid;
+    if (sid === 'wang_found') {
+      if (hasFlag('isl_chat_wang') && story.scenes.wang_found_personal) return 'wang_found_personal';
+      return linDown ? 'wang_found_missing' : sid;
+    }
+    if (sid === 'vehicle_rail') {
+      if (fateOf('akai') === 'kia') return 'vehicle_rail_akai_kia';
+      return linDown ? 'vehicle_rail_missing' : sid;
+    }
+    if (sid === 'vehicle_tunnel_jeep') {
+      if (fateOf('wang') === 'kia') return 'vehicle_tunnel_jeep_kia';
+      if (fateOf('akai') === 'kia') return 'vehicle_tunnel_jeep_akai_kia';
+      return sid;
+    }
     if (sid === 'tunnel_outro') {
       if (fateOf('wang') !== 'kia' && fateOf('wang') !== 'alive') chapterFate('wang', 'op4_tunnel');
       if (fateOf('wang') === 'kia') return 'tunnel_outro_kia';
-      if (hasFlag('isl_rail_escape') || hasFlag('isl_tunnel_jeep')) return 'tunnel_outro';
+      if (fateOf('akai') === 'kia') return 'tunnel_outro_akai_kia';
+      if (hasFlag('isl_rail_escape')) return 'tunnel_outro_rail';
+      if (hasFlag('isl_tunnel_jeep')) return 'tunnel_outro';
       return 'tunnel_outro_walk';
     }
+    if (sid === 'hq_camp') {
+      if (fateOf('wang') === 'kia' && fateOf('akai') === 'kia' && linDown) return 'hq_camp_alone';
+      if (fateOf('wang') === 'kia') return 'hq_camp_nowang';
+      if (fateOf('akai') === 'kia') return 'hq_camp_quiet';
+      if (linDown) return 'hq_camp_missing';
+      return sid;
+    }
+    if (sid === 'hq_brief') return weak ? 'hq_brief_weak' : sid;
     return sid;
   }
   function currentBeat() { return level.beats[beatI]; }
@@ -480,6 +543,11 @@
     if (b.type === 'talk' || b.type === 'choice') {
       if (b.story === 'scout_choice' && W.showNpc) W.showNpc('npc_scout_wounded', true);
       if (b.story === 'wang_found' && W.showNpc) W.showNpc('npc_sgt_wang', true);
+      if (b.story === 'commander_choice' && !canCapture()) {
+        exclusiveFlags(BOSS_FLAGS, 'isl_commander_killed');
+        showLines('commander_choice_forced', function () { nextBeat(); });
+        return;
+      }
       var sid = pickStory(b.story);
       showLines(sid, function () { nextBeat(); });
     } else if (b.type === 'wait') {
@@ -610,6 +678,12 @@
       }
       chat();
       var vNow = W.inVehicle();
+      if (vNow && (vNow.type === 'rail_cart' || vNow.type === 'rail')) {
+        setFlag('isl_rail_escape');
+        if (Cbt.beginNoise) Cbt.beginNoise();
+        if (Cbt.alertAll) Cbt.alertAll();
+        toast('軌道車太吵。整座坑道的人都警戒了。');
+      }
       if (vNow && (vNow.type === 'bike' || vNow.type === 'motorcycle')) {
         save.engineAlerted = true; persist();
         if (Cbt.beginNoise) Cbt.beginNoise();
@@ -724,12 +798,15 @@
       if (level && level.id === 'op1_landing') plan = assaultPlan();
       else if (level && level.id === 'op4_tunnel' && wave.id === 'tunnel' && hasFlag('isl_tunnel_stealth') && wave.stealthEnemies) {
         plan = { enemies: JSON.parse(JSON.stringify(wave.stealthEnemies)), stealth: true };
+      } else if (level && level.id === 'op5_hq' && hasFlag('isl_hq_stealth') && wave.stealthEnemies) {
+        plan = { enemies: JSON.parse(JSON.stringify(wave.stealthEnemies)), stealth: true };
       } else {
         plan = { enemies: JSON.parse(JSON.stringify((hasFlag('isl_ridge_trail') && wave.trailEnemies) || wave.enemies || {})) };
       }
+      if (level && level.id === 'op4_tunnel' && hasFlag('isl_rail_escape')) plan.noise = true;
       Cbt.startWave({
         id: wave.id, name: wave.name, enemies: plan.enemies, grace: wave.grace,
-        stealth: !!plan.stealth, reinforce: plan.reinforce, keep: !!plan.keep, noise: !!plan.noise,
+        stealth: !!plan.stealth, reinforce: plan.reinforce || wave.reinforce, keep: !!plan.keep, noise: !!plan.noise,
         lin: fateOf('lin') === 'kia' || !W.npc('npc_signal_lin') ? null : { hp: 80, x: linPos.x, z: linPos.z },
         buddyGunner: !!(W.inVehicle() && W.inVehicle().type === 'jeep' && !hasFlag('isl_akai_outside') && (fateOf('akai') !== 'kia' || fateOf('lin') === 'alive')),
         placed: wave.placed || b.placed
@@ -848,19 +925,49 @@
     armOne();
   }
 
+  function canCapture() {
+    return !hasFlag('isl_killed_scout') || hasFlag('isl_radio_strong');
+  }
+  function pickEnding() {
+    var kiaN = 0;
+    if (fateOf('wang') === 'kia') kiaN++;
+    if (fateOf('akai') === 'kia') kiaN++;
+    if (fateOf('lin') === 'kia') kiaN++;
+    var wangOk = hasFlag('isl_wang_rescued') || hasFlag('isl_key_captive_rescued');
+    if (wangOk && hasFlag('isl_captives_rescued') && fateOf('akai') !== 'kia' && fateOf('lin') !== 'kia' && hasFlag('isl_commander_captured')) return 'island_guard';
+    if (kiaN >= 2 || (hasFlag('isl_captives_left') && hasFlag('isl_commander_killed'))) return 'silent_island';
+    return 'nameless_line';
+  }
   function finishLevel(b) {
-    setFlag(b.setFlag || (level.id === 'op4_tunnel' ? 'isl_04_clear' : (level.id === 'op3_ridge' ? 'isl_03_clear' : (level.id === 'op2_radar' ? 'isl_02_clear' : 'isl_01_clear'))));
+    setFlag(b.setFlag || (level.id === 'op5_hq' ? 'isl_05_clear' : (level.id === 'op4_tunnel' ? 'isl_04_clear' : (level.id === 'op3_ridge' ? 'isl_03_clear' : (level.id === 'op2_radar' ? 'isl_02_clear' : 'isl_01_clear')))));
     if (Cbt.session()) save.loadout = JSON.parse(JSON.stringify(Cbt.session().pack));
-    if (shouldRoll('lin', level.id) && fateOf('lin') !== 'kia') chapterFate('lin', level.id);
-    if (shouldRoll('akai', level.id) && fateOf('akai') !== 'kia') chapterFate('akai', level.id);
-    if (shouldRoll('wang', level.id) && fateOf('wang') !== 'kia' && fateOf('wang') !== 'alive') chapterFate('wang', level.id);
+    var kiaNow = [];
+    function rollNow(id) {
+      if (!shouldRoll(id, level.id) || fateOf(id) === 'kia') return;
+      if (id === 'wang' && (fateOf('wang') === 'alive' || (save.fateRolls && save.fateRolls['wang:op4_tunnel']))) return;
+      var r = chapterFate(id, level.id);
+      if (r === 'kia') kiaNow.push(id);
+    }
+    rollNow('lin');
+    rollNow('akai');
+    if (level.id !== 'op4_tunnel') rollNow('wang');
+    if (level.id === 'op5_hq') {
+      var end = pickEnding();
+      save.ending = end;
+      setFlag('isl_ending_' + end);
+    }
     var next = catalog.levels.filter(function (l) { return l.num === (level.num || 1) + 1; })[0];
     if (next && !next.stub) {
       save.level = next.id; save.beat = 0;
-      save.checkpoint = next.id === 'op4_tunnel' ? 'tunnel_mouth' : (next.id === 'op3_ridge' ? 'ridge_rest' : (next.id === 'op2_radar' ? 'jeep_shop' : next.id));
+      save.checkpoint = next.id === 'op5_hq' ? 'hq_camp' : (next.id === 'op4_tunnel' ? 'tunnel_mouth' : (next.id === 'op3_ridge' ? 'ridge_rest' : (next.id === 'op2_radar' ? 'jeep_shop' : next.id)));
       persist();
     }
-    showLines(pickStory(b.story), function () { showCompleteCard(); });
+    function afterRadio() {
+      var doneStory = (level.id === 'op5_hq' && save.ending) ? ('ending_' + save.ending) : pickStory(b.story);
+      showLines(doneStory || pickStory(b.story), function () { showCompleteCard(); });
+    }
+    if (kiaNow.length) playRollRadios(kiaNow, afterRadio);
+    else afterRadio();
   }
   function showCompleteCard() {
     phase = 'done';
@@ -869,12 +976,26 @@
     var akai = fateOf('akai') === 'kia' ? '阿凱：陣亡（已鎖定）' : (fateOf('akai') === 'alive' ? '阿凱：生還' : (level.num >= 2 ? '阿凱：同行（尚未判定）' : '阿凱：尚未登場'));
     var wang = fateOf('wang') === 'kia' ? '王班長：陣亡（已鎖定）' : (fateOf('wang') === 'alive' ? '王班長：生還' : (level.num >= 4 ? '王班長：尚未判定' : '王班長：失聯'));
     $('#card').hidden = false;
+    if (level.id === 'op5_hq') {
+      var end = save.ending || pickEnding();
+      var titles = { island_guard: '島嶼守衛', silent_island: '沉默的島', nameless_line: '無名防線' };
+      var how5 = hasFlag('isl_jeep_charge') ? '吉普衝廣場' : hasFlag('isl_hq_stealth') ? '側門潛入' : hasFlag('isl_hq_dmr') ? '遠距壓制' : '正面強攻';
+      var boss = hasFlag('isl_commander_captured') ? '指揮官：活捉' : '指揮官：擊斃';
+      $('#cIn').innerHTML = '<p class="kicker">戰役結束</p><h2>' + (titles[end] || end) + '</h2><p>' + how5 + '。' + boss + '。</p><p>' + lin + '<br>' + akai + '<br>' + wang + '</p><div class="row"><button type="button" class="primary" id="toTitle">回標題</button></div>';
+      $('#toTitle').onclick = function () { $('#card').hidden = true; showTitle(); };
+      if (auto) { save._e2e = 'clear'; persist(); }
+      return;
+    }
     if (level.id === 'op4_tunnel') {
       var how4 = hasFlag('isl_rail_escape') ? '軌道車撤離' : hasFlag('isl_tunnel_jeep') ? '吉普車接應' : hasFlag('isl_tunnel_stealth') ? '潛入' : '強攻';
       var cap = hasFlag('isl_captives_rescued') ? '俘虜：全救' : '俘虜：留下';
-      $('#cIn').innerHTML = '<p class="kicker">第 4 關完成</p><h2>坑道</h2><p>' + how4 + '。' + cap + '。</p><p>' + lin + '<br>' + akai + '<br>' + wang + '</p><p>第 5 關「島上指揮所」將依序解鎖。</p><div class="row"><button type="button" class="primary" id="toTitle">回標題</button></div>';
+      $('#cIn').innerHTML = '<p class="kicker">第 4 關完成</p><h2>坑道</h2><p>' + how4 + '。' + cap + '。</p><p>' + lin + '<br>' + akai + '<br>' + wang + '</p><p>第 5 關「島上指揮所」已解鎖。</p><div class="row"><button type="button" class="primary" id="go5">進入第 5 關</button><button type="button" id="toTitle">回標題</button></div>';
       $('#toTitle').onclick = function () { $('#card').hidden = true; showTitle(); };
-      if (auto) { save._e2e = 'clear'; persist(); }
+      $('#go5').onclick = function () { $('#card').hidden = true; bootLevel('op5_hq', 0); };
+      if (auto) {
+        save._e2e = 'ch4'; persist();
+        setTimeout(function () { var g = $('#go5'); if (g) g.click(); }, 280);
+      }
       return;
     }
     if (level.id === 'op3_ridge') {
@@ -984,7 +1105,8 @@
   function continueSave(s) {
     save = s;
     var id = s.level || 'op1_landing';
-    if (s.flags && s.flags.isl_03_clear && !s.flags.isl_04_clear && (id === 'op1_landing' || id === 'op2_radar' || id === 'op3_ridge')) id = 'op4_tunnel';
+    if (s.flags && s.flags.isl_04_clear && !s.flags.isl_05_clear && (id === 'op1_landing' || id === 'op2_radar' || id === 'op3_ridge' || id === 'op4_tunnel')) id = 'op5_hq';
+    else if (s.flags && s.flags.isl_03_clear && !s.flags.isl_04_clear && (id === 'op1_landing' || id === 'op2_radar' || id === 'op3_ridge')) id = 'op4_tunnel';
     else if (s.flags && s.flags.isl_02_clear && !s.flags.isl_03_clear && (id === 'op1_landing' || id === 'op2_radar')) id = 'op3_ridge';
     else if (s.flags && s.flags.isl_01_clear && !s.flags.isl_02_clear && id === 'op1_landing') id = 'op2_radar';
     bootLevel(id, id === s.level ? (s.beat || 0) : 0);
@@ -1004,7 +1126,8 @@
       if (fateOf('akai') === 'kia') W.showNpc('npc_akai', false);
       if (id === 'op2_radar' && hasFlag('isl_akai_outside')) W.showNpc('npc_akai', false);
       if (W.npc && W.npc('npc_scout_wounded')) W.showNpc('npc_scout_wounded', false);
-      if (W.npc && W.npc('npc_sgt_wang')) W.showNpc('npc_sgt_wang', false);
+      if (W.npc && W.npc('npc_sgt_wang')) W.showNpc('npc_sgt_wang', id === 'op5_hq' && fateOf('wang') !== 'kia');
+      if (id === 'op5_hq' && fateOf('wang') === 'kia' && W.showNpc) W.showNpc('npc_sgt_wang', false);
       ['npc_captive_1', 'npc_captive_2', 'npc_captive_3'].forEach(function (cid) {
         if (W.npc && W.npc(cid)) W.showNpc(cid, id === 'op4_tunnel');
       });
@@ -1057,6 +1180,9 @@
     W.cb.onRestored = function () { $('#lost').hidden = true; };
   }
   HHooks.onHp = hpBar;
+  HHooks.onUsedMedkit = function () {
+    save.usedMedkit = true; persist();
+  };
   HHooks.onCarryHit = function () {
     if (!level || level.id !== 'op4_tunnel') return;
     save.wangHits = (save.wangHits || 0) + 1; persist();
