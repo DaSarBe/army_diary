@@ -91,7 +91,11 @@ async function main() {
   if (!info.flags.isl_akai_with_you && !info.flags.isl_akai_outside) throw new Error('沒有阿凱同行旗標');
   if (!info.flags.isl_jeep_driver_akai && !info.flags.isl_jeep_driver_lin && !info.flags.isl_jeep_driver_player) throw new Error('沒有吉普駕駛旗標');
   if (extra.indexOf('power=0') >= 0 && info.flags.isl_power_restored) throw new Error('摸黑不該設復電旗標');
-  if (extra.indexOf('power=0') < 0 && extra.indexOf('down=1') < 0 && !info.flags.isl_power_restored) throw new Error('預設應中途復電');
+  if (extra.indexOf('power=late') >= 0) {
+    if (info.flags.isl_power_restored) throw new Error('戰後復電不該設 isl_power_restored');
+    if (!info.flags.isl_power_restored_late) throw new Error('戰後復電應設 isl_power_restored_late');
+  }
+  if (extra.indexOf('power=0') < 0 && extra.indexOf('power=late') < 0 && extra.indexOf('down=1') < 0 && !info.flags.isl_power_restored) throw new Error('預設應中途復電');
   if (!info.fates || (info.fates.lin !== 'alive' && info.fates.lin !== 'kia')) throw new Error('第 1 關同袍命運沒接到第 2 關');
   if (info.fates.akai !== 'alive' && info.fates.akai !== 'kia') throw new Error('阿凱沒寫入第 2 關命運');
   if (extra.indexOf('down=1') >= 0 && !info.downSeen) throw new Error('倒下重試沒有觸發');

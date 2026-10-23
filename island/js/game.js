@@ -624,7 +624,7 @@
         };
         var hintSc = story.scenes[pickStory('power_hint')] || story.scenes.power_hint;
         if (hintSc && hintSc.toast) setTimeout(function () { toast(hintSc.toast); }, auto ? 400 : 10000);
-        if (auto && q.power !== '0') setTimeout(function () { W.place(b.optionalPower.x, b.optionalPower.z); startHold(b.optionalPower.label || '復電', 400); }, 700);
+        if (auto && q.power !== '0' && q.power !== 'late') setTimeout(function () { W.place(b.optionalPower.x, b.optionalPower.z); startHold(b.optionalPower.label || '復電', 400); }, 700);
       }
       HHooks._rushed = false;
       HHooks.onRusher = function () {
