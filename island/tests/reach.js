@@ -69,6 +69,8 @@ function scanJsonFootprints() {
       if (box) hits.push(pt.id + ' inside ' + box.kind + ' @' + pt.x + ',' + pt.z);
     });
     if (hits.length) throw new Error(id + ' 目標落在實心物內：' + hits.join('; '));
+    const ladders = (lv.map.props || []).filter(p => p.kind === 'ladder');
+    if (ladders.length) throw new Error(id + ' 仍有 ladder（沒有爬梯功能，不可留下）');
     console.log(id + ' json-footprint ok');
   });
 }

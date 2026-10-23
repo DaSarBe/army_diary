@@ -209,24 +209,6 @@
     } else if (k === 'slab') {
       bx(p.w, p.h || 0.28, p.d, p.x, p.y != null ? p.y : 3.1, p.z, p.col || '#1c1a16', false);
     }
-    else if (k === 'ladder') {
-      var lh = p.h || 3.2, yaw = p.yaw || 0;
-      var g = new T.Group();
-      function pole(px) {
-        var m = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, lh, 6), M('#c4b090'));
-        m.position.set(px, lh / 2, 0); g.add(m);
-      }
-      pole(-0.28); pole(0.28);
-      var ri;
-      for (ri = 0; ri < Math.max(4, Math.round(lh / 0.38)); ri++) {
-        var rg = new T.Mesh(UB, M('#d2c4a0'));
-        rg.scale.set(0.62, 0.05, 0.08);
-        rg.position.set(0, 0.28 + ri * 0.38, 0.02);
-        g.add(rg);
-      }
-      g.position.set(p.x, 0, p.z); g.rotation.y = yaw;
-      CG.add(g);
-    }
     else if (k === 'sign') sign(p.txt, p.x, p.y || 2, p.z, p.w || 3, p.h || 0.7, p.bg || '#2c4a2c', p.fg || '#f2ecd0', p.ry || 0);
     else if (k === 'sand') bx(p.w, 0.08, p.d, p.x, -0.04, p.z, '#cbb98a', false);
     else if (k === 'grass') bx(p.w, 0.08, p.d, p.x, -0.03, p.z, '#5a7348', false);
