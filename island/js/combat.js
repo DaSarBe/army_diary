@@ -136,7 +136,8 @@
       fireMode: 'auto', ads: false, reload: 0, reloadTotal: 0, cd: 0, firing: false, rec: 0,
       swayT: 0, cover: null, peek: false, carrying: false, hurtT: 0, hpZero: false,
       aimAssist: W.isMobileLike(), grace: 0, flashT: 0, nadeT: 0, dummyHits: 0,
-      lin: null, barks: {}, warnedBag: false, combat: false, smokeT: 0, smokeSpawn: 0, hasT75: !!(loadout && loadout.t75 && loadout.hasT75)
+      lin: null, barks: {}, warnedBag: false, combat: false, smokeT: 0, smokeSpawn: 0, hasT75: !!(loadout && loadout.t75 && loadout.hasT75),
+      noiseOn: false, stealthWave: false, alerted: false, reinforce: null, reinforced: false, gatherMode: false, gatherKilled: 0
     };
     W.setWeap(A.weap);
     refreshHud();
@@ -145,14 +146,74 @@
   Cbt.session = function () { return A; };
   Cbt.active = function () { return !!(A && A.active); };
 
+  function countBag(bag) {
+    var n = 0; Object.keys(bag || {}).forEach(function (k) { n += bag[k] || 0; }); return n;
+  }
+  Cbt.beginNoise = function () {
+    if (!A) Cbt.begin(Cbt.newLoadout());
+    A.noiseOn = true; A.stealthBroken = true; A.alerted = true;
+  };
+  Cbt.spawnGather = function (bag) {
+    if (!A) Cbt.begin(Cbt.newLoadout());
+    A.noiseOn = true; A.combat = true; A.ended = false; A.gatherMode = true; A.alerted = true;
+    Object.keys(bag || {}).forEach(function (k) {
+      var i; for (i = 0; i < (bag[k] || 0); i++) {
+        var e = spawnEnemy(k);
+        e.state = 'rush'; e.alerted = true; e.exposed = true;
+        A.enemies.push(e);
+      }
+    });
+    A.total = (A.total || 0) + countBag(bag);
+    $('#waveTop').hidden = false; $('#waveName').textContent = '引擎聲';
+    banner('引擎聲把人引來了');
+    refreshHud();
+  };
+  Cbt.reinforce = function (bag) {
+    if (!A || A.reinforced) return;
+    A.reinforced = true; A.alerted = true;
+    var n = 0;
+    Object.keys(bag || {}).forEach(function (k) {
+      var i; for (i = 0; i < (bag[k] || 0); i++) { A.queue.push(k); n++; }
+    });
+    A.total += n; A.spawnT = Math.min(A.spawnT || 0, 0.3);
+    Cbt.msg('增援來了', 1600);
+    refreshHud();
+  };
+  Cbt.giveAmmo = function (n) {
+    if (!A) return;
+    A.pack.t91.mags += n || 2;
+    if (A.pack.m9) A.pack.m9.mags += 1;
+    Cbt.msg('補給箱。彈匣補上了。', 1600);
+    refreshHud();
+  };
+  function alertStealth(why) {
+    if (!A || !A.stealthWave || A.alerted) return;
+    A.alerted = true;
+    Cbt.msg(why || '被發現了', 1600);
+    if (A.reinforce) Cbt.reinforce(A.reinforce);
+  }
   Cbt.startWave = function (o) {
     if (!A) Cbt.begin(Cbt.newLoadout());
-    A.combat = true; A.ended = false; A.hpZero = false;
-    A.queue = []; A.enemies.forEach(function (e) { if (e.group.parent) e.group.parent.remove(e.group); }); A.enemies = [];
+    var keep = !!(o.keep && A.enemies && A.enemies.length);
+    var live = [];
+    A.enemies.forEach(function (e) {
+      if (keep && e.state !== 'dead') live.push(e);
+      else if (e.group && e.group.parent) e.group.parent.remove(e.group);
+    });
+    A.combat = true; A.ended = false; A.hpZero = false; A.gatherMode = false;
+    A.queue = []; A.enemies = live;
+    A.stealthWave = !!o.stealth;
+    A.reinforce = o.reinforce || null;
+    A.reinforced = false;
+    if (o.noise) A.noiseOn = true;
+    A.alerted = !A.stealthWave || !!A.noiseOn;
     var list = [];
     Object.keys(o.enemies || {}).forEach(function (k) { for (var i = 0; i < o.enemies[k]; i++) list.push(k); });
     list.sort(function (a, b) { return (a === 'gunner' ? -1 : 0) - (b === 'gunner' ? -1 : 0) || Math.random() - 0.5; });
-    A.queue = list; A.total = list.length; A.killed = 0; A.spawnT = o.grace != null ? o.grace : 2; A.grace = A.spawnT;
+    A.queue = list;
+    A.killed = keep ? (A.gatherKilled || 0) : 0;
+    A.total = list.length + live.length + A.killed;
+    A.spawnT = o.grace != null ? o.grace : 2; A.grace = A.spawnT;
     if (o.lin) A.lin = { hp: o.lin.hp || 100, max: o.lin.hp || 100, x: o.lin.x, z: o.lin.z };
     W.reviveCovers();
     banner(o.name || '接觸');
@@ -286,8 +347,16 @@
     if (sl.mag <= 0) { if (first) { Sfx.sfx('empty'); Cbt.msg('彈匣空了，按 R 換彈', 1400); } return; }
     sl.mag--; A.cd = 60 / wep().rpm;
     if (A.fireMode === 'semi' || A.weap === 'm9') A.firing = false;
+    alertStealth('槍聲把人引來了');
     var F = W.S, ad = aimDir(), p = W.pos(), dir = ad.d.slice();
     var ox = p.x, oy = F.eye, oz = p.z;
+    var vehAim = W.inVehicle && W.inVehicle();
+    if (vehAim && (vehAim.type === 'bike' || vehAim.type === 'motorcycle') && cfg.vehicles && cfg.vehicles.motorcycle) {
+      var sm = 1 - (cfg.vehicles.motorcycle.shootAccMul || 0.5);
+      dir[0] += rnd(-1, 1) * sm * 0.18; dir[1] += rnd(-1, 1) * sm * 0.1; dir[2] += rnd(-1, 1) * sm * 0.18;
+      var dl = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+      dir[0] /= dl; dir[1] /= dl; dir[2] /= dl;
+    }
     if (A.aimAssist) {
       var best = null, bd = 1e9, es = exposedEnemies(), snap = (cfg.difficulty.aimAssist.snapAngleDeg || 4) * DEG;
       es.forEach(function (e) {
@@ -448,6 +517,7 @@
     e.hp -= dmg; e.flinch = 0.18;
     if (e.hp <= 0) {
       e.state = 'dead'; e.exposed = false; e.dieT = 0; A.killed++;
+      if (A.gatherMode) A.gatherKilled = (A.gatherKilled || 0) + 1;
       if (e.cover) e.cover.taken = Math.max(0, (e.cover.taken || 0) - 1);
       if (H.onKill) H.onKill(e, head);
     }
@@ -462,14 +532,14 @@
     }
     e.t += dt; e.fireCd -= dt; e.relocT -= dt; e.flinch = Math.max(0, e.flinch - dt);
     var veh = W.inVehicle && W.inVehicle();
-    if (veh && (veh.type === 'bike' || veh.type === 'motorcycle')) {
-      var nd = Math.hypot(e.x - p.x, e.z - p.z);
-      if (nd < 100) {
-        e.exposed = true; e.alerted = true; A.stealthBroken = true;
-        if (e.state === 'cover') { e.state = 'peek'; e.t = 0; e.burst = 3; e.peekDur = 1.6; }
-        if (e.state === 'advance') e.state = 'rush';
-      }
+    var noisy = A.noiseOn || (veh && (veh.type === 'bike' || veh.type === 'motorcycle'));
+    var nd = Math.hypot(e.x - p.x, e.z - p.z);
+    if (noisy && nd < 100) {
+      e.exposed = true; e.alerted = true; A.stealthBroken = true; A.alerted = true;
+      if (e.state === 'cover') { e.state = 'peek'; e.t = 0; e.burst = 3; e.peekDur = 1.6; }
+      if (e.state === 'advance') e.state = 'rush';
     }
+    var silent = A.stealthWave && !A.alerted && !A.noiseOn;
     var toX = e.cover ? e.cover.x : p.x, toZ = e.cover ? e.cover.z : p.z, moving = false;
     if (e.state === 'advance' || e.state === 'rush') {
       var tx = e.state === 'rush' ? p.x : toX, tz = e.state === 'rush' ? p.z - 0.6 : toZ;
@@ -478,8 +548,9 @@
       if (e.type === 'scout' && dd < 22 && !e.called) {
         e.called = true; A.alerted = true; A.spawnT = Math.min(A.spawnT, 0.4);
         Cbt.msg('偵察兵在呼叫支援', 1600);
+        if (A.stealthWave) Cbt.reinforce(A.reinforce);
       }
-      if (e.state === 'rush' && dd < 2.2) {
+      if (e.state === 'rush' && dd < 2.2 && !silent) {
         e.rushT = (e.rushT || 0) - dt;
         if (e.rushT <= 0) {
           e.rushT = 1.4;
@@ -492,15 +563,18 @@
         }
       } else if (e.state === 'advance' && dd < 0.9) { e.state = 'cover'; e.t = 0; e.peekT = rnd(0.8, 1.6); }
       else { e.x += dx / dd * sp * dt; e.z += dz / dd * sp * dt; moving = true; e.group.rotation.y = Math.atan2(dx, dz); }
-      e.exposed = true;
-      if (moving && e.fireCd <= 0 && A.grace <= 0) { e.fireCd = 2.4; enemyShoot(e, 0.5); }
+      e.exposed = !silent || e.type === 'scout';
+      if (!silent && moving && e.fireCd <= 0 && A.grace <= 0) { e.fireCd = 2.4; enemyShoot(e, 0.5); }
     } else if (e.state === 'cover') {
       e.exposed = false; e.group.rotation.y = Math.atan2(p.x - e.x, p.z - e.z);
-      if (e.t >= e.peekT) { e.state = 'peek'; e.t = 0; e.burst = e.type === 'gunner' ? 8 : 2; e.fireCd = 0.2; e.peekDur = rnd(1.0, 1.8); }
+      if (!silent && e.t >= e.peekT) { e.state = 'peek'; e.t = 0; e.burst = e.type === 'gunner' ? 8 : 2; e.fireCd = 0.2; e.peekDur = rnd(1.0, 1.8); }
     } else if (e.state === 'peek') {
-      e.exposed = true; e.group.rotation.y = Math.atan2(p.x - e.x, p.z - e.z);
-      if (e.fireCd <= 0 && A.grace <= 0 && e.burst > 0) { e.fireCd = e.type === 'gunner' ? 0.12 : 0.85; e.burst--; enemyShoot(e); }
-      if (e.t >= e.peekDur) { e.state = 'cover'; e.t = 0; e.peekT = rnd(1.2, 2.4); if (e.relocT <= 0 && e.type === 'rifleman') { e.relocT = rnd(4, 6); pickCover(e); } }
+      if (silent) { e.state = 'cover'; e.exposed = false; }
+      else {
+        e.exposed = true; e.group.rotation.y = Math.atan2(p.x - e.x, p.z - e.z);
+        if (e.fireCd <= 0 && A.grace <= 0 && e.burst > 0) { e.fireCd = e.type === 'gunner' ? 0.12 : 0.85; e.burst--; enemyShoot(e); }
+        if (e.t >= e.peekDur) { e.state = 'cover'; e.t = 0; e.peekT = rnd(1.2, 2.4); if (e.relocT <= 0 && e.type === 'rifleman') { e.relocT = rnd(4, 6); pickCover(e); } }
+      }
     }
     e.group.position.set(e.x, 0, e.z);
     if (W.applyEnemyVis) W.applyEnemyVis(e);
@@ -547,6 +621,23 @@
   };
   Cbt.restoreHp = function () { if (A) { A.pack.hp = A.pack.hpMax; A.hpZero = false; refreshHud(); } };
   Cbt.hurtPlayer = function (dmg) { if (A) hurt(dmg); };
+  Cbt.tickSampanRisk = function (dt) {
+    if (!A) return false;
+    var ride = W.inVehicle && W.inVehicle();
+    if (!ride || ride.type !== 'sampan') return false;
+    if (H.save && H.save() && H.save()._e2eSkipGunner) return false;
+    if (root.location && /[?&]auto=1/.test(root.location.search || '')) return false;
+    A._sampanT = (A._sampanT || 0) + dt;
+    if (A._sampanT <= 1.8 || A._sampanHit) return false;
+    A._sampanT = 0;
+    if (Math.random() < 0.22 * modeMul().enemyAccMul) {
+      A._sampanHit = true;
+      if (W.wreckVehicle) W.wreckVehicle('gunner', 20);
+      else { W.exitVehicle(); hurt(20); Cbt.msg('機槍手發現了。船翻了。', 2000); }
+      return true;
+    }
+    return false;
+  };
   Cbt.toggleLight = function () {
     if (!W.setFlashlight) return;
     var on = !W.S.flashlight;
@@ -606,38 +697,23 @@
     dustPool.forEach(function (d) { if (d.s.visible) { d.life -= dt; d.s.position.y += d.vy * dt; d.s.material.opacity = Math.max(0, d.life); if (d.life <= 0) d.s.visible = false; } });
     if (A.combat) {
       A.spawnT -= dt;
-      if (A.queue.length && A.spawnT <= 0 && A.enemies.filter(function (e) { return e.state !== 'dead'; }).length < (cfg.enemies.maxOnScreen || 8)) {
+      if (!A.gatherMode && A.queue.length && A.spawnT <= 0 && A.enemies.filter(function (e) { return e.state !== 'dead'; }).length < (cfg.enemies.maxOnScreen || 8)) {
         A.enemies.push(spawnEnemy(A.queue.shift())); A.spawnT = 1.1;
       }
       A.enemies.forEach(function (e) { updateEnemy(e, dt); });
       A.enemies = A.enemies.filter(function (e) { return !e.gone; });
-      if (!A.queue.length && A.enemies.every(function (e) { return e.state === 'dead'; }) && A.total && !A.ended) {
+      if (!A.gatherMode && !A.queue.length && A.enemies.every(function (e) { return e.state === 'dead'; }) && A.total && !A.ended) {
         A.ended = true;
         if (H.onWaveClear) H.onWaveClear();
       }
     }
+    Cbt.tickSampanRisk(dt);
     if (A.smokeT > 0) {
       A.smokeT -= dt; A.smokeSpawn = (A.smokeSpawn || 0) - dt;
       if (A.smokeSpawn <= 0) {
         A.smokeSpawn = 0.1;
         var sp = W.pos();
         dust(sp.x + rnd(-1.0, 1.0), 0.4 + Math.random(), sp.z + rnd(-1.0, 1.0));
-      }
-    }
-    var ride = W.inVehicle && W.inVehicle();
-    if (ride && ride.type === 'sampan' && A.combat !== false) {
-      A._sampanT = (A._sampanT || 0) + dt;
-      if (A._sampanT > 1.8 && !A._sampanHit && !(H.save && H.save() && H.save()._e2eSkipGunner)) {
-        A._sampanT = 0;
-        var autoSkip = !!(root.location && /[?&]auto=1/.test(root.location.search || ''));
-        if (!autoSkip && Math.random() < 0.22 * modeMul().enemyAccMul) {
-          A._sampanHit = true;
-          if (W.wreckVehicle) W.wreckVehicle('gunner', 20);
-          else {
-            W.exitVehicle(); hurt(20);
-            Cbt.msg('機槍手發現了。船翻了。', 2000);
-          }
-        }
       }
     }
     if (Cbt.bot === 'aim' && A.combat) botTick(dt);

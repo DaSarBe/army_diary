@@ -67,6 +67,7 @@ async function main() {
       fates: s && s.companionFates,
       diff: s && s.diff,
       downSeen: !!(s && s.downSeen),
+      o: s && s.o,
       renderer: !!(__island.World && __island.World.renderer && __island.World.renderer()),
       combat: !!(__island.Combat && __island.Combat.session && __island.Combat.session())
     };
@@ -80,6 +81,9 @@ async function main() {
   if (!info.flags || !info.flags.isl_01_clear) throw new Error('第 1 關沒有打完');
   if (!info.flags.isl_02_clear) throw new Error('第 2 關沒有打完');
   if (!info.flags.isl_flank_by_bike && !info.flags.isl_flank_by_sea && !info.flags.isl_flank_front && !info.flags.isl_stealth) throw new Error('沒有打法旗標');
+  const routes = ['isl_flank_front', 'isl_flank_by_sea', 'isl_flank_by_bike', 'isl_stealth'].filter(k => info.flags[k]);
+  if (routes.length !== 1) throw new Error('打法旗標沒互斥: ' + routes.join(','));
+  if (typeof info.o !== 'number') throw new Error('袍澤值 o 沒寫入');
   if (!info.flags.isl_radio_strong && !info.flags.isl_radio_weak) throw new Error('沒有天線旗標');
   if (!info.flags.isl_akai_with_you && !info.flags.isl_akai_outside) throw new Error('沒有阿凱同行旗標');
   if (!info.fates || (info.fates.lin !== 'alive' && info.fates.lin !== 'kia')) throw new Error('第 1 關同袍命運沒接到第 2 關');

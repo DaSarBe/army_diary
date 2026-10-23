@@ -113,7 +113,7 @@ body.hardcore #magRes{display:none}
 #toasts i{display:block;padding:6px 12px;border-radius:10px;background:var(--hud);border:1px solid var(--line);text-align:center;font-size:14px}
 #fade{position:fixed;inset:0;z-index:20;background:#000;opacity:0;pointer-events:none;transition:opacity .45s}
 #fade.on{opacity:1;pointer-events:auto}
-#fadeTxt{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);z-index:21;color:#fff;font-size:20px;text-align:center;opacity:0;pointer-events:none;text-shadow:0 2px 8px #000}
+#fadeTxt{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);z-index:21;color:#fff;font-size:20px;text-align:center;opacity:0;pointer-events:none;text-shadow:0 2px 8px #000;width:min(520px,88vw);line-height:1.5}
 #fadeTxt.on{opacity:1}
 
 #glerr,#lost{position:fixed;inset:0;z-index:30;background:rgba(8,10,7,.85);display:flex;align-items:center;justify-content:center}

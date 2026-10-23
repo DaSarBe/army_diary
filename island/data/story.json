@@ -38,7 +38,7 @@
     },
     "tutorial_intro": {
       "lines": [
-        { "who": "小林", "text": "老方，沙包後面。蹲低。你當年教過我這個，不要跟我說肌肉忘記了。" }
+        { "who": "小林", "text": "老方，沙包後面。蹲低。手還記得的話就蹲下去。" }
       ]
     },
     "tutorial_crouch": {
@@ -55,10 +55,10 @@
         { "who": "小林", "text": "你要怎麼走？我跟著天線走。" }
       ],
       "choices": [
-        { "id": "front", "text": "沿灘頭掩體正面推進", "flag": "isl_flank_front", "clear": "isl_flank_by_sea", "next": "assault" },
-        { "id": "sea", "text": "坐舢舨，從海面繞到碉堡後", "flag": "isl_flank_by_sea", "clear": "isl_flank_by_bike", "next": "vehicle_ride" },
-        { "id": "bike", "text": "騎機車沿公路切側翼（很吵）", "flag": "isl_flank_by_bike", "clear": "isl_flank_by_sea", "next": "vehicle_ride" },
-        { "id": "stealth", "text": "沿礁岩與倉庫陰影潛行", "flag": "isl_stealth", "clear": "isl_flank_by_sea", "next": "assault" }
+        { "id": "front", "text": "沿灘頭掩體正面推進", "flag": "isl_flank_front", "next": "assault" },
+        { "id": "sea", "text": "坐舢舨，從海面繞到碉堡後", "flag": "isl_flank_by_sea", "next": "vehicle_ride" },
+        { "id": "bike", "text": "騎機車沿公路切側翼（很吵）", "flag": "isl_flank_by_bike", "next": "vehicle_ride" },
+        { "id": "stealth", "text": "沿礁岩與倉庫陰影潛行", "flag": "isl_stealth", "next": "assault" }
       ]
     },
     "vehicle_sea": {
@@ -90,7 +90,7 @@
     },
     "lin_down": {
       "lines": [
-        { "who": "黃連長", "text": "……小林沒聲了。天線還在就繼續。第一次怎麼發生，就是怎麼記下。" }
+        { "who": "黃連長", "text": "……小林沒聲了。天線還在就繼續。名單我先記。" }
       ]
     },
     "lin_live": {
@@ -100,7 +100,7 @@
     },
     "cleared_empty": {
       "lines": [
-        { "who": "黃連長", "text": "灘頭暫時安靜。漁港是空的。先把無線電豎起來。" }
+        { "who": "黃連長", "text": "灘頭暫時安靜。先把無線電豎起來。" }
       ]
     },
     "antenna_choice": {
@@ -127,8 +127,7 @@
     },
     "jeep_foreshadow": {
       "lines": [
-        { "who": "小林", "text": "倉庫裡這台吉普車，修一修說不定能開。雷達站那條路，總不能一路走著去。" },
-        { "who": "小林", "text": "漁港被清過。小船沒了。有人先我們一步。" }
+        { "who": "小林", "text": "倉庫裡這台吉普車，修一修說不定能開。雷達站那條路，總不能一路走著去。" }
       ]
     },
     "jeep_foreshadow_missing": {
@@ -145,7 +144,7 @@
     "down": {
       "title": "無線電",
       "text": "黃連長：「還聽得到嗎。從剛才那個點起來。不是結束。」",
-      "retryHint": "回到存檔點。同袍的生死，以第一次為準。"
+      "retryHint": "黃連長：「從剛才那個點起來。少了人的頻道，我不會重問。」"
     },
     "locked": {
       "text": "關卡嚴格按 1 到 5。先把登陸灘頭打完。"

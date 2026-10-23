@@ -129,7 +129,30 @@
       "vehicles": [
         "sampan",
         "motorcycle"
-      ]
+      ],
+      "routes": {
+        "front": {
+          "flag": "isl_flank_front",
+          "enemies": "full",
+          "ammoCrate": true
+        },
+        "stealth": {
+          "flag": "isl_stealth",
+          "minus": 3,
+          "reinforceIfSpotted": true
+        },
+        "sea": {
+          "flag": "isl_flank_by_sea",
+          "minusRifleman": 2,
+          "gunnerCapsize": true
+        },
+        "bike": {
+          "flag": "isl_flank_by_bike",
+          "minus": 2,
+          "engineGatherHalf": true,
+          "engineNoiseM": 100
+        }
+      }
     },
     {
       "id": "op2_radar",
@@ -423,6 +446,11 @@
     "light": "營區與車上閒聊"
   },
   "newFlags": {
+    "isl_flank_front": "op1 正面推進",
+    "isl_stealth": "op1 沿礁岩潛行",
+    "isl_chat_lin_ok": "op1 船艙回小林年紀那句",
+    "isl_chat_quiet": "op1 船艙選擦槍",
+    "isl_chat_wang": "op1 船艙提到王班長",
     "isl_flank_by_bike": "op1 騎摩托車繞側翼完成",
     "isl_bike_dash": "op3 騎摩托車衝過稜線道路",
     "isl_jeep_convoy": "op2 吉普車護送／通過遭遇戰",

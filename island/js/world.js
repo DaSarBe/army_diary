@@ -233,7 +233,7 @@
     (map.npcs || []).forEach(function (n) { addNpc(n.id, n.preset, n.x, n.z, n.ry, n.name); });
     (map.vehicles || []).forEach(function (v) {
       var mesh = v.type === 'jeep' ? makeJeep(v.x, v.z, v.yaw) : v.type === 'sampan' ? makeSampan(v.x, v.z, v.yaw) : (v.type === 'cart' || v.type === 'generator_cart') ? makeCart(v.x, v.z, v.yaw) : makeBike(v.x, v.z, v.yaw);
-      var rec = { id: v.id, type: v.type === 'generator_cart' ? 'cart' : v.type, x: v.x, z: v.z, yaw: v.yaw || 0, mesh: mesh, occupied: false, wrecked: false };
+      var rec = { id: v.id, type: v.type === 'generator_cart' ? 'cart' : v.type, x: v.x, z: v.z, yaw: v.yaw || 0, homeX: v.x, homeZ: v.z, homeYaw: v.yaw || 0, mesh: mesh, occupied: false, wrecked: false };
       attachVeh(rec);
       S.vehicles.push(rec);
     });
@@ -702,6 +702,20 @@
     v.hp = 0; v.wrecked = true;
     if (v.mesh) v.mesh.rotation.z = reason === 'gunner' ? 1.1 : 0.55;
     if (W.cb.onVehWreck) W.cb.onVehWreck(v, playerDmg, reason || 'hp', x, z);
+  };
+  W.resetVehicle = function (v) {
+    if (!v) return;
+    v.wrecked = false;
+    v.hp = v.maxHp || 150;
+    v.occupied = false;
+    v.x = v.homeX != null ? v.homeX : v.x;
+    v.z = v.homeZ != null ? v.homeZ : v.z;
+    v.yaw = v.homeYaw != null ? v.homeYaw : (v.yaw || 0);
+    if (v.mesh) {
+      v.mesh.position.set(v.x, v.type === 'sampan' ? 0.05 : 0, v.z);
+      v.mesh.rotation.set(0, v.yaw, 0);
+    }
+    syncVehCol(v);
   };
   W.setBlackout = function (on) {
     S.blackout = !!on; S.powerOn = false;

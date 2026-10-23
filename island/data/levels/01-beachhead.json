@@ -19,6 +19,7 @@
       { "kind": "bld", "x": -22, "z": 40, "w": 8, "d": 6, "h": 3.2, "wall": "#5a5348", "roof": "#3a3830", "lab": "漁港" },
       { "kind": "crate", "x": 3, "z": 40, "w": 1.2, "h": 0.8, "d": 1.0 },
       { "kind": "crate", "x": 4.4, "z": 40.2, "w": 1.0, "h": 0.6, "d": 0.8 },
+      { "kind": "crate", "x": 10, "z": -16, "w": 1.2, "h": 0.7, "d": 1.0 },
       { "kind": "rock", "x": -24, "z": -8, "w": 3.2, "h": 1.8, "d": 2.6 },
       { "kind": "rock", "x": -28, "z": -12, "w": 2.4, "h": 1.4, "d": 2.2 },
       { "kind": "bunker", "x": -14, "z": -16, "w": 6.5, "h": 2.4, "d": 4.5 },
@@ -98,9 +99,14 @@
         "name": "登陸灘頭",
         "enemies": { "scout": 4, "rifleman": 6, "rusher": 2 },
         "seaMinusRifleman": 2,
+        "bikeMinus": 2,
+        "stealthMinus": 3,
+        "stealthReinforce": { "scout": 2, "rifleman": 1 },
+        "frontAmmo": { "x": 10, "z": -16 },
         "grace": 2.2
       }
     },
+    { "id": "cleared_empty", "type": "talk", "story": "cleared_empty" },
     { "id": "antenna_choice", "type": "choice", "story": "antenna_choice" },
     {
       "id": "plant_antenna",
