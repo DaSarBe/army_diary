@@ -564,7 +564,7 @@
       } else if (e.state === 'advance' && dd < 0.9) { e.state = 'cover'; e.t = 0; e.peekT = rnd(0.8, 1.6); }
       else { e.x += dx / dd * sp * dt; e.z += dz / dd * sp * dt; moving = true; e.group.rotation.y = Math.atan2(dx, dz); }
       e.exposed = !silent || e.type === 'scout';
-      if (!silent && moving && e.fireCd <= 0 && A.grace <= 0) { e.fireCd = 2.4; enemyShoot(e, 0.5); }
+      if (!silent && !A.gatherMode && moving && e.fireCd <= 0 && A.grace <= 0) { e.fireCd = 2.4; enemyShoot(e, 0.5); }
     } else if (e.state === 'cover') {
       e.exposed = false; e.group.rotation.y = Math.atan2(p.x - e.x, p.z - e.z);
       if (!silent && e.t >= e.peekT) { e.state = 'peek'; e.t = 0; e.burst = e.type === 'gunner' ? 8 : 2; e.fireCd = 0.2; e.peekDur = rnd(1.0, 1.8); }
