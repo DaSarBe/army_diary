@@ -68,9 +68,13 @@
   }
   function setFlag(id, on) { if (!id) return; save.flags[id] = on !== false; persist(); }
   function hasFlag(id) { return !!(save && save.flags && save.flags[id]); }
-  function fateOf(id) { return save.companionFates[id] || null; }
+  function fateOf(id) {
+    var v = save.companionFates[id];
+    return (!v || v === 'absent') ? null : v;
+  }
   function lockFate(id, val) {
-    if (save.companionFates[id]) return save.companionFates[id];
+    var cur = save.companionFates[id];
+    if (cur && cur !== 'absent') return cur;
     save.companionFates[id] = val; persist(); return val;
   }
 

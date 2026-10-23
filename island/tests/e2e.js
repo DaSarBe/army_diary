@@ -82,7 +82,8 @@ async function main() {
   if (!info.flags.isl_flank_by_bike && !info.flags.isl_flank_by_sea && !info.flags.isl_flank_front && !info.flags.isl_stealth) throw new Error('沒有打法旗標');
   if (!info.flags.isl_radio_strong && !info.flags.isl_radio_weak) throw new Error('沒有天線旗標');
   if (!info.flags.isl_akai_with_you && !info.flags.isl_akai_outside) throw new Error('沒有阿凱同行旗標');
-  if (!info.fates || info.fates.lin !== 'alive' && info.fates.lin !== 'kia') throw new Error('第 1 關同袍命運沒接到第 2 關');
+  if (!info.fates || (info.fates.lin !== 'alive' && info.fates.lin !== 'kia')) throw new Error('第 1 關同袍命運沒接到第 2 關');
+  if (info.fates.akai !== 'alive' && info.fates.akai !== 'kia') throw new Error('阿凱沒寫入第 2 關命運');
   if (extra.indexOf('down=1') >= 0 && !info.downSeen) throw new Error('倒下重試沒有觸發');
   if (extra.indexOf('route=sea') >= 0 && !info.flags.isl_flank_by_sea) throw new Error('沒有舢舨旗標');
   if (extra.indexOf('antenna=warehouse') >= 0 && !info.flags.isl_radio_weak) throw new Error('沒有弱訊號天線');
