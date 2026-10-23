@@ -133,24 +133,33 @@
       "routes": {
         "front": {
           "flag": "isl_flank_front",
-          "enemies": "full",
-          "ammoCrate": true
+          "enemyDelta": {},
+          "bonus": "沿途多一個彈藥補給箱",
+          "retrySpawn": "正面推進起點"
         },
         "stealth": {
           "flag": "isl_stealth",
-          "minus": 3,
-          "reinforceIfSpotted": true
+          "enemyDelta": {
+            "rifleman": -3
+          },
+          "detectedPenalty": "被發現時多一波 rusher x2 增援",
+          "retrySpawn": "潛行起點"
         },
         "sea": {
           "flag": "isl_flank_by_sea",
-          "minusRifleman": 2,
-          "gunnerCapsize": true
+          "enemyDelta": {
+            "rifleman": -2
+          },
+          "risk": "被機槍手發現則舢舨受損",
+          "retrySpawn": "舢舨上岸點"
         },
         "bike": {
           "flag": "isl_flank_by_bike",
-          "minus": 2,
-          "engineGatherHalf": true,
-          "engineNoiseM": 100
+          "enemyDelta": {
+            "rifleman": -2
+          },
+          "risk": "引擎聲使一半敵人提前集合",
+          "retrySpawn": "摩托車上岸點 [18,-26]"
         }
       }
     },
@@ -349,7 +358,7 @@
     },
     "lin": {
       "killedBy": "isl_lin_kia",
-      "chance": "clamp(20-(o-50)*0.6,3,35)",
+      "chance": "clamp(20-(o-50)*0.6,3,35)，o 取玩家目前袍澤值，不可寫死",
       "stage": "op1~op5，若有登場"
     }
   },
@@ -446,17 +455,16 @@
     "light": "營區與車上閒聊"
   },
   "newFlags": {
-    "isl_flank_front": "op1 正面推進",
-    "isl_stealth": "op1 沿礁岩潛行",
-    "isl_chat_lin_ok": "op1 船艙回小林年紀那句",
-    "isl_chat_quiet": "op1 船艙選擦槍",
-    "isl_chat_wang": "op1 船艙提到王班長",
     "isl_flank_by_bike": "op1 騎摩托車繞側翼完成",
     "isl_bike_dash": "op3 騎摩托車衝過稜線道路",
     "isl_jeep_convoy": "op2 吉普車護送／通過遭遇戰",
     "isl_jeep_charge": "op5 駕吉普車衝入指揮所廣場",
     "isl_key_captive_rescued": "關鍵被俘者被救出；沿用日記且王班長已死時，取代 isl_wang_rescued",
-    "_status": "Eve 提案，Dai 已採用"
+    "_status": "Eve 提案，Dai 已採用",
+    "isl_flank_front": "op1 正面推進路線",
+    "isl_stealth": "op1 潛行路線",
+    "isl_chat_*": "營區／車上閒聊已觸發，純演出，不影響結局",
+    "_exclusive": "op1 路線 flag（isl_flank_by_sea/by_bike/front/stealth）互斥：選定時清掉其他三個，並立刻存檔"
   },
   "saveSchema": {
     "companionFates": {
@@ -493,5 +501,6 @@
       "akai_injured_or_absent": "op2 阿凱初始 hp 70 或缺席",
       "lin_main_partner": "阿凱缺席時小林為主要搭檔"
     }
-  }
+  },
+  "narrationRule": "系統規則（同袍生死不重擲、第一次決定）只寫在設定與存檔，不在對白裡用系統語；對白改為人物會說的話"
 }

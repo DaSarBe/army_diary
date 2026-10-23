@@ -96,19 +96,28 @@
     }
     return out;
   }
+  function routeSpec() {
+    var ops = (cfg && cfg.raw && cfg.raw.outposts) || [];
+    var op = ops.filter(function (x) { return x.id === 'op1_landing'; })[0];
+    return (op && op.routes) || {};
+  }
+  function applyDelta(en, delta) {
+    Object.keys(delta || {}).forEach(function (k) { en[k] = Math.max(0, (en[k] || 0) + (delta[k] || 0)); });
+  }
   function assaultPlan() {
     var b = (level && level.beats || []).filter(function (x) { return x.id === 'assault'; })[0];
     var wave = (b && b.wave) || { enemies: { scout: 4, rifleman: 6, rusher: 2 } };
     var enemies = JSON.parse(JSON.stringify(wave.enemies || {}));
+    var routes = routeSpec();
     var plan = { enemies: enemies, stealth: false, reinforce: null, ammo: null, gather: null, keep: false, noise: false };
     if (hasFlag('isl_stealth')) {
       plan.stealth = true;
-      plan.reinforce = wave.stealthReinforce || { scout: 2, rifleman: 1 };
-      dropBag(enemies, wave.stealthMinus || 3, ['scout', 'rifleman', 'rusher']);
+      applyDelta(enemies, (routes.stealth && routes.stealth.enemyDelta) || { rifleman: -3 });
+      plan.reinforce = wave.stealthReinforce || { rusher: 2 };
     } else if (hasFlag('isl_flank_by_sea')) {
-      enemies.rifleman = Math.max(0, (enemies.rifleman || 0) - (wave.seaMinusRifleman || 2));
+      applyDelta(enemies, (routes.sea && routes.sea.enemyDelta) || { rifleman: -(wave.seaMinusRifleman || 2) });
     } else if (hasFlag('isl_flank_by_bike')) {
-      dropBag(enemies, wave.bikeMinus || 2, ['rifleman', 'scout']);
+      applyDelta(enemies, (routes.bike && routes.bike.enemyDelta) || { rifleman: -(wave.bikeMinus || 2) });
       plan.noise = true;
       var sess = Cbt.session && Cbt.session();
       var live = sess && sess.enemies && sess.enemies.filter(function (e) { return e.state !== 'dead'; }).length;
@@ -142,13 +151,43 @@
     save.o = o; persist();
     return o;
   }
-  function companionRadio(id, line, cb) {
+  function companionRadio(id, lines, cb) {
     lockFate(id, 'kia');
     if (id === 'lin') W.showNpc('npc_signal_lin', false);
     if (id === 'akai') W.showNpc('npc_akai', false);
     if (id === 'wang') W.showNpc('npc_sgt_wang', false);
-    Sfx.sfx('radio');
-    fade(line, 1800, cb || function () {});
+    var list = Array.isArray(lines) ? lines : [lines];
+    var i = 0;
+    function step() {
+      if (i >= list.length) { if (cb) cb(); return; }
+      Sfx.sfx('radio');
+      fade(list[i], 1800, function () { i++; step(); });
+    }
+    step();
+  }
+  function pickCompanionRadio(id) {
+    var sc = story && story.scenes && story.scenes[id + '_down'];
+    var bag = (sc && sc.radio) || [];
+    if (!bag.length) {
+      if (id === 'lin') return ['黃連長：「小林，回答。……小林，回答。」', '黃連長：「頻道裡少了一個人。」'];
+      if (id === 'wang') return ['黃連長：「班長的呼號不再回應。他帶過的人，今天站得很穩。」'];
+      if (id === 'akai') return ['黃連長：「阿凱的頻道沒有再開。他守的那一段，沒有人退。」'];
+      return ['黃連長：「頻道裡少了一個人。」'];
+    }
+    var pick = auto ? 0 : Math.floor(Math.random() * bag.length);
+    return bag[pick];
+  }
+  function retryRadioLine() {
+    var sc = story.scenes.down || {};
+    var miss = [];
+    if (fateOf('lin') === 'kia') miss.push('lin');
+    if (fateOf('wang') === 'kia') miss.push('wang');
+    if (fateOf('akai') === 'kia') miss.push('akai');
+    if (miss.length >= 2) return sc.retryMany || '黃連長：「線守住了，但我們少了不只一個人。名單我先記著，你先站穩。」';
+    if (miss[0] === 'lin') return sc.retryLin || '黃連長：「線守住了，但我們少了小林。天線交給你。」';
+    if (miss[0] === 'wang') return sc.retryWang || '黃連長：「線守住了，但班長沒有回來。這一段，你帶。」';
+    if (miss[0] === 'akai') return sc.retryAkai || '黃連長：「線守住了，但阿凱的頻道沒有再開。繼續往前。」';
+    return sc.retryAll || '黃連長：「線還在，人都在。繼續。」';
   }
   function fateOf(id) {
     var v = save.companionFates[id];
@@ -591,7 +630,7 @@
       var land = landForRoute();
       W.place(land[0], land[1]);
     }
-    toast('黃連長：「從剛才那個點起來。」');
+    toast(retryRadioLine());
     runBeat();
   }
 
@@ -703,11 +742,6 @@
     var o = playerO(), ch = clamp(20 - (o - 50) * 0.6, 3, 35);
     return lockFate('lin', Math.random() * 100 < ch ? 'kia' : 'alive');
   }
-  var COMPANION_RADIO = {
-    lin: '黃連長：「……小林沒聲了。天線還在就繼續。名單我先記。」',
-    akai: '黃連長：「……阿凱沒聲了。繼續。名單我先記。」',
-    wang: '黃連長：「……王班長沒聲了。繼續。名單我先記。」'
-  };
   HHooks.onWaveClear = function () {
     Cbt.stopWave();
     W.setInteract([]);
@@ -718,17 +752,17 @@
     if (fateOf('lin') === 'kia') {
       if (save._linRadio) { nextBeat(); return; }
       save._linRadio = true; persist();
-      companionRadio('lin', COMPANION_RADIO.lin, function () { nextBeat(); });
+      companionRadio('lin', pickCompanionRadio('lin'), function () { nextBeat(); });
     } else showLines('lin_live', function () { nextBeat(); });
   };
   HHooks.onLinDown = function () {
     if (save._linRadio) return;
     save._linRadio = true; persist();
-    companionRadio('lin', COMPANION_RADIO.lin);
+    companionRadio('lin', pickCompanionRadio('lin'));
   };
   HHooks.onCompanionDown = function (id) {
     if (!id || fateOf(id) === 'kia') return;
-    companionRadio(id, COMPANION_RADIO[id] || '黃連長：「頻道裡少一個人。繼續。名單我先記。」');
+    companionRadio(id, pickCompanionRadio(id));
   };
   HHooks.onVehicle = function () { boardVehicle(); };
   HHooks.onCarry = function () { if (HHooks.carryFrom) doCarry(); else Cbt.msg('現在沒有人能背', 1200); };

@@ -101,7 +101,7 @@
         "seaMinusRifleman": 2,
         "bikeMinus": 2,
         "stealthMinus": 3,
-        "stealthReinforce": { "scout": 2, "rifleman": 1 },
+        "stealthReinforce": { "rusher": 2 },
         "frontAmmo": { "x": 10, "z": -16 },
         "grace": 2.2
       }

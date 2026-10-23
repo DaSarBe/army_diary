@@ -200,6 +200,11 @@
 | `isl_radio_strong` / `isl_radio_weak` | 天線位置 | 第 1 關 | |
 | `isl_flank_by_sea` | 舢舨繞後 | 第 1 關 | Dai 已定義 |
 | `isl_flank_by_bike` | 機車繞側 | 第 1 關 | **提案**，Dai 確認 |
+| `isl_flank_front` | 沿灘頭掩體正面推進 | 第 1 關 | 第 1 關實作新增 |
+| `isl_stealth` | 沿礁岩與倉庫陰影潛行 | 第 1 關 | 第 1 關實作新增 |
+| `isl_chat_lin_ok` | 船艙閒聊選「班長現在才比較像班長」，和小林輕鬆搭話 | 第 1 關 | 第 1 關實作新增 |
+| `isl_chat_quiet` | 船艙閒聊選「先把槍擦乾。海風會咬」，沉默務實 | 第 1 關 | 第 1 關實作新增 |
+| `isl_chat_wang` | 船艙閒聊選「王班長在島上。我是來找人的」，說出私人理由 | 第 1 關 | 第 1 關實作新增 |
 | `isl_power_restored` | 雷達站復電 | 第 2 關 | |
 | `isl_akai_with_you` / `isl_akai_outside` | 阿凱同行或接應 | 第 2 關 | |
 | `isl_bike_dash` | 機車衝過稜線 | 第 3 關 | **提案** |
@@ -214,6 +219,8 @@
 | `isl_jeep_charge` | 吉普車衝廣場 | 第 5 關 | **提案** |
 | `isl_commander_captured` / `isl_commander_killed` | 指揮官處置 | 第 5 關 | |
 | `isl_no_retreat` | 全程沒有撤退或放棄據點 | 全程 | Dai 已提到 |
+
+> **路線旗標互斥：** `isl_flank_by_sea`、`isl_flank_by_bike`、`isl_flank_front`、`isl_stealth` 四個只能同時成立一個。玩家選定路線時，必須**清掉另外三個**（目前實作只清其中一個，會殘留舊旗標，需 Sam 修正）。`isl_chat_*` 三個為單次閒聊選擇，彼此獨立。
 
 ### 結局 1｜「島嶼守衛」（好結局）
 - **條件（Dai）：** `isl_wang_rescued && isl_captives_rescued && !isl_akai_kia && !isl_lin_kia && isl_commander_captured`。
