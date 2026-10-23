@@ -5,7 +5,8 @@
   "tone": "night",
   "bounds": [-14, 14, -6, 98],
   "spawn": [0, 8],
-  "spawnYaw": 0,
+  "spawnYaw": 3.1416,
+  "fog": [6, 32],
   "waterZ": -40,
   "map": {
     "ground": [
@@ -13,10 +14,11 @@
     ],
     "props": [
       { "kind": "rail", "x": 0, "z": 48, "w": 1.1, "d": 86 },
-      { "kind": "bld", "x": -7.2, "z": 28, "w": 4.2, "d": 36, "h": 3.4, "wall": "#3a3832", "roof": "#2a2824" },
-      { "kind": "bld", "x": 7.2, "z": 28, "w": 4.2, "d": 36, "h": 3.4, "wall": "#3a3832", "roof": "#2a2824" },
-      { "kind": "bld", "x": -7.2, "z": 68, "w": 4.2, "d": 36, "h": 3.4, "wall": "#35332e", "roof": "#26241f" },
-      { "kind": "bld", "x": 7.2, "z": 68, "w": 4.2, "d": 36, "h": 3.4, "wall": "#35332e", "roof": "#26241f" },
+      { "kind": "bld", "x": -4.6, "z": 28, "w": 3.4, "d": 36, "h": 3.6, "wall": "#3a3832", "roof": "#2a2824" },
+      { "kind": "bld", "x": 4.6, "z": 28, "w": 3.4, "d": 36, "h": 3.6, "wall": "#3a3832", "roof": "#2a2824" },
+      { "kind": "bld", "x": -4.6, "z": 68, "w": 3.4, "d": 36, "h": 3.6, "wall": "#35332e", "roof": "#26241f" },
+      { "kind": "bld", "x": 4.6, "z": 68, "w": 3.4, "d": 36, "h": 3.6, "wall": "#35332e", "roof": "#26241f" },
+      { "kind": "slab", "x": 0, "z": 48, "w": 7.4, "h": 0.28, "d": 88, "y": 3.45, "col": "#1a1814" },
       { "kind": "crate", "x": -2.4, "z": 36, "w": 0.9, "h": 0.7, "d": 0.8 },
       { "kind": "crate", "x": 2.6, "z": 52, "w": 0.8, "h": 0.6, "d": 0.7 },
       { "kind": "crate", "x": -2.2, "z": 74, "w": 0.9, "h": 0.65, "d": 0.8 },
@@ -45,7 +47,7 @@
     ],
     "vehicles": [
       { "id": "rail_cart", "type": "rail_cart", "x": 0, "z": 64, "yaw": 3.14 },
-      { "id": "jeep_tunnel", "type": "jeep", "x": 4.4, "z": 8, "yaw": 0 }
+      { "id": "jeep_tunnel", "type": "jeep", "x": 8, "z": 5, "yaw": 0 }
     ],
     "spawns": {
       "sea": [[-2, 90], [2, 92], [0, 94]],
@@ -77,7 +79,7 @@
       "to": [0, 14],
       "toByFlag": {
         "isl_rail_escape": [0, 64],
-        "isl_tunnel_jeep": [4.4, 10]
+        "isl_tunnel_jeep": [8, 6]
       },
       "checkpoint": true
     },
@@ -117,9 +119,9 @@
         "isl_tunnel_jeep": {
           "vehicle": "jeep_tunnel",
           "story": "vehicle_tunnel_jeep",
-          "land": [6, 22],
+          "land": [8, 18],
           "stay": true,
-          "waypoints": [[4.4, 8], [6, 16], [6, 22]]
+          "waypoints": [[8, 5], [8, 12], [8, 18]]
         }
       }
     },

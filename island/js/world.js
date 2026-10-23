@@ -202,6 +202,8 @@
       bx(p.w || 1.1, 0.05, p.d, p.x, 0, p.z, '#3a3a36', false);
       bx(0.08, 0.07, p.d, p.x - 0.38, 0.02, p.z, '#6a6a62', false);
       bx(0.08, 0.07, p.d, p.x + 0.38, 0.02, p.z, '#6a6a62', false);
+    } else if (k === 'slab') {
+      bx(p.w, p.h || 0.28, p.d, p.x, p.y != null ? p.y : 3.1, p.z, p.col || '#1c1a16', false);
     }
     else if (k === 'sign') sign(p.txt, p.x, p.y || 2, p.z, p.w || 3, p.h || 0.7, p.bg || '#2c4a2c', p.fg || '#f2ecd0', p.ry || 0);
     else if (k === 'sand') bx(p.w, 0.08, p.d, p.x, -0.04, p.z, '#cbb98a', false);
@@ -238,6 +240,10 @@
     S.bounds = lv.bounds || [-50, 50, -60, 50];
     S.spawn = lv.spawn || [0, 38];
     S.waterZ = lv.waterZ != null ? lv.waterZ : -44;
+    if (lv.fog && scene && scene.fog) {
+      S.fogNear = lv.fog[0]; S.fogFar = lv.fog[1];
+      scene.fog.near = lv.fog[0]; scene.fog.far = lv.fog[1];
+    }
     S.px = S.spawn[0]; S.pz = S.spawn[1]; S.yaw = lv.spawnYaw != null ? lv.spawnYaw : Math.PI; S.pitch = 0;
     var map = lv.map || {};
     (map.ground || []).forEach(applyProp);
