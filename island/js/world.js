@@ -25,14 +25,14 @@
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function turn(a, b, k) { return a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k; }
 
-  function bx(w, h, d, x, y, z, col, solid, ry) {
+  function bx(w, h, d, x, y, z, col, solid, ry, kind) {
     var m = new T.Mesh(UB, M(col)); m.scale.set(w, h, d); m.position.set(x, y + h / 2, z); if (ry) m.rotation.y = ry; CG.add(m);
-    if (solid) S.cols.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: y, y1: y + h });
+    if (solid) S.cols.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, y0: y, y1: y + h, kind: kind || null });
     return m;
   }
-  function cyl(r, h, x, y, z, col, solid, seg) {
+  function cyl(r, h, x, y, z, col, solid, seg, kind) {
     var m = new T.Mesh(new T.CylinderGeometry(r, r, h, seg || 10), M(col)); m.position.set(x, y + h / 2, z); CG.add(m);
-    if (solid) S.cols.push({ x0: x - r, x1: x + r, z0: z - r, z1: z + r, y0: y, y1: y + h });
+    if (solid) S.cols.push({ x0: x - r, x1: x + r, z0: z - r, z1: z + r, y0: y, y1: y + h, kind: kind || null });
     return m;
   }
   function cone(r, h, x, y, z, col, seg, ry) {
@@ -181,22 +181,26 @@
 
   function applyProp(p) {
     var k = p.kind;
-    if (k === 'tent') { cone(p.r || 2.2, p.h || 2.1, p.x, 0, p.z, p.col || '#6b7a4a', 4, Math.PI / 4); S.cols.push({ x0: p.x - 1.2, x1: p.x + 1.2, z0: p.z - 1.2, z1: p.z + 1.2 }); }
-    else if (k === 'crate') bx(p.w || 1.1, p.h || 0.7, p.d || 0.9, p.x, 0, p.z, '#8a6a46', true);
+    if (k === 'tent') { cone(p.r || 2.2, p.h || 2.1, p.x, 0, p.z, p.col || '#6b7a4a', 4, Math.PI / 4); S.cols.push({ x0: p.x - 1.2, x1: p.x + 1.2, z0: p.z - 1.2, z1: p.z + 1.2, kind: 'tent' }); }
+    else if (k === 'crate') bx(p.w || 1.1, p.h || 0.7, p.d || 0.9, p.x, 0, p.z, '#8a6a46', true, 0, 'crate');
+    else if (k === 'powerbox') {
+      bx(0.72, 1.15, 0.38, p.x, 0, p.z, '#3a4a38', true, p.yaw || 0, 'powerbox');
+      bx(0.5, 0.28, 0.1, p.x, 0.72, p.z + 0.2, '#c9a227', false);
+    }
     else if (k === 'flag') {
       cyl(0.07, p.h || 8, p.x, 0, p.z, '#d9d9d9'); sph(0.13, p.x, (p.h || 8) + 0.1, p.z, '#e2bb4f');
       bx(2, 1.33, 0.05, p.x + 1.1, (p.h || 8) - 1.4, p.z, '#c8312b');
     } else if (k === 'bld') {
-      bx(p.w, p.h, p.d, p.x, 0, p.z, p.wall || '#8a7a62', true); bx(p.w + 0.4, 0.28, p.d + 0.4, p.x, p.h, p.z, p.roof || '#5a4a38');
+      bx(p.w, p.h, p.d, p.x, 0, p.z, p.wall || '#8a7a62', true, 0, 'bld'); bx(p.w + 0.4, 0.28, p.d + 0.4, p.x, p.h, p.z, p.roof || '#5a4a38');
       if (p.lab) sign(p.lab, p.x, p.h + 0.7, p.z + p.d / 2 + 0.2, Math.min(p.w - 0.4, 4), 0.7, '#2c4a2c', '#f2ecd0', 0);
     } else if (k === 'tree') {
-      cyl(0.22, 1.5, p.x, 0, p.z, '#6b4a2f', true, 6);
+      cyl(0.22, 1.5, p.x, 0, p.z, '#6b4a2f', true, 6, 'tree');
       cone(1.5, 2.6, p.x, 1.2, p.z, '#3f6e3b', 7); cone(1.1, 2, p.x, 2.6, p.z, '#4b7d44', 7);
-    } else if (k === 'rock') bx(p.w, p.h, p.d, p.x, 0, p.z, '#6d675c', true);
+    } else if (k === 'rock') bx(p.w, p.h, p.d, p.x, 0, p.z, '#6d675c', true, 0, 'rock');
     else if (k === 'bunker') {
-      bx(p.w, p.h, p.d, p.x, 0, p.z, '#5a584c', true); bx(p.w + 0.3, 0.25, p.d + 0.3, p.x, p.h, p.z, '#4a4840');
+      bx(p.w, p.h, p.d, p.x, 0, p.z, '#5a584c', true, 0, 'bunker'); bx(p.w + 0.3, 0.25, p.d + 0.3, p.x, p.h, p.z, '#4a4840');
       bx(1.4, 1.1, 0.12, p.x, 0, p.z + p.d / 2 + 0.04, '#3a382e');
-    } else if (k === 'pier') bx(p.w, p.h || 0.35, p.d, p.x, 0, p.z, '#6b4a2f', true);
+    } else if (k === 'pier') bx(p.w, p.h || 0.35, p.d, p.x, 0, p.z, '#6b4a2f', true, 0, 'pier');
     else if (k === 'road') bx(p.w, 0.06, p.d, p.x, 0, p.z, '#4a4a44', false);
     else if (k === 'rail') {
       bx(p.w || 1.1, 0.05, p.d, p.x, 0, p.z, '#3a3a36', false);
@@ -204,6 +208,24 @@
       bx(0.08, 0.07, p.d, p.x + 0.38, 0.02, p.z, '#6a6a62', false);
     } else if (k === 'slab') {
       bx(p.w, p.h || 0.28, p.d, p.x, p.y != null ? p.y : 3.1, p.z, p.col || '#1c1a16', false);
+    }
+    else if (k === 'ladder') {
+      var lh = p.h || 3.2, yaw = p.yaw || 0;
+      var g = new T.Group();
+      function pole(px) {
+        var m = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, lh, 6), M('#c4b090'));
+        m.position.set(px, lh / 2, 0); g.add(m);
+      }
+      pole(-0.28); pole(0.28);
+      var ri;
+      for (ri = 0; ri < Math.max(4, Math.round(lh / 0.38)); ri++) {
+        var rg = new T.Mesh(UB, M('#d2c4a0'));
+        rg.scale.set(0.62, 0.05, 0.08);
+        rg.position.set(0, 0.28 + ri * 0.38, 0.02);
+        g.add(rg);
+      }
+      g.position.set(p.x, 0, p.z); g.rotation.y = yaw;
+      CG.add(g);
     }
     else if (k === 'sign') sign(p.txt, p.x, p.y || 2, p.z, p.w || 3, p.h || 0.7, p.bg || '#2c4a2c', p.fg || '#f2ecd0', p.ry || 0);
     else if (k === 'sand') bx(p.w, 0.08, p.d, p.x, -0.04, p.z, '#cbb98a', false);
@@ -260,7 +282,7 @@
       S.vehicles.push(rec);
     });
     S.antennas = {};
-    W.mastRidge = antennaMast(16.4, -6.2); W.mastBunker = antennaMast(-14, -16.6);
+    W.mastRidge = antennaMast(18, 8); W.mastBunker = antennaMast(-14, -16);
     S.blackout = false; S.powerOn = false; S.flashlight = false;
     if (spot) spot.intensity = 0;
     setTone(lv.tone || 'dawn', true);
@@ -372,12 +394,17 @@
     else { scene.fog.near = S.fogNear; scene.fog.far = S.fogFar; }
   }
 
-  var PR = 0.42;
+  var PR = 0.42, STEP_MAX = 0.45;
+  function colBlocks(q) {
+    if (q.dead || (S.veh && q.veh)) return false;
+    if (q.y0 != null && q.y1 != null && (q.y1 - Math.max(0, q.y0)) <= STEP_MAX) return false;
+    return true;
+  }
   function collide() {
     for (var it = 0; it < 2; it++) {
       for (var i = 0; i < S.cols.length; i++) {
         var q = S.cols[i];
-        if (q.dead || (S.veh && q.veh)) continue;
+        if (!colBlocks(q)) continue;
         var cx = clamp(S.px, q.x0, q.x1), cz = clamp(S.pz, q.z0, q.z1), dx = S.px - cx, dz = S.pz - cz, d2 = dx * dx + dz * dz;
         if (d2 < PR * PR) {
           if (d2 > 1e-8) { var d = Math.sqrt(d2); S.px = cx + dx / d * PR; S.pz = cz + dz / d * PR; }
@@ -593,7 +620,10 @@
   };
   W.setMode = function (m) { S.mode = m; var play = m === 'play'; $('#joy').hidden = !play || !W.isMobileLike(); $('#lookPad').hidden = !play || !W.isMobileLike(); };
   W.pos = function () { return { x: S.px, z: S.pz }; };
-  W.place = function (x, z, yaw) { S.px = x; S.pz = z; if (yaw != null) S.yaw = yaw; collide(); };
+  W.place = function (x, z, yaw) {
+    var n = W.nudgeOutside(x, z, 1.5);
+    S.px = n.x; S.pz = n.z; if (yaw != null) S.yaw = yaw; collide();
+  };
   W.aim = function (dx, dy, type) {
     var sens = type === 'touch' ? 0.22 : 0.12;
     if (S.ads) sens *= 0.65;
@@ -662,7 +692,11 @@
     g.userData = { mat: mat, beam: beam }; g.visible = false; scene.add(g); return g;
   }
   W.setMarks = function (pts) {
-    S.marks = pts || [];
+    S.marks = (pts || []).map(function (p) {
+      if (!p) return p;
+      var n = W.nudgeOutside(p.x, p.z, 1.5);
+      return { x: n.x, z: n.z, color: p.color, hidden: p.hidden };
+    });
     while (MKPOOL.length < S.marks.length) MKPOOL.push(makeMarker());
     MKPOOL.forEach(function (m, i) {
       var p = S.marks[i];
@@ -670,7 +704,77 @@
       if (p) { m.position.set(p.x, 0, p.z); m.userData.mat.color.set(p.color || '#e2bb4f'); }
     });
   };
-  W.setInteract = function (list) { S.inter = list || []; S.near = null; if (W.cb.onNear) W.cb.onNear(null); };
+  W.playerRadius = function () { return PR; };
+  W.stepHeight = function () { return STEP_MAX; };
+  function nudgeCol(q) {
+    if (!colBlocks(q) || q.cover || q.veh || q.noRay) return false;
+    return true;
+  }
+  W.insideSolid = function (x, z) {
+    var i, q;
+    for (i = 0; i < S.cols.length; i++) {
+      q = S.cols[i];
+      if (!nudgeCol(q)) continue;
+      if (x >= q.x0 && x <= q.x1 && z >= q.z0 && z <= q.z1) return q;
+    }
+    return null;
+  };
+  W.nudgeOutside = function (x, z, margin) {
+    var m = margin == null ? 1.5 : margin, n = 0, q, l, r, t, b, mn;
+    while (n++ < 8) {
+      q = W.insideSolid(x, z);
+      if (!q) return { x: x, z: z, moved: n > 1 };
+      l = x - q.x0; r = q.x1 - x; t = z - q.z0; b = q.z1 - z; mn = Math.min(l, r, t, b);
+      if (mn === l) x = q.x0 - m;
+      else if (mn === r) x = q.x1 + m;
+      else if (mn === t) z = q.z0 - m;
+      else z = q.z1 + m;
+    }
+    return { x: x, z: z, moved: true };
+  };
+  W.pathReach = function (tx, tz, radius) {
+    var ox = S.px, oz = S.pz, oyaw = S.yaw;
+    var sx = (S.spawn && S.spawn[0]) || 0, sz = (S.spawn && S.spawn[1]) || 0;
+    S.px = sx; S.pz = sz; collide();
+    var start = { x: S.px, z: S.pz };
+    var r = radius == null ? 2.4 : radius;
+    if (Math.hypot(start.x - tx, start.z - tz) <= r) {
+      S.px = ox; S.pz = oz; S.yaw = oyaw;
+      return { ok: true, steps: 0 };
+    }
+    var cell = 0.6, step = 0.55, seen = {}, q = [start], qi = 0, guard = 0;
+    function key(x, z) { return Math.round(x / cell) + ',' + Math.round(z / cell); }
+    seen[key(start.x, start.z)] = 1;
+    var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.707, 0.707], [-0.707, 0.707], [0.707, -0.707], [-0.707, -0.707]];
+    while (qi < q.length && guard++ < 9000) {
+      var p = q[qi++];
+      if (Math.hypot(p.x - tx, p.z - tz) <= r) {
+        S.px = ox; S.pz = oz; S.yaw = oyaw;
+        return { ok: true, steps: guard };
+      }
+      var di;
+      for (di = 0; di < dirs.length; di++) {
+        S.px = p.x; S.pz = p.z;
+        S.px = p.x + dirs[di][0] * step; S.pz = p.z + dirs[di][1] * step;
+        collide();
+        var ax = S.px, az = S.pz;
+        if (Math.hypot(ax - p.x, az - p.z) < 0.14) continue;
+        var k = key(ax, az);
+        if (seen[k]) continue;
+        seen[k] = 1;
+        q.push({ x: ax, z: az });
+      }
+    }
+    S.px = ox; S.pz = oz; S.yaw = oyaw;
+    return { ok: false, steps: guard };
+  };
+  W.setInteract = function (list) {
+    S.inter = (list || []).map(function (it) {
+      var n = W.nudgeOutside(it.x, it.z, 1.5);
+      return { id: it.id, x: n.x, z: n.z, r: it.r, label: it.label, hold: it.hold };
+    });
+    S.near = null; if (W.cb.onNear) W.cb.onNear(null);
+  };
   W.near = function () { return S.near; };
   W.npc = function (id) { return S.npcs[id]; };
   W.moveNpc = function (id, x, z) {

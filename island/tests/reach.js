@@ -1,0 +1,145 @@
+/* 可達性：用實際玩家碰撞半徑與跨步高度，從出生點 BFS 走到每個目標。禁止傳送。 */
+const puppeteer = require('puppeteer-core');
+const http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = path.join(__dirname, '..', '..');
+const CHROME = process.env.CHROME || '/usr/local/bin/google-chrome';
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
+
+function serve(port) {
+  return new Promise(res => {
+    const s = http.createServer((q, r) => {
+      let f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
+      if (f.endsWith('/')) f += 'index.html';
+      fs.readFile(f, (e, d) => {
+        if (e) { r.writeHead(404); r.end('nf'); return; }
+        r.writeHead(200, { 'content-type': (MIME[path.extname(f)] || 'application/octet-stream') + '; charset=utf-8' }); r.end(d);
+      });
+    }).listen(port, () => res(s));
+  });
+}
+
+function must(cond, msg) { if (!cond) throw new Error(msg); }
+
+const LEVELS = ['op1_landing', 'op2_radar', 'op3_ridge', 'op4_tunnel', 'op5_hq'];
+const LEVEL_FILES = {
+  op1_landing: 'island/data/levels/01-beachhead.json',
+  op2_radar: 'island/data/levels/02-radar.json',
+  op3_ridge: 'island/data/levels/03-ridge.json',
+  op4_tunnel: 'island/data/levels/04-tunnel.json',
+  op5_hq: 'island/data/levels/05-hq.json'
+};
+const SOLID_KINDS = { bld: 1, crate: 1, rock: 1, bunker: 1, tent: 1, tree: 1, powerbox: 1 };
+
+function propBox(p) {
+  if (!p || !SOLID_KINDS[p.kind]) return null;
+  if (p.kind === 'tent') return { kind: p.kind, x0: p.x - 1.2, x1: p.x + 1.2, z0: p.z - 1.2, z1: p.z + 1.2 };
+  if (p.kind === 'tree') return { kind: p.kind, x0: p.x - 0.22, x1: p.x + 0.22, z0: p.z - 0.22, z1: p.z + 0.22 };
+  const w = p.w || (p.kind === 'powerbox' ? 0.72 : 1);
+  const d = p.d || (p.kind === 'powerbox' ? 0.38 : 1);
+  return { kind: p.kind, x0: p.x - w / 2, x1: p.x + w / 2, z0: p.z - d / 2, z1: p.z + d / 2 };
+}
+
+function collectJsonPoints(lv) {
+  const pts = [];
+  function add(id, x, z) {
+    if (x == null || z == null) return;
+    pts.push({ id: id, x: x, z: z });
+  }
+  (lv.beats || []).forEach(b => {
+    if (b.x != null) add(b.id, b.x, b.z);
+    if (b.optionalPower) add(b.id + ':power', b.optionalPower.x, b.optionalPower.z);
+    if (b.sites) Object.keys(b.sites).forEach(k => add(b.id + ':' + k, b.sites[k].x, b.sites[k].z));
+    if (b.points) b.points.forEach(p => add('rescue:' + p.id, p.x, p.z));
+    if (b.from) add(b.id + ':from', b.from[0], b.from[1]);
+    if (b.to) add(b.id + ':to', b.to[0], b.to[1]);
+    if (b.toByFlag) Object.keys(b.toByFlag).forEach(k => add(b.id + ':' + k, b.toByFlag[k][0], b.toByFlag[k][1]));
+    if (b.wave && b.wave.frontAmmo) add('ammo', b.wave.frontAmmo.x, b.wave.frontAmmo.z);
+    if (b.wave && b.wave.placed) b.wave.placed.forEach((pl, i) => add('placed:' + (pl.type || i), pl.x, pl.z));
+  });
+  return pts;
+}
+
+function scanJsonFootprints() {
+  Object.keys(LEVEL_FILES).forEach(id => {
+    const lv = JSON.parse(fs.readFileSync(path.join(ROOT, LEVEL_FILES[id]), 'utf8'));
+    const boxes = (lv.map.props || []).map(propBox).filter(Boolean);
+    const hits = [];
+    collectJsonPoints(lv).forEach(pt => {
+      const box = boxes.find(b => pt.x >= b.x0 && pt.x <= b.x1 && pt.z >= b.z0 && pt.z <= b.z1);
+      if (box) hits.push(pt.id + ' inside ' + box.kind + ' @' + pt.x + ',' + pt.z);
+    });
+    if (hits.length) throw new Error(id + ' 目標落在實心物內：' + hits.join('; '));
+    console.log(id + ' json-footprint ok');
+  });
+}
+
+const BLOCKED = {
+  op2_radar: [{ id: 'old_power_on_roof', x: -16, z: 70, r: 0.8 }],
+  op3_ridge: [{ id: 'old_dmr_inside', x: 4, z: 88, r: 0.8 }],
+  op5_hq: [{ id: 'old_office_inside', x: 0, z: 78, r: 0.8 }]
+};
+
+async function main() {
+  scanJsonFootprints();
+  const port = 9020 + Math.floor(Math.random() * 40);
+  const srv = await serve(port);
+  const browser = await puppeteer.launch({
+    executablePath: CHROME, headless: 'new',
+    args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']
+  });
+  const page = await browser.newPage();
+  const pageErrs = [];
+  page.on('pageerror', e => pageErrs.push(e.message));
+  await page.goto(`http://localhost:${port}/island/index.html?test=1`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__island && __island.loadMapOnly && __island.World && __island.World.ok, { timeout: 20000 });
+
+  const reports = [];
+  for (const id of LEVELS) {
+    const scan = await page.evaluate(async (levelId, blocked) => {
+      await __island.loadMapOnly(levelId);
+      const W = __island.World;
+      const spawn = W.S.spawn;
+      W.place(spawn[0], spawn[1]);
+      const reach = __island.scanReach();
+      const blockedHits = (blocked || []).map(function (b) {
+        const r = W.pathReach(b.x, b.z, b.r);
+        return { id: b.id, x: b.x, z: b.z, r: b.r, ok: !!r.ok };
+      });
+      return {
+        level: reach.level,
+        spawn: reach.spawn,
+        radius: reach.radius,
+        step: reach.step,
+        jump: reach.jump,
+        count: reach.results.length,
+        failed: reach.failed,
+        results: reach.results,
+        blockedHits: blockedHits
+      };
+    }, id, BLOCKED[id] || []);
+    reports.push(scan);
+    console.log(scan.level + ' targets=' + scan.count + ' radius=' + scan.radius + ' step=' + scan.step + ' jump=' + scan.jump);
+    scan.results.forEach(t => {
+      console.log('  ' + (t.ok ? 'OK' : 'FAIL') + '  ' + t.id + '  (' + t.x + ',' + t.z + ') r=' + t.r);
+    });
+    must(scan.count > 0, scan.level + ' 沒有蒐集到目標點');
+    must(scan.radius === 0.42, '玩家碰撞半徑應為 0.42');
+    must(scan.step === 0.45, '跨步高度應為 0.45');
+    must(scan.jump === 0, '本遊戲沒有跳躍，尋路不得假設可跳過建物');
+    const inside = (scan.results || []).filter(t => t.inside);
+    if (inside.length) throw new Error(scan.level + ' 目標在實心物內：' + inside.map(f => f.id + '/' + f.inside).join('; '));
+    if (scan.failed.length) {
+      throw new Error(scan.level + ' 不可達：' + scan.failed.map(f => f.id + '@' + f.x + ',' + f.z).join('; '));
+    }
+    scan.blockedHits.forEach(b => {
+      must(!b.ok, scan.level + ' 建物內部 ' + b.id + ' 不該走得到（證明沒用傳送）');
+    });
+  }
+
+  await browser.close();
+  srv.close();
+  if (pageErrs.length) console.warn('page errors', pageErrs.slice(0, 4));
+  console.log('reach ok', reports.map(r => r.level + ':' + r.count).join(' '));
+}
+
+main().catch(e => { console.error(e); process.exit(1); });

@@ -1333,8 +1333,13 @@
     };
     W.cb.onNear = function (it) {
       var act = $('#act');
-      if (!it) { act.hidden = true; return; }
+      if (!it) {
+        act.hidden = true;
+        if (holdT) cancelHold();
+        return;
+      }
       act.hidden = false; act.textContent = it.label || '互動';
+      if (W.isMobileLike() && it.hold && !holdT) startHold(it.label, it.hold);
     };
     W.cb.onLost = function () { $('#lost').hidden = false; };
     W.cb.onRestored = function () { $('#lost').hidden = true; };
@@ -1401,6 +1406,88 @@
   $('#glRetry').onclick = function () { location.reload(); };
   $('#mute').textContent = Sfx.isMuted() ? '音效關' : '音效開';
 
+  function collectReachables(lv) {
+    var out = [], seen = {};
+    function add(id, x, z, r) {
+      if (x == null || z == null || !isFinite(x) || !isFinite(z)) return;
+      var k = id + ':' + x + ',' + z;
+      if (seen[k]) return;
+      seen[k] = 1;
+      out.push({ id: id, x: x, z: z, r: r == null ? 2.4 : r });
+    }
+    if (!lv) return out;
+    (lv.map && lv.map.vehicles || []).forEach(function (v) {
+      if (!v || /wreck/.test(v.id || '')) return;
+      add('veh:' + v.id, v.x, v.z, 3.0);
+    });
+    (lv.map && lv.map.targets || []).forEach(function (t) {
+      add('target:' + (t.id || 'dummy'), t.x, t.z, 2.2);
+    });
+    (lv.map && lv.map.npcs || []).forEach(function (n) {
+      if (!n || !/scout|wang|captive/i.test(n.id || '')) return;
+      add('npc:' + n.id, n.x, n.z, 2.4);
+    });
+    (lv.beats || []).forEach(function (b) {
+      if (!b) return;
+      if (b.mark) add(b.id + ':mark', b.mark[0], b.mark[1], 1.8);
+      if (b.x != null && b.z != null) add(b.id, b.x, b.z, 2.4);
+      if (b.optionalPower) add(b.id + ':power', b.optionalPower.x, b.optionalPower.z, 2.6);
+      if (b.sites) Object.keys(b.sites).forEach(function (k) {
+        var s = b.sites[k];
+        if (s) add(b.id + ':' + k, s.x, s.z, 2.4);
+      });
+      if (b.from) add(b.id + ':from', b.from[0], b.from[1], 2.2);
+      if (b.to) add(b.id + ':to', b.to[0], b.to[1], 2.2);
+      if (b.toByFlag) Object.keys(b.toByFlag).forEach(function (k) {
+        var t = b.toByFlag[k];
+        if (t) add(b.id + ':' + k, t[0], t[1], 2.2);
+      });
+      if (b.points) b.points.forEach(function (p) {
+        add('rescue:' + (p.id || b.id), p.x, p.z, 2.4);
+      });
+      if (b.wave && b.wave.frontAmmo) add('ammo', b.wave.frontAmmo.x, b.wave.frontAmmo.z, 2.2);
+      if (b.wave && b.wave.placed) b.wave.placed.forEach(function (pl, i) {
+        if (pl) add('placed:' + (pl.type || i), pl.x, pl.z, pl.type === 'commander' ? 3.0 : 2.8);
+      });
+      if (b.routes) Object.keys(b.routes).forEach(function (k) {
+        var rt = b.routes[k];
+        if (!rt) return;
+        if (rt.land) add(b.id + ':land:' + k, rt.land[0], rt.land[1], 2.5);
+      });
+    });
+    return out;
+  }
+  function scanReach() {
+    var lv = level;
+    var targets = collectReachables(lv);
+    var results = targets.map(function (t) {
+      var r = W.pathReach(t.x, t.z, t.r);
+      var hit = W.insideSolid && W.insideSolid(t.x, t.z);
+      return { id: t.id, x: t.x, z: t.z, r: t.r, ok: !!r.ok, steps: r.steps, inside: hit ? (hit.kind || 'solid') : null };
+    });
+    return {
+      level: lv && lv.id,
+      spawn: lv && lv.spawn,
+      radius: W.playerRadius(),
+      step: W.stepHeight(),
+      jump: 0,
+      results: results,
+      failed: results.filter(function (x) { return !x.ok || x.inside; })
+    };
+  }
+  function loadMapOnly(id) {
+    var meta = catalog.levels.filter(function (l) { return l.id === id; })[0];
+    if (!meta) return Promise.reject(new Error('no level ' + id));
+    if (!save) save = freshSave('測試', 'story');
+    return loadJson(meta.file).then(function (lv) {
+      level = lv; level.num = meta.num;
+      W.loadLevel(lv, cfg);
+      W.setMode('play');
+      beatI = 0;
+      phase = 'play';
+      return lv.id;
+    });
+  }
   function attachTestApi() {
     if (!testMode() || !root.__island) return;
     root.__island.evalStoryState = evalStoryState;
@@ -1411,6 +1498,10 @@
     root.__island.pickEnding = pickEnding;
     root.__island.buildEndingScene = buildEndingScene;
     root.__island.canCapture = canCapture;
+    root.__island.collectReachables = collectReachables;
+    root.__island.scanReach = scanReach;
+    root.__island.loadMapOnly = loadMapOnly;
+    root.__island.catalog = function () { return catalog; };
   }
   function boot() {
     parseQuery();
@@ -1449,6 +1540,9 @@
     World: W, Combat: Cbt,
     startNew: function (n, d) { startNew(n, d); },
     nextBeat: nextBeat,
-    jumpTo: jumpTo
+    jumpTo: jumpTo,
+    loadMapOnly: loadMapOnly,
+    scanReach: scanReach,
+    collectReachables: collectReachables
   };
 })(typeof self !== 'undefined' ? self : this);
