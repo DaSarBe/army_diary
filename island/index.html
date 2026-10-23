@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#151a13">
+<meta name="description" content="島嶼守備：阿兵哥日記世界觀的第一人稱射擊續作。">
+<meta property="og:title" content="島嶼守備">
+<meta property="og:description" content="南灘要先站穩。天線要先豎起來。">
+<title>島嶼守備</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='28' width='48' height='10' rx='2' fill='%23cdd1be'/%3E%3Crect x='28' y='10' width='8' height='36' fill='%23232a1d'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/island.css">
+</head>
+<body>
+<canvas id="gl" aria-label="3D 遊戲畫面"></canvas>
+
+<header id="hud" hidden>
+  <div class="h1"><span id="hWho">島嶼守備</span><span id="hDay">第 1 關</span><span id="hRes"></span></div>
+  <div class="h2">
+    <div class="bar hp" title="體力"><u id="bHp"></u><em id="tHp"></em></div>
+  </div>
+  <div id="objChip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L20 20 L12 15.5 L4 20 Z" fill="currentColor"/></svg><span id="objTxt"></span></div>
+</header>
+
+<div id="joy" hidden aria-label="移動搖桿"><i id="knob"></i></div>
+<div id="lookPad" hidden aria-hidden="true"></div>
+
+<section id="fps">
+  <div id="dmgfx"></div>
+  <div id="xhair"><i></i></div>
+  <div id="hitmk"><b></b></div>
+  <div id="waveBanner"></div>
+  <div id="waveTop" hidden><b id="waveName"></b><span id="waveLeft"></span></div>
+  <div id="fpsMsg"></div>
+  <p id="fpsHint"></p>
+  <div id="ammoHud">
+    <span id="magHint"></span>
+    <span id="magRes"></span>
+    <span id="fireMode"></span>
+    <span id="coverState"></span>
+    <span id="wepName"></span>
+  </div>
+  <div id="cluster">
+    <button type="button" id="bAds">瞄準</button>
+    <button type="button" id="bReload">換彈</button>
+    <button type="button" id="bCrouch">蹲下</button>
+    <button type="button" id="bNade">手榴彈</button>
+    <button type="button" id="bMed">急救</button>
+    <button type="button" id="bVeh">上車</button>
+    <button type="button" id="bCarry">背人</button>
+    <button type="button" id="bWeap">T91</button>
+    <button type="button" id="bFire">開火</button>
+  </div>
+</section>
+
+<button id="act" hidden type="button">互動</button>
+<div id="hold" hidden><span id="holdTx"></span><div class="mg-timer"><u id="holdBar"></u></div></div>
+
+<nav id="side">
+  <button type="button" id="btnMenu">選單</button>
+  <button type="button" id="mute">音效開</button>
+</nav>
+
+<section id="dlg" class="sheet" hidden role="dialog" aria-live="polite">
+  <div class="in">
+    <div id="dName" class="dname"></div>
+    <div id="dText" class="dtext"></div>
+    <div id="dBtns" class="dbtns"></div>
+  </div>
+</section>
+
+<section id="card" hidden role="dialog" aria-modal="true">
+  <div class="cin" id="cIn"></div>
+</section>
+
+<div id="toasts" aria-live="polite"></div>
+<div id="fade"></div>
+<div id="fadeTxt"></div>
+
+<section id="glerr" hidden role="alert">
+  <div class="cin">
+    <h2>無法顯示 3D 畫面</h2>
+    <p>這個瀏覽器或裝置沒辦法啟用 WebGL。請開啟硬體加速，或改用最新版的 Chrome、Edge、Safari、Firefox。</p>
+    <button type="button" class="primary" id="glRetry">重新載入</button>
+  </div>
+</section>
+<section id="lost" hidden role="alert">
+  <div class="cin"><h2>畫面中斷了</h2><p>顯示裝置暫時失去連線。正在嘗試恢復，請稍候…</p></div>
+</section>
+<noscript><p style="padding:24px;color:#fff;background:#151a13">這個遊戲需要開啟 JavaScript 才能執行。</p></noscript>
+
+<script src="../vendor/three.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

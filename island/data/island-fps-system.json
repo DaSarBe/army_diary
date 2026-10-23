@@ -1,0 +1,141 @@
+{
+  "version": "1.0",
+  "updated": "2026-10-23",
+  "owner": "Dai",
+  "title": "島嶼守備",
+  "notes": "阿兵哥日記世界觀的第一人稱續作。掩體、血量、難度沿用海灘章 fps-system.json。關卡資料從 JSON 讀取，1 到 5 關依序解鎖。",
+  "view": {
+    "default": "first",
+    "fov": 70,
+    "eyeStand": 1.62,
+    "eyeCrouch": 1.02,
+    "transitionMs": 180
+  },
+  "difficulty": {
+    "default": "hardcore",
+    "modes": {
+      "story": { "name": "劇情向", "dmgTakenMul": 0.5, "enemyAccMul": 0.6, "aimAssist": true, "canDie": false },
+      "standard": { "name": "標準", "dmgTakenMul": 1.0, "enemyAccMul": 1.0, "aimAssist": "optional", "canDie": true },
+      "hardcore": { "name": "硬派", "dmgTakenMul": 1.4, "enemyAccMul": 1.15, "aimAssist": "optional", "canDie": true, "noHud": ["ammoCount"], "note": "彈藥數不顯示，只看彈匣重量提示" }
+    },
+    "aimAssist": { "toggle": true, "defaultOnMobile": true, "snapAngleDeg": 4, "slowdownPct": 40, "hardcorePenalty": { "xpMul": 0.9 } }
+  },
+  "cover": {
+    "autoSnapM": 1.2,
+    "crouched": {
+      "enemyAccMul": 0.05,
+      "blockByRaycast": true,
+      "dmgTakenMul": { "sandbag": 0.1, "rock": 0, "bunker": 0 }
+    },
+    "peeking": { "enemyAccMul": 0.7, "dmgTakenMul": 0.5 },
+    "types": {
+      "sandbag": { "hp": 600, "damagedOnlyOnHit": true, "warnAtPct": 30 },
+      "rock": { "hp": null },
+      "bunker": { "hp": null }
+    },
+    "rusher": { "meleeNeedsHitRoll": true, "accMulBehindCover": 0.5, "noDoubleDamage": true },
+    "feedback": { "blockedHint": "掩體擋下", "sandbagWarn": "沙包要爛了，換位置！" }
+  },
+  "health": {
+    "hpMax": 100,
+    "lowHpPct": 25,
+    "medkitHealPct": 40,
+    "medkitsStart": 1,
+    "zeroHp": {
+      "action": "checkpoint",
+      "note": "主角倒下回到最近存檔點，不是 game over"
+    }
+  },
+  "aiming": {
+    "swayBase": 2.6,
+    "adsSwayMul": 0.5,
+    "recoilDeg": 0.7,
+    "recoilRecoverPerSec": 6,
+    "hit": "hitscan",
+    "headshotMul": 2.0
+  },
+  "weapons": {
+    "t91": {
+      "id": "t91",
+      "name": "T91 步槍",
+      "dmg": 34,
+      "rpm": 600,
+      "modes": ["semi", "auto"],
+      "magSize": 30,
+      "startMags": 4,
+      "range": 280,
+      "reloadSec": 2.4
+    },
+    "m9": {
+      "id": "m9",
+      "name": "M9 手槍",
+      "dmg": 22,
+      "rpm": 280,
+      "modes": ["semi"],
+      "magSize": 15,
+      "startMags": 2,
+      "range": 60,
+      "reloadSec": 1.6
+    }
+  },
+  "grenade": { "name": "手榴彈", "count": 2, "dmg": 70, "radius": 5.5, "fuse": 1.1 },
+  "enemies": {
+    "_desc": "不明敵軍。不寫國名。",
+    "types": {
+      "rifleman": { "hp": 100, "acc": 0.18, "dmg": 12, "behavior": "前進到掩體、探頭射擊" },
+      "gunner": { "hp": 140, "acc": 0.1, "dmg": 10, "rpm": 700, "behavior": "固定壓制" },
+      "rusher": { "hp": 80, "acc": 0.12, "dmg": 14, "behavior": "直衝逼換位" }
+    },
+    "maxOnScreen": 8
+  },
+  "vehicles": {
+    "bike": { "id": "bike", "name": "摩托車", "speed": 16, "dmgTakenMul": 1.25, "steer": 1.6 },
+    "jeep": { "id": "jeep", "name": "吉普車", "speed": 12, "dmgTakenMul": 0.85, "steer": 1.1, "seats": 4 },
+    "sampan": { "id": "sampan", "name": "舢舨", "speed": 7, "dmgTakenMul": 0.9, "enemyAccMul": 0.75, "water": true }
+  },
+  "carry": {
+    "enemyAccMul": 0.5,
+    "dmgTakenMul": 0.6,
+    "speedMul": 0.6,
+    "cannotAds": true,
+    "hint": "背著人不能瞄準射擊"
+  },
+  "retry": {
+    "onDown": "checkpoint",
+    "keepCompanionFates": true,
+    "note": "同袍生死以第一次結果為準，存在 save.island.companionFates，重試不重擲"
+  },
+  "mobile": {
+    "layout": "cod",
+    "leftStickMove": true,
+    "stickEdgeSprint": true,
+    "rightHalfLook": true,
+    "fireBottomRight": true,
+    "ammoAboveButtons": true,
+    "buttons": ["ads", "reload", "crouch", "grenade", "medkit", "vehicle", "carry"]
+  },
+  "save": {
+    "key": "island-save-0",
+    "muteKey": "island-mute",
+    "fields": ["name", "diff", "level", "checkpoint", "flags", "companionFates", "weapons", "hp"]
+  },
+  "outposts": [
+    { "id": "op_south", "name": "南灘據點", "level": 1 },
+    { "id": "op_radar", "name": "雷達站", "level": 2 },
+    { "id": "op_village", "name": "漁村", "level": 3 },
+    { "id": "op_ridge", "name": "高地砲陣", "level": 4 },
+    { "id": "op_hq", "name": "指揮所", "level": 5 }
+  ],
+  "flags": {
+    "isl_antenna_ridge": "天線架在稜線",
+    "isl_antenna_bunker": "天線架在碉堡",
+    "isl_flank_by_sea": "舢舨側翼",
+    "isl_flank_by_bike": "摩托車側翼",
+    "isl_01_clear": "第 1 關完成"
+  },
+  "companions": {
+    "akai": { "npc": "npc_akai", "name": "阿凱" },
+    "lin": { "npc": "npc_signal_lin", "name": "小林" },
+    "sgt": { "npc": "npc_sgt_wang", "name": "王班長" }
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "id": "01-beachhead",
+  "name": "登陸灘頭",
+  "outpost": "op_south",
+  "tone": "dawn",
+  "bounds": [-52, 52, -68, 56],
+  "spawn": [0, 38],
+  "spawnYaw": 3.1416,
+  "waterZ": -44,
+  "objective": { "x": 0, "z": 22 },
+  "map": {
+    "ground": [
+      { "kind": "sand", "x": 0, "z": -18, "w": 110, "d": 90 },
+      { "kind": "grass", "x": 0, "z": 32, "w": 110, "d": 56 },
+      { "kind": "water", "x": 0, "z": -62, "w": 130, "d": 40 }
+    ],
+    "props": [
+      { "kind": "tent", "x": -12, "z": 44, "r": 2.4, "h": 2.2, "col": "#6b7a4a" },
+      { "kind": "tent", "x": 12, "z": 44, "r": 2.4, "h": 2.2, "col": "#5e6d42" },
+      { "kind": "tent", "x": -6, "z": 48, "r": 2.1, "h": 2.0, "col": "#647248" },
+      { "kind": "crate", "x": 3, "z": 40, "w": 1.2, "h": 0.8, "d": 1.0 },
+      { "kind": "crate", "x": 4.4, "z": 40.2, "w": 1.0, "h": 0.6, "d": 0.8 },
+      { "kind": "flag", "x": -2, "z": 46, "h": 8 },
+      { "kind": "bld", "x": -22, "z": 40, "w": 8, "d": 6, "h": 3.2, "wall": "#8a7a62", "roof": "#5a4a38", "lab": "通訊" },
+      { "kind": "tree", "x": 22, "z": 48 },
+      { "kind": "tree", "x": 26, "z": 40 },
+      { "kind": "tree", "x": -28, "z": 46 },
+      { "kind": "tree", "x": 18, "z": 8 },
+      { "kind": "tree", "x": 24, "z": -2 },
+      { "kind": "rock", "x": 16, "z": -6, "w": 4.2, "h": 2.4, "d": 3.2 },
+      { "kind": "rock", "x": 18.5, "z": -8.5, "w": 3.0, "h": 1.8, "d": 2.4 },
+      { "kind": "bunker", "x": -14, "z": -16, "w": 6.5, "h": 2.4, "d": 4.5 },
+      { "kind": "pier", "x": -38, "z": -8, "w": 3.2, "d": 14, "h": 0.35 },
+      { "kind": "road", "x": 28, "z": 4, "w": 3.4, "d": 52 },
+      { "kind": "sign", "x": 0, "z": 41, "y": 2.2, "w": 3.6, "h": 0.7, "txt": "南灘前哨", "bg": "#2c4a2c", "fg": "#f2ecd0" }
+    ],
+    "covers": [
+      { "type": "sandbag", "x": -4, "z": 22, "w": 3.6, "d": 0.9, "h": 1.0, "ax": -4, "az": 23.2 },
+      { "type": "sandbag", "x": 4, "z": 22, "w": 3.6, "d": 0.9, "h": 1.0, "ax": 4, "az": 23.2 },
+      { "type": "sandbag", "x": 0, "z": 20.5, "w": 3.2, "d": 0.9, "h": 1.0, "ax": 0, "az": 21.6 },
+      { "type": "sandbag", "x": -10, "z": -20, "w": 4.0, "d": 0.95, "h": 1.05, "ax": -10, "az": -18.8 },
+      { "type": "sandbag", "x": -2, "z": -21, "w": 4.0, "d": 0.95, "h": 1.05, "ax": -2, "az": -19.8 },
+      { "type": "sandbag", "x": 8, "z": -20.5, "w": 4.0, "d": 0.95, "h": 1.05, "ax": 8, "az": -19.3 },
+      { "type": "sandbag", "x": 16, "z": -22, "w": 3.6, "d": 0.9, "h": 1.0, "ax": 16, "az": -20.8 },
+      { "type": "rock", "x": 20, "z": -18, "w": 2.8, "h": 1.6, "d": 2.2, "ax": 20, "az": -16.6 },
+      { "type": "bunker", "x": -14, "z": -14.2, "w": 2.2, "h": 1.4, "d": 1.1, "ax": -14, "az": -12.8 }
+    ],
+    "eCovers": [
+      { "x": -18, "z": -34, "kind": "sand" },
+      { "x": -8, "z": -36, "kind": "sand" },
+      { "x": 2, "z": -35, "kind": "sand" },
+      { "x": 12, "z": -37, "kind": "sand" },
+      { "x": 20, "z": -33, "kind": "sand" },
+      { "x": -14, "z": -42, "kind": "boat" },
+      { "x": 6, "z": -44, "kind": "boat" },
+      { "x": 16, "z": -43, "kind": "boat" }
+    ],
+    "targets": [
+      { "id": "dummy", "x": 0, "z": 12 }
+    ],
+    "npcs": [
+      { "id": "npc_sgt_wang", "preset": "sgt", "x": -1.2, "z": 36.5, "ry": 3.14, "name": "王班長" },
+      { "id": "npc_akai", "preset": "kai", "x": 2.2, "z": 35.4, "ry": 3.0, "name": "阿凱" },
+      { "id": "npc_signal_lin", "preset": "lin", "x": -3.4, "z": 35.2, "ry": 3.3, "name": "小林" }
+    ],
+    "vehicles": [
+      { "id": "jeep_camp", "type": "jeep", "x": 9, "z": 43, "yaw": 0.4 },
+      { "id": "bike_east", "type": "bike", "x": 28, "z": 18, "yaw": 3.14 },
+      { "id": "sampan_west", "type": "sampan", "x": -38, "z": -10, "yaw": 3.14 }
+    ],
+    "spawns": {
+      "sea": [[-22, -58], [-8, -60], [6, -59], [18, -57]],
+      "shore": [[-16, -38], [-4, -36], [8, -37], [20, -35]]
+    }
+  },
+  "beats": [
+    { "id": "camp_chat", "type": "talk", "story": "camp_chat", "checkpoint": true, "place": [0, 38] },
+    { "id": "briefing", "type": "talk", "story": "briefing" },
+    { "id": "tutorial_intro", "type": "talk", "story": "tutorial_intro" },
+    {
+      "id": "tutorial_cover",
+      "type": "tutorial",
+      "goal": "crouch_cover",
+      "hint": "tutorial_crouch",
+      "mark": [0, 22],
+      "checkpoint": true
+    },
+    {
+      "id": "tutorial_fire",
+      "type": "tutorial",
+      "goal": "hit_dummy",
+      "hint": "tutorial_fire",
+      "mark": [0, 12]
+    },
+    { "id": "antenna_choice", "type": "choice", "story": "antenna_choice" },
+    {
+      "id": "plant_antenna",
+      "type": "interact",
+      "holdMs": 2200,
+      "label": "架設天線",
+      "sites": {
+        "isl_antenna_ridge": { "x": 16.4, "z": -6.2, "hint": "hintRidge" },
+        "isl_antenna_bunker": { "x": -14, "z": -16.6, "hint": "hintBunker" }
+      },
+      "checkpoint": true
+    },
+    { "id": "flank_choice", "type": "choice", "story": "flank_choice" },
+    {
+      "id": "vehicle_ride",
+      "type": "vehicle",
+      "routes": {
+        "isl_flank_by_sea": {
+          "vehicle": "sampan_west",
+          "story": "vehicle_sea",
+          "land": [-22, -28],
+          "waypoints": [[-38, -18], [-32, -26], [-24, -28]]
+        },
+        "isl_flank_by_bike": {
+          "vehicle": "bike_east",
+          "story": "vehicle_bike",
+          "land": [18, -26],
+          "waypoints": [[28, 6], [28, -12], [22, -24], [18, -26]]
+        }
+      }
+    },
+    {
+      "id": "assault",
+      "type": "combat",
+      "story": "assault_start",
+      "checkpoint": true,
+      "place": null,
+      "wave": {
+        "id": "assault",
+        "name": "南灘突擊",
+        "enemies": { "rifleman": 4, "gunner": 1, "rusher": 1 },
+        "grace": 2.2
+      },
+      "lin": { "x": null, "z": null, "hp": 100, "fromAntenna": true }
+    },
+    { "id": "aftermath", "type": "choice", "story": "aftermath" },
+    {
+      "id": "carry_wounded",
+      "type": "carry",
+      "hint": "carry_hint",
+      "from": [10, -24],
+      "to": [2, -16]
+    },
+    {
+      "id": "complete",
+      "type": "complete",
+      "story": "complete",
+      "setFlag": "isl_01_clear"
+    }
+  ]
+}
