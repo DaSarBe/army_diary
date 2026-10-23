@@ -6,7 +6,7 @@
   var W = { ok: false, cb: {} };
   if (!T) { root.World = W; return; }
 
-  var cv, R, scene, cam, hemi, sun, stars, spot, lost = false, paused = false, rafId = 0, last = 0;
+  var cv, R, scene, cam, hemi, sun, stars, spot, lost = false, paused = false, rafId = 0, last = 0, floodCache = null;
   var UB = new T.BoxGeometry(1, 1, 1), MATS = {}, CG = null, SIGNS = [];
   var vm = null, vmRifle = null, vmPistol = null;
   var FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei","WenQuanYi Micro Hei","Noto Sans CJK TC",sans-serif';
@@ -258,7 +258,7 @@
     CG = new T.Group(); scene.add(CG);
     S.cols = []; S.covers = []; S.eCovers = []; S.npcs = {}; S.temps = []; S.vehicles = []; S.inter = []; S.near = null;
     S.veh = null; S.carry = false;
-    S.marks = []; S.water = null; SIGNS.length = 0; MATS = {};
+    S.marks = []; S.water = null; SIGNS.length = 0; MATS = {}; floodCache = null;
     S.bounds = lv.bounds || [-50, 50, -60, 50];
     S.spawn = lv.spawn || [0, 38];
     S.waterZ = lv.waterZ != null ? lv.waterZ : -44;
@@ -732,41 +732,45 @@
     }
     return { x: x, z: z, moved: true };
   };
-  W.pathReach = function (tx, tz, radius) {
+  W.floodReach = function () {
+    if (floodCache) return floodCache;
     var ox = S.px, oz = S.pz, oyaw = S.yaw;
+    var cell = 0.6, B = S.bounds;
+    function walkable(x, z) {
+      if (x < B[0] || x > B[1] || z < B[2] || z > B[3]) return false;
+      S.px = x; S.pz = z; collide();
+      return Math.hypot(S.px - x, S.pz - z) < 0.28;
+    }
     var sx = (S.spawn && S.spawn[0]) || 0, sz = (S.spawn && S.spawn[1]) || 0;
     S.px = sx; S.pz = sz; collide();
-    var start = { x: S.px, z: S.pz };
-    var r = radius == null ? 2.4 : radius;
-    if (Math.hypot(start.x - tx, start.z - tz) <= r) {
-      S.px = ox; S.pz = oz; S.yaw = oyaw;
-      return { ok: true, steps: 0 };
-    }
-    var cell = 0.6, step = 0.55, seen = {}, q = [start], qi = 0, guard = 0;
-    function key(x, z) { return Math.round(x / cell) + ',' + Math.round(z / cell); }
-    seen[key(start.x, start.z)] = 1;
-    var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.707, 0.707], [-0.707, 0.707], [0.707, -0.707], [-0.707, -0.707]];
-    while (qi < q.length && guard++ < 9000) {
-      var p = q[qi++];
-      if (Math.hypot(p.x - tx, p.z - tz) <= r) {
-        S.px = ox; S.pz = oz; S.yaw = oyaw;
-        return { ok: true, steps: guard };
-      }
-      var di;
+    sx = S.px; sz = S.pz;
+    function ck(x, z) { return Math.round(x / cell) + ',' + Math.round(z / cell); }
+    function snap(v) { return Math.round(v / cell) * cell; }
+    var cells = [{ x: snap(sx), z: snap(sz) }], qi = 0, seen = {};
+    seen[ck(sx, sz)] = 1;
+    var dirs = [[cell, 0], [-cell, 0], [0, cell], [0, -cell], [cell, cell], [-cell, cell], [cell, -cell], [-cell, -cell]];
+    while (qi < cells.length) {
+      var p = cells[qi++], di;
       for (di = 0; di < dirs.length; di++) {
-        S.px = p.x; S.pz = p.z;
-        S.px = p.x + dirs[di][0] * step; S.pz = p.z + dirs[di][1] * step;
-        collide();
-        var ax = S.px, az = S.pz;
-        if (Math.hypot(ax - p.x, az - p.z) < 0.14) continue;
-        var k = key(ax, az);
+        var nx = snap(p.x + dirs[di][0]), nz = snap(p.z + dirs[di][1]), k = ck(nx, nz);
         if (seen[k]) continue;
+        if (!walkable(nx, nz)) { seen[k] = 2; continue; }
         seen[k] = 1;
-        q.push({ x: ax, z: az });
+        cells.push({ x: nx, z: nz });
       }
     }
     S.px = ox; S.pz = oz; S.yaw = oyaw;
-    return { ok: false, steps: guard };
+    floodCache = { cells: cells, spawn: [sx, sz], cell: cell };
+    return floodCache;
+  };
+  W.pathReach = function (tx, tz, radius) {
+    var r = radius == null ? 2.4 : radius;
+    var flood = W.floodReach(), i, p;
+    for (i = 0; i < flood.cells.length; i++) {
+      p = flood.cells[i];
+      if (Math.hypot(p.x - tx, p.z - tz) <= r + 0.35) return { ok: true, steps: i };
+    }
+    return { ok: false, steps: flood.cells.length };
   };
   W.setInteract = function (list) {
     S.inter = (list || []).map(function (it) {
