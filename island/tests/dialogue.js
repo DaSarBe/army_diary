@@ -77,6 +77,10 @@ async function main() {
         wang: 'alive', akai: 'alive', lin: 'alive',
         flags: { isl_captives_left: true, isl_commander_killed: true }
       }),
+      silentBothPreferA: ev({
+        wang: 'kia', akai: 'kia', lin: 'alive',
+        flags: { isl_captives_left: true, isl_commander_killed: true }
+      }),
       campNowang: ev({
         wang: 'kia', akai: 'alive', lin: 'alive',
         flags: { isl_captives_rescued: true, isl_commander_captured: true }
@@ -150,6 +154,14 @@ async function main() {
   must(has(cases.silentB_allAlive.lines, /坑道裡還有三個名字/), '沉默 B 俘虜名單');
   must(has(cases.silentB_allAlive.lines, /這不是勝利/), '沉默 B 這不是勝利');
   must(cases.silentB_allAlive.camp === 'hq_camp', '沉默 B 同袍可全活');
+
+  must(cases.silentBothPreferA.ending === 'silent_island' && cases.silentBothPreferA.variant === 'silent_a', 'A+B 同時應固定播 A');
+  must(has(cases.silentBothPreferA.lines, /名單我會親自簽/), 'A+B 同時應有 A 名單');
+  must(has(cases.silentBothPreferA.lines, /阿凱，保險業務/), 'A+B 同時應念阿凱');
+  must(has(cases.silentBothPreferA.lines, /王班長。方子豪的班長/), 'A+B 同時應念王班長');
+  must(none(cases.silentBothPreferA.lines, /坑道裡還有三個名字/), 'A+B 同時不該播 B 版俘虜句');
+  must(none(cases.silentBothPreferA.lines, /這不是勝利/), 'A+B 同時不該播 B 版全活句');
+  must(none(cases.silentBothPreferA.lines, /頻道裡人少了/), 'A+B 同時不該播頻道裡人少了');
 
   must(cases.campNowang.camp === 'hq_camp_nowang', '只王班長死應 nowang');
   must(!deadSpoke('王班長', cases.campNowang.campWho), 'nowang 王班長不該說話');
