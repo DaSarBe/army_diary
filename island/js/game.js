@@ -634,9 +634,9 @@
         if (hintSc && hintSc.toast) setTimeout(function () { toast(hintSc.toast); }, 900);
         if (auto && q.power !== '0') setTimeout(function () { W.place(b.optionalPower.x, b.optionalPower.z); startHold(b.optionalPower.label || '復電', 400); }, 700);
       }
-      if ((plan.enemies && plan.enemies.rusher) || (wave.enemies && wave.enemies.rusher)) {
+      if (b.blackout && ((plan.enemies && plan.enemies.rusher) || (wave.enemies && wave.enemies.rusher))) {
         setTimeout(function () {
-          var rs = pickStory(hasFlag('isl_akai_outside') ? 'rusher_warn_outside' : 'rusher_warn');
+          var rs = pickStory('rusher_warn');
           var rsc = story.scenes[rs] || story.scenes.rusher_warn;
           if (rsc && rsc.toast) toast(rsc.toast);
         }, 2200);
