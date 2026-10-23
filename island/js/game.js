@@ -50,7 +50,7 @@
         medkitHealPct: island.weapons.medkit.heal, medkitsStart: island.weapons.medkit.count,
         medkitUseSec: island.weapons.medkit.useSec, cancelOnHit: island.weapons.medkit.cancelOnHit
       },
-      weapons: { t91: wep('t91', 'T91 步槍', 4), m9: wep('m9', 'M9 手槍', 2) },
+      weapons: { t91: wep('t91', 'T91 步槍', 4), m9: wep('m9', 'M9 手槍', 2), t75: island.weapons.t75_lmg ? { id: 't75', name: 'T75 機槍', dmg: island.weapons.t75_lmg.dmg, rpm: island.weapons.t75_lmg.rpm, magSize: island.weapons.t75_lmg.mag, startMags: 1, reloadSec: island.weapons.t75_lmg.reloadSec, range: island.weapons.t75_lmg.range } : null },
       grenade: { name: '手榴彈', count: island.weapons.frag.count, dmg: island.weapons.frag.dmg, radius: island.weapons.frag.radius, fuse: island.weapons.frag.fuseSec },
       enemies: { types: island.enemies, maxOnScreen: island.maxEnemiesOnScreen || 8 },
       vehicles: island.vehicles, props: island.props, carry: carry,
@@ -138,6 +138,8 @@
           if (q.route === 'bike' && sceneId === 'approach_choice') pick = choices[2] || pick;
           if (q.route === 'front' && sceneId === 'approach_choice') pick = choices[0];
           if (q.route === 'stealth' && sceneId === 'approach_choice') pick = choices[3] || pick;
+          if (q.akai === 'out' && sceneId === 'driver_choice') pick = choices[2] || pick;
+          if ((q.akai === 'with' || !q.akai) && sceneId === 'driver_choice') pick = choices[0];
           setTimeout(function () { pick && $('#dBtns').querySelectorAll('button')[choices.indexOf(pick)].click(); }, 200);
         }
         return;
@@ -147,6 +149,15 @@
     render();
   }
 
+  function pickStory(sid) {
+    if (!sid) return sid;
+    if (sid === 'jeep_foreshadow' && fateOf('lin') === 'kia') return 'jeep_foreshadow_missing';
+    if (sid === 'assault_start' && fateOf('lin') === 'kia') return 'assault_start_missing';
+    if (sid === 'jeep_shop' && fateOf('lin') === 'kia') return 'jeep_shop_missing';
+    if (sid === 'radar_door' && hasFlag('isl_radio_weak') && story.scenes.radar_door_weak) return 'radar_door_weak';
+    if (sid === 'dark_talk' && hasFlag('isl_akai_outside') && story.scenes.dark_talk_outside) return 'dark_talk_outside';
+    return sid;
+  }
   function currentBeat() { return level.beats[beatI]; }
   function jumpTo(id) {
     var i; for (i = 0; i < level.beats.length; i++) if (level.beats[i].id === id) { beatI = i; runBeat(); return; }
@@ -167,9 +178,7 @@
     if (b.checkpoint) markCheckpoint(b);
     if (b.place) W.place(b.place[0], b.place[1]);
     if (b.type === 'talk' || b.type === 'choice') {
-      var sid = b.story;
-      if (sid === 'jeep_foreshadow' && fateOf('lin') === 'kia') sid = 'jeep_foreshadow_missing';
-      if (sid === 'assault_start' && fateOf('lin') === 'kia') sid = 'assault_start_missing';
+      var sid = pickStory(b.story);
       showLines(sid, function () { nextBeat(); });
     } else if (b.type === 'tutorial') startTutorial(b);
     else if (b.type === 'interact') startInteract(b);
@@ -214,11 +223,31 @@
 
   /* ---------- 天線 ---------- */
   function startInteract(b) {
+    if (b.kind === 'power' || b.kind === 't75') {
+      var sc = story.scenes[b.story] || {};
+      objective(sc.hint || b.label, b.x, b.z);
+      $('#fpsHint').textContent = sc.hint || b.label;
+      W.setInteract([{ id: b.kind, x: b.x, z: b.z, r: 2.6, label: b.label, hold: b.holdMs || 2000 }]);
+      HHooks.pendingHold = function () {
+        W.setInteract([]);
+        if (b.kind === 'power') {
+          setFlag(b.setFlag || 'isl_power_restored');
+          if (W.setPower) W.setPower(true);
+          toast('電來了。整層亮了。');
+        }
+        if (b.kind === 't75' && Cbt.unlockT75) { Cbt.unlockT75(); save.hasT75 = true; persist(); }
+        var done = { lines: sc.done || [{ who: '', text: '好。' }] };
+        story.scenes._hold_done = done;
+        showLines('_hold_done', function () { nextBeat(); });
+      };
+      if (auto) setTimeout(function () { W.place(b.x, b.z); startHold(b.label, 400); }, 280);
+      return;
+    }
     var flag = hasFlag('isl_radio_strong') ? 'isl_radio_strong' : 'isl_radio_weak';
     if (!hasFlag('isl_radio_strong') && !hasFlag('isl_radio_weak')) flag = 'isl_radio_strong';
     var site = b.sites[flag];
-    var sc = story.scenes.plant_antenna;
-    var hint = flag === 'isl_radio_strong' ? sc.hintStrong : sc.hintWeak;
+    var scA = story.scenes.plant_antenna;
+    var hint = flag === 'isl_radio_strong' ? scA.hintStrong : scA.hintWeak;
     objective(hint, site.x, site.z);
     $('#fpsHint').textContent = hint;
     W.setInteract([{ id: 'antenna', x: site.x, z: site.z, r: 2.4, label: b.label || '架設天線', hold: b.holdMs || 2000 }]);
@@ -226,7 +255,7 @@
       W.showAntenna(site.mast || (flag === 'isl_radio_strong' ? 'bunker' : 'ridge'));
       W.setInteract([]);
       var doneId = flag === 'isl_radio_strong' ? 'doneStrong' : 'doneWeak';
-      var tmp = { lines: sc[doneId] || sc.doneStrong };
+      var tmp = { lines: scA[doneId] || scA.doneStrong };
       story.scenes._plant_done = tmp;
       showLines('_plant_done', function () { nextBeat(); });
     };
@@ -251,7 +280,9 @@
   var rideWatch = null;
   function startVehicle(b) {
     var flag = hasFlag('isl_flank_by_sea') ? 'isl_flank_by_sea' : (hasFlag('isl_flank_by_bike') ? 'isl_flank_by_bike' : null);
+    if (!flag || !b.routes[flag]) flag = b.routes && b.routes.default ? 'default' : flag;
     if (!flag || !b.routes[flag]) { nextBeat(); return; }
+    if (b.flag) setFlag(b.flag);
     var route = b.routes[flag];
     var sc = story.scenes[route.story];
     objective(sc.hint, null, null);
@@ -311,24 +342,28 @@
     if (HHooks.wantVehicle && v.id !== HHooks.wantVehicle) { Cbt.msg('這不是這次要坐的', 1400); return; }
     W.enterVehicle(v); Cbt.refresh(); Sfx.sfx('confirm');
     if ((v.type === 'bike' || v.type === 'motorcycle') && Cbt.forceWeap) Cbt.forceWeap('m9');
+    if (v.type === 'cart' && Cbt.session() && Cbt.session().carrying) { Cbt.msg('背著人不能推車', 1400); W.exitVehicle(); Cbt.refresh(); return; }
     if (HHooks.onBoarded) { var fn = HHooks.onBoarded; HHooks.onBoarded = null; fn(); }
   }
 
   /* ---------- 戰鬥 ---------- */
   function startCombat(b) {
-    var sid = (fateOf('lin') === 'kia') ? 'assault_start_missing' : (b.story || 'assault_start');
+    var sid = pickStory(b.story || 'assault_start');
     showLines(sid, function () {
       var p = W.pos(), linPos = { x: p.x + 2.2, z: p.z + 1.4 };
       if (fateOf('lin') === 'kia') W.showNpc('npc_signal_lin', false);
-      else W.moveNpc('npc_signal_lin', linPos.x, linPos.z);
+      else if (W.npc('npc_signal_lin')) W.moveNpc('npc_signal_lin', linPos.x, linPos.z);
+      if (hasFlag('isl_akai_outside')) W.showNpc('npc_akai', false);
+      if (b.blackout && W.setBlackout) W.setBlackout(true);
       var wave = b.wave, enemies = JSON.parse(JSON.stringify(wave.enemies || {}));
       if (hasFlag('isl_flank_by_sea') && wave.seaMinusRifleman) enemies.rifleman = Math.max(0, (enemies.rifleman || 0) - wave.seaMinusRifleman);
       Cbt.startWave({
         id: wave.id, name: wave.name, enemies: enemies, grace: wave.grace,
-        lin: fateOf('lin') === 'kia' ? null : { hp: 80, x: linPos.x, z: linPos.z }
+        lin: fateOf('lin') === 'kia' || !W.npc('npc_signal_lin') ? null : { hp: 80, x: linPos.x, z: linPos.z }
       });
       if (auto) {
         Cbt.bot = 'aim';
+        if (b.blackout && W.setFlashlight) W.setFlashlight(true);
         setTimeout(function () {
           var s = Cbt.session();
           if (!s || !s.combat || s.ended) return;
@@ -337,7 +372,7 @@
           s.killed = s.total;
         }, 18000);
       }
-      objective('清空灘頭', p.x, p.z - 8);
+      objective(b.wave && b.wave.name ? ('清空' + b.wave.name) : '清空敵人', p.x, p.z - 8);
       if (q.down === '1' && !save._downTest) {
         save._downTest = 1;
         setTimeout(function () { if (Cbt.session()) { Cbt.session().pack.hp = 0; HHooks.onDown(); } }, 800);
@@ -369,20 +404,37 @@
   }
 
   function finishLevel(b) {
-    setFlag(b.setFlag || 'isl_01_clear');
+    setFlag(b.setFlag || (level.id === 'op2_radar' ? 'isl_02_clear' : 'isl_01_clear'));
+    if (Cbt.session()) save.loadout = JSON.parse(JSON.stringify(Cbt.session().pack));
     if (!fateOf('lin')) lockFate('lin', 'alive');
-    showLines(fateOf('lin') === 'kia' && story.scenes.complete ? b.story : b.story, function () { showCompleteCard(); });
+    if (level.id === 'op2_radar' && !fateOf('akai')) lockFate('akai', 'alive');
+    var next = catalog.levels.filter(function (l) { return l.num === (level.num || 1) + 1; })[0];
+    if (next && !next.stub) { save.level = next.id; save.beat = 0; save.checkpoint = next.id === 'op2_radar' ? 'jeep_shop' : next.id; persist(); }
+    showLines(pickStory(b.story), function () { showCompleteCard(); });
   }
   function showCompleteCard() {
     phase = 'done';
     objective('');
     var lin = fateOf('lin') === 'kia' ? '小林：陣亡（已鎖定）' : '小林：生還';
+    var akai = !fateOf('akai') || fateOf('akai') === 'absent' ? '阿凱：尚未登場' : (fateOf('akai') === 'kia' ? '阿凱：陣亡（已鎖定）' : '阿凱：生還');
+    $('#card').hidden = false;
+    if (level.id === 'op2_radar') {
+      var how = hasFlag('isl_power_restored') ? '復電強攻' : '摸黑';
+      var who = hasFlag('isl_akai_outside') ? '阿凱留在車上接應' : '阿凱同行';
+      $('#cIn').innerHTML = '<p class="kicker">第 2 關完成</p><h2>雷達站</h2><p>' + how + '。' + who + '。</p><p>' + lin + '<br>' + akai + '<br>王班長：失聯</p><p>第 3 關「稜線哨所」將依序解鎖。</p><div class="row"><button type="button" class="primary" id="toTitle">回標題</button></div>';
+      $('#toTitle').onclick = function () { $('#card').hidden = true; showTitle(); };
+      if (auto) { save._e2e = 'clear'; persist(); }
+      return;
+    }
     var ant = hasFlag('isl_radio_strong') ? '碉堡頂（訊號好）' : '倉庫後（訊號弱）';
     var flank = hasFlag('isl_flank_by_sea') ? '舢舨繞後' : hasFlag('isl_flank_by_bike') ? '機車側翼' : hasFlag('isl_stealth') ? '潛行' : '正面推進';
-    $('#card').hidden = false;
-    $('#cIn').innerHTML = '<p class="kicker">第 1 關完成</p><h2>登陸灘頭</h2><p>天線在' + ant + '。打法：' + flank + '。</p><p>' + lin + '<br>阿凱：尚未登場<br>王班長：失聯</p><p>第 2 關「雷達站」將依序解鎖。</p><div class="row"><button type="button" class="primary" id="toTitle">回標題</button></div>';
+    $('#cIn').innerHTML = '<p class="kicker">第 1 關完成</p><h2>登陸灘頭</h2><p>天線在' + ant + '。打法：' + flank + '。</p><p>' + lin + '<br>阿凱：尚未登場<br>王班長：失聯</p><p>第 2 關「雷達站」已解鎖。</p><div class="row"><button type="button" class="primary" id="go2">進入第 2 關</button><button type="button" id="toTitle">回標題</button></div>';
     $('#toTitle').onclick = function () { $('#card').hidden = true; showTitle(); };
-    if (auto) { save._e2e = 'clear'; persist(); }
+    $('#go2').onclick = function () { $('#card').hidden = true; bootLevel('op2_radar', 0); };
+    if (auto) {
+      save._e2e = 'ch1'; persist();
+      setTimeout(function () { var g = $('#go2'); if (g) g.click(); }, 280);
+    }
   }
 
   /* ---------- 倒下重試 ---------- */
@@ -447,20 +499,28 @@
   function startNew(name, diff, carryOver) {
     save = freshSave(name.trim() || '方子豪', diff);
     save.carryOver = !!carryOver;
+    if (auto) save._e2eSkipGunner = true;
     persist();
     bootLevel('op1_landing', 0);
   }
   function continueSave(s) {
     save = s;
-    bootLevel(s.level || 'op1_landing', s.beat || 0);
+    var id = s.level || 'op1_landing';
+    if (s.flags && s.flags.isl_01_clear && !s.flags.isl_02_clear && id === 'op1_landing') id = 'op2_radar';
+    bootLevel(id, id === s.level ? (s.beat || 0) : 0);
   }
   function bootLevel(id, startBeat) {
     var meta = catalog.levels.filter(function (l) { return l.id === id; })[0];
     if (!meta || meta.stub) { toast(story.scenes.locked.text); return; }
     loadJson(meta.file).then(function (lv) {
       level = lv; level.num = meta.num;
+      save.level = id; persist();
       W.loadLevel(lv, cfg);
-      Cbt.begin(Cbt.newLoadout());
+      Cbt.begin(save.loadout || Cbt.newLoadout());
+      Cbt.restoreHp();
+      if (save.hasT75 && Cbt.unlockT75) Cbt.unlockT75(true);
+      if (fateOf('lin') === 'kia') W.showNpc('npc_signal_lin', false);
+      if (id === 'op2_radar' && !fateOf('akai')) lockFate('akai', 'alive');
       document.body.classList.toggle('hardcore', save.diff === 'hardcore');
       document.body.classList.toggle('touch', W.isMobileLike());
       $('#hud').hidden = false; $('#card').hidden = true;
@@ -486,6 +546,16 @@
       if (rideWatch) rideWatch(dt);
       hpBar();
     };
+    W.cb.onVehWreck = function (v, dmg, reason) {
+      if (Cbt.hurtPlayer) Cbt.hurtPlayer(dmg);
+      if (reason === 'gunner') { toast('機槍手發現了。落水。從碼頭再上。'); W.place(-38, -10); }
+      else if (v && v.type === 'jeep') toast('吉普車打爆了。車上的人被甩出來。');
+      else toast('翻車。引擎聲停了。');
+    };
+    W.cb.onVehHp = function (v) {
+      if (!v) return;
+      toast((v.type === 'jeep' ? '吉普' : v.type === 'cart' ? '發電車' : '機車') + '耐久 ' + Math.max(0, Math.round(v.hp)));
+    };
     W.cb.onNear = function (it) {
       var act = $('#act');
       if (!it) { act.hidden = true; return; }
@@ -507,6 +577,7 @@
     Cbt.stopWave();
     if (Cbt.session() && Cbt.session().lin && Cbt.session().lin.hp <= 0) lockFate('lin', 'kia');
     else rollLinFate();
+    if (level && level.id === 'op2_radar') { nextBeat(); return; }
     if (fateOf('lin') === 'kia') showLines('lin_down', function () { nextBeat(); });
     else showLines('lin_live', function () { nextBeat(); });
   };

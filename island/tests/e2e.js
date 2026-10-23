@@ -53,8 +53,8 @@ async function main() {
 
   await page.waitForFunction(() => {
     const s = window.__island && __island.save && __island.save();
-    return s && (s.flags && s.flags.isl_01_clear || s._e2e === 'clear' || (window.__island.phase && __island.phase() === 'done'));
-  }, { timeout: extra.indexOf('down=1') >= 0 ? 180000 : 120000 });
+    return s && s.flags && s.flags.isl_02_clear;
+  }, { timeout: extra.indexOf('down=1') >= 0 ? 240000 : 180000 });
 
   await sleep(500);
   await page.screenshot({ path: path.join(outDir, `${mode}-99-done.png`) });
@@ -78,8 +78,11 @@ async function main() {
     throw new Error('console errors: ' + fatal.slice(0, 8).join(' | '));
   }
   if (!info.flags || !info.flags.isl_01_clear) throw new Error('第 1 關沒有打完');
+  if (!info.flags.isl_02_clear) throw new Error('第 2 關沒有打完');
   if (!info.flags.isl_flank_by_bike && !info.flags.isl_flank_by_sea && !info.flags.isl_flank_front && !info.flags.isl_stealth) throw new Error('沒有打法旗標');
   if (!info.flags.isl_radio_strong && !info.flags.isl_radio_weak) throw new Error('沒有天線旗標');
+  if (!info.flags.isl_akai_with_you && !info.flags.isl_akai_outside) throw new Error('沒有阿凱同行旗標');
+  if (!info.fates || info.fates.lin !== 'alive' && info.fates.lin !== 'kia') throw new Error('第 1 關同袍命運沒接到第 2 關');
   if (extra.indexOf('down=1') >= 0 && !info.downSeen) throw new Error('倒下重試沒有觸發');
   if (extra.indexOf('route=sea') >= 0 && !info.flags.isl_flank_by_sea) throw new Error('沒有舢舨旗標');
   if (extra.indexOf('antenna=warehouse') >= 0 && !info.flags.isl_radio_weak) throw new Error('沒有弱訊號天線');

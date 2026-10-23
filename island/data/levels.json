@@ -22,8 +22,7 @@
       "outpostName": "雷達站",
       "file": "data/levels/02-radar.json",
       "unlockFlag": "isl_01_clear",
-      "clearFlag": "isl_02_clear",
-      "stub": true
+      "clearFlag": "isl_02_clear"
     },
     {
       "id": "op3_ridge",

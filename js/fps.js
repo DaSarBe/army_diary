@@ -501,6 +501,7 @@
       return;
     }
     if (A.carrying) acc *= carryAccMul();
+    if (A.smokeT > 0) acc *= 0.6;
     if (crouched) acc *= (C.crouched && C.crouched.enemyAccMul != null) ? C.crouched.enemyAccMul : 0.05;
     else if (peeking) acc *= (C.peeking && C.peeking.enemyAccMul != null) ? C.peeking.enemyAccMul : 0.7;
     if (playerMoving() && !A.carrying) acc *= 0.7;

@@ -6,7 +6,7 @@
   var W = { ok: false, cb: {} };
   if (!T) { root.World = W; return; }
 
-  var cv, R, scene, cam, hemi, sun, stars, lost = false, paused = false, rafId = 0, last = 0;
+  var cv, R, scene, cam, hemi, sun, stars, spot, lost = false, paused = false, rafId = 0, last = 0;
   var UB = new T.BoxGeometry(1, 1, 1), MATS = {}, CG = null, SIGNS = [];
   var vm = null, vmRifle = null, vmPistol = null;
   var FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei","WenQuanYi Micro Hei","Noto Sans CJK TC",sans-serif';
@@ -16,7 +16,8 @@
     bounds: [-50, 50, -60, 50], spawn: [0, 38], speed: 1, mv: 0, t: 0, stepT: 0,
     cols: [], covers: [], eCovers: [], npcs: {}, temps: [], vehicles: [], inter: [], near: null,
     marks: [], water: null, waterZ: -44, mode: 'title', w: 1, h: 1, veh: null, carry: false,
-    spawns: { sea: [], shore: [] }, sprint: 0, weap: 't91'
+    spawns: { sea: [], shore: [] }, sprint: 0, weap: 't91',
+    blackout: false, powerOn: false, flashlight: false, fogNear: 42, fogFar: 130
   };
   W.S = S;
 
@@ -138,7 +139,17 @@
       wh.rotation.z = Math.PI / 2; wh.position.set(p[0], p[1], p[2]); g.add(wh);
     });
     g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g);
-    S.cols.push({ x0: x - 1.1, x1: x + 1.1, z0: z - 2.1, z1: z + 2.1, y0: 0, y1: 1.6, veh: true });
+    return g;
+  }
+  function makeCart(x, z, yaw) {
+    var g = new T.Group();
+    var box = new T.Mesh(UB, M('#4a4e42')); box.scale.set(1.4, 1.15, 1.8); box.position.y = 0.85; g.add(box);
+    var gen = new T.Mesh(UB, M('#6a5a2a')); gen.scale.set(0.7, 0.55, 0.9); gen.position.set(0, 1.55, 0); g.add(gen);
+    [[-0.55, 0.22, 0.6], [0.55, 0.22, 0.6], [-0.55, 0.22, -0.6], [0.55, 0.22, -0.6]].forEach(function (p) {
+      var wh = new T.Mesh(new T.CylinderGeometry(0.2, 0.2, 0.16, 8), M('#222'));
+      wh.rotation.z = Math.PI / 2; wh.position.set(p[0], p[1], p[2]); g.add(wh);
+    });
+    g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g);
     return g;
   }
   function makeSampan(x, z, yaw) {
@@ -221,12 +232,17 @@
     S.dummies = (map.targets || []).map(function (t) { return dummyTarget(t.x, t.z); });
     (map.npcs || []).forEach(function (n) { addNpc(n.id, n.preset, n.x, n.z, n.ry, n.name); });
     (map.vehicles || []).forEach(function (v) {
-      var mesh = v.type === 'jeep' ? makeJeep(v.x, v.z, v.yaw) : v.type === 'sampan' ? makeSampan(v.x, v.z, v.yaw) : makeBike(v.x, v.z, v.yaw);
-      S.vehicles.push({ id: v.id, type: v.type, x: v.x, z: v.z, yaw: v.yaw || 0, mesh: mesh, occupied: false });
+      var mesh = v.type === 'jeep' ? makeJeep(v.x, v.z, v.yaw) : v.type === 'sampan' ? makeSampan(v.x, v.z, v.yaw) : (v.type === 'cart' || v.type === 'generator_cart') ? makeCart(v.x, v.z, v.yaw) : makeBike(v.x, v.z, v.yaw);
+      var rec = { id: v.id, type: v.type === 'generator_cart' ? 'cart' : v.type, x: v.x, z: v.z, yaw: v.yaw || 0, mesh: mesh, occupied: false, wrecked: false };
+      attachVeh(rec);
+      S.vehicles.push(rec);
     });
     S.antennas = {};
     W.mastRidge = antennaMast(16.4, -6.2); W.mastBunker = antennaMast(-14, -16.6);
+    S.blackout = false; S.powerOn = false; S.flashlight = false;
+    if (spot) spot.intensity = 0;
     setTone(lv.tone || 'dawn', true);
+    if (lv.blackout) W.setBlackout(true);
     W.setMarks([]);
     S.mode = 'play';
   };
@@ -325,9 +341,13 @@
     var k = Math.min(1, dt * 2.4);
     ['sky', 'hs', 'hg', 'dc'].forEach(function (n) { cur[n].lerp(tg[n], k); });
     cur.hi += (tg.hi - cur.hi) * k; cur.di += (tg.di - cur.di) * k; cur.star += (tg.star - cur.star) * k;
-    scene.fog.color.copy(cur.sky); hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hi;
-    sun.color.copy(cur.dc); sun.intensity = cur.di; stars.material.opacity = cur.star;
+    scene.fog.color.copy(cur.sky); hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg);
+    hemi.intensity = S.blackout && !S.powerOn ? cur.hi * 0.15 : cur.hi;
+    sun.color.copy(cur.dc); sun.intensity = S.blackout && !S.powerOn ? cur.di * 0.15 : cur.di;
+    stars.material.opacity = cur.star;
     if (scene.background) scene.background.copy(cur.sky);
+    if (S.blackout && !S.powerOn) { scene.fog.near = 3; scene.fog.far = 18; }
+    else { scene.fog.near = S.fogNear; scene.fog.far = S.fogFar; }
   }
 
   var PR = 0.42;
@@ -358,10 +378,29 @@
   }
 
   function vehSpec(type) {
-    var key = type === 'bike' ? 'motorcycle' : type;
+    var key = type === 'bike' ? 'motorcycle' : (type === 'cart' ? 'generator_cart' : type);
     var v = (W.cfg && W.cfg.vehicles && W.cfg.vehicles[key]) || (W.cfg && W.cfg.props && W.cfg.props[key]) || {};
-    var spd = (v.speed && (v.speed.cruise || v.speed.max)) || v.speed || 10;
-    return { speed: spd, steer: v.turnRate || v.steer || 1.2, water: type === 'sampan' || !!v.water, dmg: v.armorDmgMul || 1 };
+    var spd = (v.speed && (v.speed.cruise || v.speed.max)) || v.pushSpeed || v.speed || 10;
+    var col = v.collision || {};
+    return {
+      speed: spd, steer: v.turnRate || v.steer || 1.2, water: type === 'sampan' || !!v.water,
+      push: type === 'cart', hp: v.hp || (v.cover && v.cover.hp) || 150,
+      obstacleDmg: col.obstacleStopDmg || 15, minorDmg: col.minorDmg || 10,
+      flipDmg: type === 'jeep' ? 40 : 25, armor: v.armorDmgMul || 1,
+      hw: type === 'jeep' ? 1.1 : type === 'cart' ? 0.85 : 0.45,
+      hd: type === 'jeep' ? 2.1 : type === 'cart' ? 1.0 : 0.9
+    };
+  }
+  function attachVeh(v) {
+    var vs = vehSpec(v.type);
+    v.hp = vs.hp; v.maxHp = vs.hp;
+    v.col = { x0: v.x - vs.hw, x1: v.x + vs.hw, z0: v.z - vs.hd, z1: v.z + vs.hd, y0: 0, y1: 1.8, veh: true, vehId: v.id };
+    if (v.type === 'jeep' || v.type === 'cart') S.cols.push(v.col);
+  }
+  function syncVehCol(v) {
+    if (!v || !v.col) return;
+    var vs = vehSpec(v.type);
+    v.col.x0 = v.x - vs.hw; v.col.x1 = v.x + vs.hw; v.col.z0 = v.z - vs.hd; v.col.z1 = v.z + vs.hd;
   }
 
   function update(dt) {
@@ -373,17 +412,35 @@
     var moving = 0;
     var fwx = -Math.sin(S.yaw), fwz = -Math.cos(S.yaw), rtx = Math.cos(S.yaw), rtz = -Math.sin(S.yaw);
     if (S.veh) {
-      var vs = vehSpec(S.veh.type), thr = jy, stw = jx;
-      S.veh.yaw -= stw * vs.steer * dt * (thr < 0 ? -1 : 1);
-      var sp = vs.speed * thr;
-      S.px += -Math.sin(S.veh.yaw) * sp * dt;
-      S.pz += -Math.cos(S.veh.yaw) * sp * dt;
+      var vs = vehSpec(S.veh.type), thr = jy, stw = jx, ox = S.px, oz = S.pz;
+      if (vs.push) {
+        var pmx = rtx * jx + fwx * jy, pmz = rtz * jx + fwz * jy, pml = Math.hypot(pmx, pmz) || 1;
+        S.px += pmx / pml * vs.speed * Math.min(1, mag) * dt;
+        S.pz += pmz / pml * vs.speed * Math.min(1, mag) * dt;
+        S.veh.yaw = S.yaw;
+        moving = Math.min(1, mag);
+      } else {
+        S.veh.yaw -= stw * vs.steer * dt * (thr < 0 ? -1 : 1);
+        var sp = vs.speed * thr;
+        S.px += -Math.sin(S.veh.yaw) * sp * dt;
+        S.pz += -Math.cos(S.veh.yaw) * sp * dt;
+        S.yaw = turn(S.yaw, S.veh.yaw, Math.min(1, dt * 4));
+        moving = Math.min(1, Math.abs(thr));
+        if (moving > 0.2 && Math.random() < dt * 4) Sfx.sfx('engine');
+      }
       if (vs.water) { if (S.pz > -6) S.pz = -6; }
       else if (S.pz < S.waterZ + 1) S.pz = S.waterZ + 1;
-      S.yaw = turn(S.yaw, S.veh.yaw, Math.min(1, dt * 4));
-      S.veh.x = S.px; S.veh.z = S.pz; S.veh.mesh.position.set(S.px, S.veh.type === 'sampan' ? 0.05 : 0, S.pz); S.veh.mesh.rotation.y = S.veh.yaw;
-      moving = Math.min(1, Math.abs(thr));
-      if (moving > 0.2 && Math.random() < dt * 4) Sfx.sfx('engine');
+      if (!vs.water && !vs.push) {
+        var hit = vehHitObstacle();
+        if (hit) {
+          S.px = ox; S.pz = oz;
+          if (Math.abs(thr) > 0.25) W.damageVehicle(vs.obstacleDmg, Math.abs(thr) > 0.85 ? 'flip' : 'obstacle');
+        }
+      }
+      S.veh.x = S.px; S.veh.z = S.pz;
+      S.veh.mesh.position.set(S.px, S.veh.type === 'sampan' ? 0.05 : 0, S.pz);
+      S.veh.mesh.rotation.y = S.veh.yaw;
+      syncVehCol(S.veh);
     } else if (mag > 0.12) {
       var sprint = (!S.crouch && !S.carry && (st.sprint || mag > 0.92 || keys.ShiftLeft || keys.ShiftRight)) ? 1.55 : 1;
       var walk = (S.crouch ? 2.2 : 4.6) * (S.carry ? 0.6 : 1) * sprint * S.speed;
@@ -425,6 +482,21 @@
     });
     if (W.cb.onTick) W.cb.onTick(dt);
     stars.position.copy(cam.position);
+    if (spot) {
+      spot.visible = !!S.flashlight && !!S.blackout && !S.powerOn;
+      if (spot.visible) { spot.target.position.set(0, -0.05, -1); spot.target.updateMatrixWorld(); }
+    }
+  }
+
+  function vehHitObstacle() {
+    var i, hit = false;
+    for (i = 0; i < S.cols.length; i++) {
+      var q = S.cols[i];
+      if (q.dead || q.veh || q.cover || q.ecover || q.noRay) continue;
+      var cx = clamp(S.px, q.x0, q.x1), cz = clamp(S.pz, q.z0, q.z1), dx = S.px - cx, dz = S.pz - cz;
+      if (dx * dx + dz * dz < 0.55 * 0.55) hit = true;
+    }
+    return hit;
   }
   function frame(now) {
     rafId = requestAnimationFrame(frame);
@@ -471,6 +543,9 @@
     scene.fog = new T.Fog('#c9b89a', 42, 130); scene.background = new T.Color('#c9b89a');
     hemi = new T.HemisphereLight('#f0e0c4', '#6d6a50', 0.9); scene.add(hemi);
     sun = new T.DirectionalLight('#ffd2a0', 0.72); sun.position.set(30, 50, 20); scene.add(sun);
+    spot = new T.SpotLight('#ffe8b8', 0, 28, 0.42, 0.45, 1);
+    spot.position.set(0, 0.05, 0.1); cam.add(spot);
+    spot.target.position.set(0, -0.05, -1); cam.add(spot.target);
     var starG = new T.BufferGeometry(), sp = [];
     for (var si = 0; si < 180; si++) { var sa = Math.random() * 6.283, sb = Math.random() * 1.2 + 0.15; sp.push(Math.cos(sa) * Math.cos(sb) * 150, Math.sin(sb) * 150, Math.sin(sa) * Math.cos(sb) * 150); }
     starG.setAttribute('position', new T.Float32BufferAttribute(sp, 3));
@@ -588,7 +663,7 @@
   W.nearestVehicle = function (x, z, maxd) {
     var best = null, bd = maxd || 2.8, i;
     for (i = 0; i < S.vehicles.length; i++) {
-      var v = S.vehicles[i]; if (v.occupied || /wreck/.test(v.id || '')) continue;
+      var v = S.vehicles[i]; if (v.occupied || v.wrecked || v.hp <= 0 || /wreck/.test(v.id || '')) continue;
       var d = Math.hypot(v.x - x, v.z - z);
       if (d < bd) { bd = d; best = v; }
     }
@@ -599,7 +674,8 @@
     return null;
   };
   W.enterVehicle = function (v) {
-    if (!v) return;
+    if (!v || v.wrecked || v.hp <= 0) return;
+    if (S.carry && (v.type === 'cart' || v.type === 'bike' || v.type === 'motorcycle')) return;
     S.veh = v; v.occupied = true; S.px = v.x; S.pz = v.z; S.yaw = v.yaw;
     W.setCrouch(false);
   };
@@ -607,9 +683,55 @@
     if (!S.veh) return;
     S.veh.occupied = false; S.veh.x = S.px; S.veh.z = S.pz;
     S.veh.mesh.position.set(S.px, 0, S.pz);
+    syncVehCol(S.veh);
     S.veh = null;
   };
   W.inVehicle = function () { return S.veh; };
+  W.damageVehicle = function (dmg, reason) {
+    if (!S.veh || S.veh.hp == null) return;
+    S.veh.hp = Math.max(0, S.veh.hp - dmg);
+    if (W.cb.onVehHp) W.cb.onVehHp(S.veh);
+    if (S.veh.hp <= 0) W.wreckVehicle(reason || 'hp');
+  };
+  W.wreckVehicle = function (reason, fallHp) {
+    var v = S.veh; if (!v) return;
+    var vs = vehSpec(v.type);
+    var playerDmg = reason === 'gunner' ? (fallHp || 20) : vs.flipDmg;
+    var x = v.x, z = v.z;
+    W.exitVehicle();
+    v.hp = 0; v.wrecked = true;
+    if (v.mesh) v.mesh.rotation.z = reason === 'gunner' ? 1.1 : 0.55;
+    if (W.cb.onVehWreck) W.cb.onVehWreck(v, playerDmg, reason || 'hp', x, z);
+  };
+  W.setBlackout = function (on) {
+    S.blackout = !!on; S.powerOn = false;
+    if (on) { scene.fog.near = 3; scene.fog.far = 18; scene.fog.color.set('#05070c'); scene.background.set('#05070c'); }
+  };
+  W.setPower = function (on) {
+    S.powerOn = !!on;
+    if (on) { S.flashlight = false; if (spot) spot.intensity = 0; scene.fog.near = S.fogNear; scene.fog.far = S.fogFar; }
+  };
+  W.setFlashlight = function (on) {
+    S.flashlight = !!on && S.blackout && !S.powerOn;
+    if (spot) spot.intensity = S.flashlight ? 2.1 : 0;
+  };
+  W.isLit = function (x, y, z) {
+    if (!S.blackout || S.powerOn) return true;
+    if (!S.flashlight || !cam) return false;
+    var dx = x - cam.position.x, dy = (y || 1.2) - cam.position.y, dz = z - cam.position.z, len = Math.hypot(dx, dy, dz) || 1;
+    if (len > 26) return false;
+    var cp = Math.cos(S.pitch), fx = -Math.sin(S.yaw) * cp, fy = Math.sin(S.pitch), fz = -Math.cos(S.yaw) * cp;
+    return (dx * fx + dy * fy + dz * fz) / len > 0.78;
+  };
+  W.applyEnemyVis = function (e) {
+    if (!e || !e.group) return;
+    var dark = S.blackout && !S.powerOn;
+    var lit = W.isLit(e.x, 1.2, e.z);
+    e.group.traverse(function (m) {
+      if (m.isLine) m.visible = dark && lit;
+      else if (m.isMesh) m.visible = !dark || lit;
+    });
+  };
   W.showAntenna = function (which) {
     if (W.mastRidge) W.mastRidge.visible = which === 'ridge';
     if (W.mastBunker) W.mastBunker.visible = which === 'bunker';

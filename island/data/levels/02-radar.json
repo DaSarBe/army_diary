@@ -1,0 +1,127 @@
+{
+  "id": "op2_radar",
+  "name": "雷達站",
+  "outpost": "op2_radar",
+  "tone": "night",
+  "blackout": false,
+  "bounds": [-48, 48, -8, 96],
+  "spawn": [14, 14],
+  "spawnYaw": 0,
+  "waterZ": -44,
+  "map": {
+    "ground": [
+      { "kind": "grass", "x": 0, "z": 40, "w": 110, "d": 120 },
+      { "kind": "sand", "x": 0, "z": 4, "w": 110, "d": 28 }
+    ],
+    "props": [
+      { "kind": "bld", "x": 18, "z": 8, "w": 9, "d": 7, "h": 3.4, "wall": "#6a5a48", "roof": "#3a3228", "lab": "倉庫" },
+      { "kind": "bld", "x": 0, "z": 74, "w": 14, "d": 10, "h": 4.6, "wall": "#4a4e46", "roof": "#2c3028", "lab": "雷達站" },
+      { "kind": "bld", "x": -16, "z": 70, "w": 7, "d": 6, "h": 3.2, "wall": "#5a5348", "roof": "#3a3830", "lab": "機房" },
+      { "kind": "bld", "x": 16, "z": 68, "w": 6, "d": 5, "h": 2.8, "wall": "#4e5248", "roof": "#2e3228", "lab": "庫房" },
+      { "kind": "road", "x": 8, "z": 40, "w": 3.6, "d": 70 },
+      { "kind": "crate", "x": 12, "z": 12, "w": 1.1, "h": 0.7, "d": 0.9 },
+      { "kind": "crate", "x": -8, "z": 72, "w": 1.0, "h": 0.6, "d": 0.8 },
+      { "kind": "rock", "x": -20, "z": 36, "w": 2.8, "h": 1.4, "d": 2.2 },
+      { "kind": "rock", "x": 22, "z": 44, "w": 2.4, "h": 1.2, "d": 2.0 },
+      { "kind": "tree", "x": -28, "z": 28 },
+      { "kind": "tree", "x": 26, "z": 22 },
+      { "kind": "sign", "x": 8, "z": 20, "y": 2.1, "w": 3.4, "h": 0.65, "txt": "雷達站", "bg": "#2c4a2c", "fg": "#f2ecd0" }
+    ],
+    "covers": [
+      { "type": "sandbag", "x": 6, "z": 28, "w": 3.4, "d": 0.9, "h": 1.0, "ax": 6, "az": 29.2 },
+      { "type": "sandbag", "x": 12, "z": 36, "w": 3.2, "d": 0.9, "h": 1.0, "ax": 12, "az": 37.2 },
+      { "type": "sandbag", "x": 2, "z": 48, "w": 3.4, "d": 0.9, "h": 1.0, "ax": 2, "az": 49.2 },
+      { "type": "sandbag", "x": -6, "z": 58, "w": 3.4, "d": 0.9, "h": 1.0, "ax": -6, "az": 59.2 },
+      { "type": "sandbag", "x": 8, "z": 62, "w": 3.2, "d": 0.9, "h": 1.0, "ax": 8, "az": 63.2 },
+      { "type": "rock", "x": 18, "z": 52, "w": 2.4, "h": 1.3, "d": 2.0, "ax": 18, "az": 53.4 }
+    ],
+    "eCovers": [
+      { "x": -8, "z": 66, "kind": "sand" },
+      { "x": 4, "z": 68, "kind": "sand" },
+      { "x": 14, "z": 64, "kind": "sand" },
+      { "x": -4, "z": 78, "kind": "boat" },
+      { "x": 10, "z": 80, "kind": "boat" },
+      { "x": 6, "z": 42, "kind": "sand" },
+      { "x": -2, "z": 38, "kind": "sand" }
+    ],
+    "npcs": [
+      { "id": "npc_signal_lin", "preset": "lin", "x": 12, "z": 16, "ry": 3.2, "name": "小林" },
+      { "id": "npc_akai", "preset": "kai", "x": 16, "z": 15.2, "ry": 3.4, "name": "阿凱" }
+    ],
+    "vehicles": [
+      { "id": "jeep_main", "type": "jeep", "x": 10, "z": 14, "yaw": 0 },
+      { "id": "cart_gen", "type": "cart", "x": 10, "z": 58, "yaw": 0 }
+    ],
+    "spawns": {
+      "sea": [[-10, 82], [4, 86], [16, 84], [8, 90]],
+      "shore": [[-6, 66], [6, 64], [16, 62], [0, 48], [10, 40]]
+    }
+  },
+  "beats": [
+    { "id": "jeep_shop", "type": "talk", "story": "jeep_shop", "checkpoint": true, "place": [14, 14] },
+    { "id": "driver_choice", "type": "choice", "story": "driver_choice" },
+    {
+      "id": "jeep_ride",
+      "type": "vehicle",
+      "flag": "isl_jeep_convoy",
+      "routes": {
+        "default": {
+          "vehicle": "jeep_main",
+          "story": "vehicle_jeep",
+          "land": [8, 50],
+          "waypoints": [[10, 22], [8, 34], [8, 46], [8, 50]]
+        }
+      }
+    },
+    {
+      "id": "road_fight",
+      "type": "combat",
+      "story": "road_fight",
+      "checkpoint": true,
+      "wave": {
+        "id": "patrol",
+        "name": "路上遭遇",
+        "enemies": { "rifleman": 3, "scout": 2 },
+        "grace": 1.6
+      }
+    },
+    { "id": "radar_door", "type": "talk", "story": "radar_door" },
+    {
+      "id": "station_assault",
+      "type": "combat",
+      "story": "station_assault",
+      "blackout": true,
+      "checkpoint": true,
+      "wave": {
+        "id": "station",
+        "name": "雷達站",
+        "enemies": { "rifleman": 6, "gunner": 3, "scout": 3 },
+        "grace": 2.0
+      }
+    },
+    {
+      "id": "restore_power",
+      "type": "interact",
+      "holdMs": 2400,
+      "label": "復電",
+      "kind": "power",
+      "x": -16,
+      "z": 70,
+      "story": "restore_power",
+      "setFlag": "isl_power_restored",
+      "checkpoint": true
+    },
+    {
+      "id": "grab_t75",
+      "type": "interact",
+      "holdMs": 1400,
+      "label": "撿起 T75",
+      "kind": "t75",
+      "x": -6,
+      "z": 72,
+      "story": "grab_t75"
+    },
+    { "id": "dark_talk", "type": "talk", "story": "dark_talk" },
+    { "id": "complete", "type": "complete", "story": "radar_complete", "setFlag": "isl_02_clear" }
+  ]
+}

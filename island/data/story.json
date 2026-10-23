@@ -149,6 +149,93 @@
     },
     "locked": {
       "text": "關卡嚴格按 1 到 5。先把登陸灘頭打完。"
+    },
+    "jeep_shop": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "阿凱", "text": "老方，你還活著喔？" },
+        { "who": "阿凱", "text": "你胖了。" },
+        { "who": "小林", "text": "你才胖。扳手拿穩。" },
+        { "who": "阿凱", "text": "我現在賣保險。召集令下來的時候，我正在客戶家簽約。" },
+        { "who": "黃連長", "text": "雷達站沒電。先把這台吉普修好，再上去。" }
+      ]
+    },
+    "jeep_shop_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "老方。頻道裡少一個人。扳手還是要拿。" },
+        { "who": "黃連長", "text": "雷達站沒電。先把車修好。" }
+      ]
+    },
+    "driver_choice": {
+      "lines": [
+        { "who": "阿凱", "text": "誰開？我可以開，也可以坐後面那挺機槍。不想開的話我就留在車上接應。" }
+      ],
+      "choices": [
+        { "id": "akai_drive", "text": "阿凱開車，我跟小林上車", "flag": "isl_akai_with_you", "clear": "isl_akai_outside" },
+        { "id": "lin_drive", "text": "小林開車，阿凱上機槍", "flag": "isl_akai_with_you", "clear": "isl_akai_outside" },
+        { "id": "self_drive", "text": "我自己開，阿凱留在車上接應", "flag": "isl_akai_outside", "clear": "isl_akai_with_you" }
+      ]
+    },
+    "vehicle_jeep": {
+      "hint": "上吉普車。路上會遇到巡邏。車載 T75 連射會過熱，車被打爆會被甩出去。",
+      "chatter": [
+        { "who": "阿凱", "text": "這台方向盤比我那台保險業務車還重。" },
+        { "who": "黃連長", "text": "前面有車。不要停太久。" }
+      ]
+    },
+    "road_fight": {
+      "lines": [
+        { "who": "黃連長", "text": "接觸。可以衝過去，可以下車，不要跟他們耗。" }
+      ]
+    },
+    "radar_door": {
+      "lines": [
+        { "who": "小林", "text": "整區沒電。備用燈偶爾閃一下。手電筒會暴露位置。" },
+        { "who": "黃連長", "text": "老方看得懂配電箱。中途可以復電。復電之後整層會亮。" }
+      ]
+    },
+    "radar_door_weak": {
+      "lines": [
+        { "who": "小林", "text": "整區沒電。" },
+        { "who": "黃連長", "text": "……復電……聽得到嗎。雜訊很大。" }
+      ]
+    },
+    "station_assault": {
+      "lines": [
+        { "who": "黃連長", "text": "進站。摸黑或復電，你們選。" }
+      ]
+    },
+    "restore_power": {
+      "hint": "到機房配電箱復電。標籤被換過，是本島的備用線路圖。",
+      "done": [
+        { "who": "小林", "text": "亮了。這張線路圖不是島上自己的。有人事先摸過，而且很懂。" },
+        { "who": "黃連長", "text": "記下。先把機房拿回來。" }
+      ]
+    },
+    "grab_t75": {
+      "hint": "機房角落有一把被拆下的 T75。",
+      "done": [
+        { "who": "阿凱", "text": "這挺還能打？那我以後不坐後面了，我要當射手。" }
+      ]
+    },
+    "dark_talk": {
+      "lines": [
+        { "who": "阿凱", "text": "你不准跟別人講。我怕黑。小時候被關在雜物間。" },
+        { "who": "小林", "text": "我只跟連長講。" },
+        { "who": "阿凱", "text": "老方！" }
+      ]
+    },
+    "dark_talk_outside": {
+      "lines": [
+        { "who": "黃連長", "text": "阿凱在車上接應。你們先回來。" },
+        { "who": "小林", "text": "他怕黑。這句不要跟他講是我說的。" }
+      ]
+    },
+    "radar_complete": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。下一目標稜線哨所。先休息。" },
+        { "who": "電台", "text": "收到。" }
+      ]
     }
   }
 }
