@@ -16,6 +16,7 @@
       { "kind": "bld", "x": 0, "z": 78, "w": 14, "d": 10, "h": 4.2, "wall": "#5a5348", "roof": "#3a3830", "lab": "指揮所" },
       { "kind": "bld", "x": -16, "z": 70, "w": 6, "d": 5, "h": 2.8, "wall": "#4e5248", "roof": "#2e3228", "lab": "庫房" },
       { "kind": "bld", "x": 16, "z": 68, "w": 5.5, "d": 5, "h": 2.6, "wall": "#4e5248", "roof": "#2e3228" },
+      { "kind": "ladder", "x": 0, "z": 72.7, "h": 4.2, "yaw": 3.1416 },
       { "kind": "crate", "x": -4, "z": 52, "w": 1.1, "h": 0.7, "d": 0.9 },
       { "kind": "crate", "x": 5, "z": 58, "w": 1.0, "h": 0.7, "d": 0.8 },
       { "kind": "sign", "x": 0, "z": 14, "y": 2.1, "w": 3.8, "h": 0.65, "txt": "島上指揮所", "bg": "#2c4a2c", "fg": "#f2ecd0" }
@@ -75,10 +76,10 @@
         "enemies": { "rifleman": 8, "gunner": 3, "sniper": 2, "commander": 1 },
         "stealthEnemies": { "rifleman": 4, "gunner": 1, "sniper": 1, "commander": 1 },
         "grace": 1.6,
-        "placed": [{ "type": "commander", "x": 0, "z": 80 }]
+        "placed": [{ "type": "commander", "x": 0, "z": 86 }]
       }
     },
-    { "id": "hq_office", "type": "talk", "story": "hq_office", "place": [0, 76] },
+    { "id": "hq_office", "type": "talk", "story": "hq_office", "place": [0, 84.2] },
     { "id": "commander_choice", "type": "choice", "story": "commander_choice" },
     { "id": "complete", "type": "complete", "story": "hq_complete", "setFlag": "isl_05_clear" }
   ]

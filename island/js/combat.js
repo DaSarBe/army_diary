@@ -509,6 +509,10 @@
     var pts = W.S.spawns, bag = (Math.random() < 0.45 ? pts.sea : pts.shore) || pts.sea || [[0, -50]];
     var sp = bag[Math.floor(Math.random() * bag.length)];
     var e = { type: type, hp: ET(type).hp, state: type === 'commander' ? 'peek' : 'advance', x: x != null ? x : sp[0] + rnd(-3, 3), z: z != null ? z : sp[1] + rnd(-2, 2), t: 0, fireCd: rnd(0.4, 1.2), burst: 0, cover: null, exposed: true, walkT: Math.random() * 6, dieT: 0, flinch: 0, relocT: rnd(4, 6), peekT: 0, crouch: 0 };
+    if (W.nudgeOutside) {
+      var nudged = W.nudgeOutside(e.x, e.z, 1.5);
+      e.x = nudged.x; e.z = nudged.z;
+    }
     var m = buildEnemy(type, e); e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline;
     e.group.position.set(e.x, 0, e.z); scene.add(e.group);
     pickCover(e);
