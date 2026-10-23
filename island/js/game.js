@@ -967,9 +967,14 @@
     var kiaN = (linK ? 1 : 0) + (akaiK ? 1 : 0) + (wangK ? 1 : 0);
     var lines = [], variant = end;
     function add(who, text) { lines.push({ who: who || '', text: text }); }
+    function addKiaMemorial() {
+      if (linK) { lines.push({ pause: 1500 }); add('黃連長', '小林，南灘通信。位置我收到了。'); }
+      if (akaiK) { lines.push({ pause: 1500 }); add('黃連長', '阿凱，保險業務。他守的那一段，沒有人退。'); }
+      if (wangK) { lines.push({ pause: 1500 }); add('黃連長', '王班長。方子豪的班長。'); }
+    }
     if (end === 'island_guard') {
       add('黃連長', '回來就好。');
-      add('王班長', '便當。說話算話。');
+      add('王班長', '便當。我說話算話。');
       add('阿凱', '班長，你終於——');
       add('小林', '天線我收好了。');
       if (hasFlag('isl_chat_wang')) {
@@ -988,13 +993,12 @@
       /* A 優先：同袍死兩人以上時，即使同時留下俘虜並擊斃指揮官，也不播 B 版。 */
       variant = 'silent_a';
       add('黃連長', '名單我會親自簽。');
-      if (linK) { lines.push({ pause: 1500 }); add('黃連長', '小林，南灘通信。位置我收到了。'); }
-      if (akaiK) { lines.push({ pause: 1500 }); add('黃連長', '阿凱，保險業務。他守的那一段，沒有人退。'); }
-      if (wangK) { lines.push({ pause: 1500 }); add('黃連長', '王班長。方子豪的班長。'); }
+      addKiaMemorial();
       add('電台', '……');
     } else if (end === 'silent_island') {
       variant = 'silent_b';
       add('黃連長', '坑道裡還有三個名字。我也會簽。');
+      if (kiaN === 1) addKiaMemorial();
       add('黃連長', '指揮官死了，地圖上的據點都還在。這不是勝利，只是結束。');
       add('電台', '……');
     } else {
@@ -1011,7 +1015,7 @@
       lines.push({ pause: 1200 });
       add('', '隔天，水電行。');
       add('電視', '離島防務順利恢復。');
-      add('方子豪', '');
+      add('', '他關掉電視，沒有說話。');
     }
     save.endingVariant = variant;
     save.endingLines = lines.filter(function (ln) { return !ln.pause; }).map(function (ln) {

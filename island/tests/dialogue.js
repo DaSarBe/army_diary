@@ -77,6 +77,18 @@ async function main() {
         wang: 'alive', akai: 'alive', lin: 'alive',
         flags: { isl_captives_left: true, isl_commander_killed: true }
       }),
+      silentB_wang: ev({
+        wang: 'kia', akai: 'alive', lin: 'alive',
+        flags: { isl_captives_left: true, isl_commander_killed: true }
+      }),
+      silentB_akai: ev({
+        wang: 'alive', akai: 'kia', lin: 'alive',
+        flags: { isl_captives_left: true, isl_commander_killed: true }
+      }),
+      silentB_lin: ev({
+        wang: 'alive', akai: 'alive', lin: 'kia',
+        flags: { isl_captives_left: true, isl_commander_killed: true }
+      }),
       silentBothPreferA: ev({
         wang: 'kia', akai: 'kia', lin: 'alive',
         flags: { isl_captives_left: true, isl_commander_killed: true }
@@ -106,8 +118,18 @@ async function main() {
 
   const log = (...a) => console.log('[island dialogue]', ...a);
 
+  function noEmptyBox(lines, label) {
+    (lines || []).forEach(t => {
+      const i = String(t).indexOf(':');
+      const text = i < 0 ? String(t) : String(t).slice(i + 1);
+      must(text.trim() !== '', (label || '結局') + ' 出現空對話框: ' + JSON.stringify(t));
+    });
+  }
+  Object.keys(cases).forEach(k => noEmptyBox(cases[k].lines, k));
+
   must(cases.guard.ending === 'island_guard', '守衛結局未命中');
   must(has(cases.guard.lines, /回來就好/), '守衛缺少碼頭回來就好');
+  must(has(cases.guard.lines, /便當。我說話算話/), '守衛便當句未改');
   must(has(cases.guard.lines, /去過島上的/), '守衛缺少水電行客人');
   must(has(cases.guard.lines, /你是來找人的/), '守衛缺少找人回聲');
   must(cases.guard.camp === 'hq_camp', '全員活著應播 hq_camp');
@@ -122,6 +144,11 @@ async function main() {
   must(cases.namelessNone.ending === 'nameless_line', '無名無人死未命中');
   must(has(cases.namelessNone.lines, /離島防務順利恢復/), '無名缺少新聞');
   must(has(cases.namelessNone.lines, /指揮官倒下了/), '無名無人死前綴');
+  must(has(cases.namelessNone.lines, /他關掉電視，沒有說話/), '無名缺少關電視旁白');
+  must(none(cases.namelessNone.lines, /^方子豪:\s*$/), '無名不該有空的方子豪對話框');
+  must(has(cases.namelessLin.lines, /他關掉電視，沒有說話/), '無名小林版缺少關電視旁白');
+  must(has(cases.namelessAkai.lines, /他關掉電視，沒有說話/), '無名阿凱版缺少關電視旁白');
+  must(has(cases.namelessWang.lines, /他關掉電視，沒有說話/), '無名王班長版缺少關電視旁白');
   must(has(cases.namelessLin.lines, /南灘通信，小林/), '無名小林前綴');
   must(has(cases.namelessAkai.lines, /還沒簽完那張保單/), '無名阿凱前綴');
   must(has(cases.namelessWang.lines, /他帶過的人/), '無名王班長前綴');
@@ -153,7 +180,20 @@ async function main() {
   must(none(cases.silentB_allAlive.lines, /頻道裡人少了/), '沉默 B 不可播頻道裡人少了');
   must(has(cases.silentB_allAlive.lines, /坑道裡還有三個名字/), '沉默 B 俘虜名單');
   must(has(cases.silentB_allAlive.lines, /這不是勝利/), '沉默 B 這不是勝利');
+  must(none(cases.silentB_allAlive.lines, /小林，南灘通信|阿凱，保險業務|王班長。方子豪的班長/), '沉默 B 全活不該有名單句');
   must(cases.silentB_allAlive.camp === 'hq_camp', '沉默 B 同袍可全活');
+
+  function memorialBeforeEnd(lines, nameRe, label) {
+    const iName = (lines || []).findIndex(t => nameRe.test(t));
+    const iEnd = (lines || []).findIndex(t => /這不是勝利/.test(t));
+    must(iName >= 0 && iEnd >= 0 && iName < iEnd, label + ' 名單句應在「這不是勝利」之前');
+  }
+  must(cases.silentB_wang.variant === 'silent_b', '王班長一人死應仍為沉默 B');
+  must(has(cases.silentB_wang.lines, /坑道裡還有三個名字/), '沉默 B 一人死仍有俘虜句');
+  memorialBeforeEnd(cases.silentB_wang.lines, /王班長。方子豪的班長/, '沉默 B 王班長');
+  must(none(cases.silentB_wang.lines, /名單我會親自簽/), '一人死不該改播 A');
+  memorialBeforeEnd(cases.silentB_akai.lines, /阿凱，保險業務/, '沉默 B 阿凱');
+  memorialBeforeEnd(cases.silentB_lin.lines, /小林，南灘通信/, '沉默 B 小林');
 
   must(cases.silentBothPreferA.ending === 'silent_island' && cases.silentBothPreferA.variant === 'silent_a', 'A+B 同時應固定播 A');
   must(has(cases.silentBothPreferA.lines, /名單我會親自簽/), 'A+B 同時應有 A 名單');

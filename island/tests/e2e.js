@@ -97,7 +97,7 @@ async function main() {
       const n = document.getElementById('dName');
       if (!dlg || dlg.hidden || !t || !t.textContent) return false;
       const s = ((n && n.textContent) || '') + t.textContent;
-      return /回來就好|便當。說話算話|名單我會親自簽|坑道裡還有三個名字|這不是勝利|離島防務順利恢復|指揮官倒下了|去過島上|南灘通信/.test(s);
+      return /回來就好|便當。我說話算話|名單我會親自簽|坑道裡還有三個名字|這不是勝利|離島防務順利恢復|指揮官倒下了|去過島上|南灘通信|他關掉電視/.test(s);
     }, { timeout: 20000 });
     await page.screenshot({ path: path.join(outDir, `${mode}-ending-dlg.png`) });
   } catch (e) { log('ending dlg shot skipped', e.message); }
@@ -142,6 +142,11 @@ async function main() {
   if (!info.endingLines || !info.endingLines.length) throw new Error('沒有結局對白');
   if (!info.hqCamp) throw new Error('沒有營區場景');
   const joined = info.endingLines.join('\n');
+  info.endingLines.forEach(t => {
+    const i = String(t).indexOf(':');
+    const text = i < 0 ? String(t) : String(t).slice(i + 1);
+    if (!text.trim()) throw new Error('結局空對話框: ' + JSON.stringify(t));
+  });
   const campId = info.hqCamp;
   if (info.fates.wang === 'kia' && info.fates.akai === 'kia' && info.fates.lin === 'kia' && campId !== 'hq_camp_alone') throw new Error('三人陣亡應為 alone，實際 ' + campId);
   if (info.fates.wang === 'kia' && info.fates.akai === 'kia' && info.fates.lin !== 'kia' && campId !== 'hq_camp_lin_only') throw new Error('只剩小林應為 lin_only，實際 ' + campId);
@@ -157,11 +162,14 @@ async function main() {
   if (!params.ending && extra.indexOf('boss=kill') < 0 && extra.indexOf('captive=leave') < 0 && extra.indexOf('down=1') < 0 && extra.indexOf('fate=kia') < 0 && extra.indexOf('akai=kia') < 0 && extra.indexOf('wang=kia') < 0 && extra.indexOf('lin=kia') < 0 && extra.indexOf('scout=kill') < 0 && info.ending !== 'island_guard') throw new Error('預設應為島嶼守衛，實際 ' + info.ending);
   if (info.ending === 'island_guard') {
     if (!/回來就好/.test(joined)) throw new Error('島嶼守衛缺少碼頭「回來就好」');
+    if (!/便當。我說話算話/.test(joined)) throw new Error('島嶼守衛便當句未改');
     if (!/去過島上的/.test(joined)) throw new Error('島嶼守衛缺少水電行客人問句');
     if (params.chat === 'wang' && !/你是來找人的/.test(joined)) throw new Error('島嶼守衛缺少王班長找人回聲');
   }
   if (info.ending === 'nameless_line') {
     if (!/離島防務順利恢復/.test(joined)) throw new Error('無名防線缺少新聞「離島防務順利恢復」');
+    if (!/他關掉電視，沒有說話/.test(joined)) throw new Error('無名防線缺少關電視旁白');
+    if (/^方子豪:\s*$/m.test(joined)) throw new Error('無名防線不該有空的方子豪對話框');
     if (info.fates.lin !== 'kia' && info.fates.akai !== 'kia' && info.fates.wang !== 'kia' && !/指揮官倒下了/.test(joined)) throw new Error('無名防線無人死應有前綴');
     if (info.fates.lin === 'kia' && info.fates.akai !== 'kia' && info.fates.wang !== 'kia' && !/南灘通信，小林/.test(joined)) throw new Error('無名防線小林陣亡前綴錯誤');
     if (info.fates.akai === 'kia' && info.fates.lin !== 'kia' && info.fates.wang !== 'kia' && !/還沒簽完那張保單/.test(joined)) throw new Error('無名防線阿凱陣亡前綴錯誤');
@@ -177,6 +185,15 @@ async function main() {
     if (/頻道裡人少了/.test(joined)) throw new Error('沉默的島 B 不該出現「頻道裡人少了」');
     if (!/坑道裡還有三個名字/.test(joined)) throw new Error('沉默的島 B 缺少俘虜名單');
     if (!/這不是勝利/.test(joined)) throw new Error('沉默的島 B 缺少「這不是勝利」');
+    const kiaN = ['wang', 'akai', 'lin'].filter(id => info.fates[id] === 'kia').length;
+    if (kiaN === 1) {
+      if (info.fates.lin === 'kia' && !/小林，南灘通信/.test(joined)) throw new Error('沉默 B 一人死沒念小林');
+      if (info.fates.akai === 'kia' && !/阿凱，保險業務/.test(joined)) throw new Error('沉默 B 一人死沒念阿凱');
+      if (info.fates.wang === 'kia' && !/王班長。方子豪的班長/.test(joined)) throw new Error('沉默 B 一人死沒念王班長');
+      const iName = info.endingLines.findIndex(t => /小林，南灘通信|阿凱，保險業務|王班長。方子豪的班長/.test(t));
+      const iEnd = info.endingLines.findIndex(t => /這不是勝利/.test(t));
+      if (iName < 0 || iName > iEnd) throw new Error('沉默 B 名單句應在「這不是勝利」之前');
+    }
   }
   if (params.hq === 'jeep') {
     if (!info.jeepChat || !info.jeepChat.length) throw new Error('吉普車沒有車上對白');
