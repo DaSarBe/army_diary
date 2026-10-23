@@ -100,11 +100,11 @@
     if (freezeAuto || pref !== 'auto') return;
     if (!isPlayable(ctx) || !(dt > 0) || dt > 0.25) return;
     var warm = table.autoWarmupSec != null ? table.autoWarmupSec : 4;
-    if (warmupT < warm) { warmupT += dt; return; }
+    if (warmupT + 1e-4 < warm) { warmupT += dt; return; }
     sampleDts.push(dt);
     sampleT += dt;
     var need = table.autoSampleSec || 3;
-    if (sampleT < need) return;
+    if (sampleT + 1e-4 < need) return;
     var med = median(sampleDts);
     var fps = med > 0 ? (1 / med) : 0;
     clearSample();

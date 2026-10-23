@@ -111,13 +111,13 @@ async function main() {
     G.setPref('auto');
     rec('start');
     let t = performance.now() + 20000;
-    t = pump(t, 80, 0.05); /* 4s 暖機，20fps 也不該降 */
+    t = pump(t, 90, 0.05); /* 4.5s 暖機，20fps 也不該降 */
     rec('warm');
     const afterWarm = G.applied();
-    t = pump(t, 60, 0.05); /* 第一次 3s 低於門檻 */
+    t = pump(t, 70, 0.05); /* 第一次取樣窗口低於門檻 */
     rec('one');
     const afterOne = G.applied();
-    t = pump(t, 60, 0.05); /* 連續第二次才降 */
+    t = pump(t, 70, 0.05); /* 連續第二次才降 */
     rec('two');
     const afterDrop = G.applied();
 
@@ -128,9 +128,9 @@ async function main() {
     G.setPref('auto');
     rec('reset');
     t = performance.now() + 20000;
-    t = pump(t, 80, 0.05); /* 暖機 */
+    t = pump(t, 90, 0.05); /* 暖機 */
     function spikeWindow() {
-      t = pump(t, 170, 1 / 60);
+      t = pump(t, 180, 1 / 60);
       t = pump(t, 1, 0.2);
     }
     spikeWindow();
@@ -140,17 +140,17 @@ async function main() {
 
     t = performance.now() + 20000;
     G.resetPlay();
-    t = pump(t, 40, 0.05); /* 暖機 2 秒 */
-    t = pump(t, 80, 0.05, { mode: 'play', paused: true, hidden: false });
-    t = pump(t, 80, 0.05, { mode: 'play', paused: false, hidden: true });
-    t = pump(t, 80, 0.05, { mode: 'talk', paused: false, hidden: false });
+    t = pump(t, 45, 0.05); /* 暖機約 2 秒 */
+    t = pump(t, 90, 0.05, { mode: 'play', paused: true, hidden: false });
+    t = pump(t, 90, 0.05, { mode: 'play', paused: false, hidden: true });
+    t = pump(t, 90, 0.05, { mode: 'talk', paused: false, hidden: false });
     rec('paused');
     const duringPause = G.applied();
-    t = pump(t, 40, 0.05); /* 再 2 秒暖機才滿 */
-    t = pump(t, 60, 0.05);
+    t = pump(t, 45, 0.05); /* 再約 2 秒暖機才滿 */
+    t = pump(t, 70, 0.05);
     rec('stillWarm');
     const stillNeedTwo = G.applied();
-    t = pump(t, 60, 0.05);
+    t = pump(t, 70, 0.05);
     rec('afterPause');
     const afterPause = G.applied();
 
@@ -158,19 +158,19 @@ async function main() {
     G.setPref('auto');
     rec('high');
     t = performance.now() + 20000;
-    t = pump(t, 80, 0.05);
-    t = pump(t, 60, 0.05);
-    t = pump(t, 60, 0.05);
+    t = pump(t, 90, 0.05);
+    t = pump(t, 70, 0.05);
+    t = pump(t, 70, 0.05);
     rec('toMid');
     const midNow = G.applied();
     const tMid = t;
-    t = pump(t, 60, 0.05);
-    t = pump(t, 60, 0.05);
+    t = pump(t, 70, 0.05);
+    t = pump(t, 70, 0.05);
     rec('cool');
     const duringCool = G.applied();
     t = tMid + 11000;
-    t = pump(t, 60, 0.05);
-    t = pump(t, 60, 0.05);
+    t = pump(t, 70, 0.05);
+    t = pump(t, 70, 0.05);
     rec('toLow');
     const afterCool = G.applied();
 
