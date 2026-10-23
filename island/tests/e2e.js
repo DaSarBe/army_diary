@@ -94,12 +94,15 @@ async function main() {
     await page.waitForFunction(() => {
       const dlg = document.getElementById('dlg');
       const t = document.getElementById('dText');
-      return dlg && !dlg.hidden && t && t.textContent;
-    }, { timeout: 8000 });
-    await sleep(200);
+      const n = document.getElementById('dName');
+      if (!dlg || dlg.hidden || !t || !t.textContent) return false;
+      const s = ((n && n.textContent) || '') + t.textContent;
+      return /回來就好|便當。說話算話|名單我會親自簽|坑道裡還有三個名字|這不是勝利|離島防務順利恢復|指揮官倒下了|去過島上|南灘通信/.test(s);
+    }, { timeout: 20000 });
     await page.screenshot({ path: path.join(outDir, `${mode}-ending-dlg.png`) });
   } catch (e) { log('ending dlg shot skipped', e.message); }
-  await sleep(500);
+  await page.waitForFunction(() => window.__island && __island.phase() === 'done', { timeout: 60000 });
+  await sleep(400);
   await page.screenshot({ path: path.join(outDir, `${mode}-99-done.png`) });
 
   const info = await page.evaluate(() => {
@@ -145,7 +148,8 @@ async function main() {
   if (info.fates.wang === 'kia' && info.fates.lin === 'kia' && info.fates.akai !== 'kia' && campId !== 'hq_camp_akai_only') throw new Error('只剩阿凱應為 akai_only，實際 ' + campId);
   if (info.fates.wang !== 'kia' && info.fates.akai === 'kia' && info.fates.lin === 'kia' && campId !== 'hq_camp_wang_only') throw new Error('只剩王班長應為 wang_only，實際 ' + campId);
   if (!info.flags.isl_commander_captured && !info.flags.isl_commander_killed) throw new Error('沒有指揮官旗標');
-  if (!info.rolls['lin:op5_hq'] || !info.rolls['akai:op5_hq']) throw new Error('第 5 關小林／阿凱擲骰沒寫入');
+  if (info.fates.lin !== 'kia' && !info.rolls['lin:op5_hq']) throw new Error('第 5 關小林擲骰沒寫入');
+  if (info.fates.akai !== 'kia' && !info.rolls['akai:op5_hq']) throw new Error('第 5 關阿凱擲骰沒寫入');
   if (params.ending === 'silent_a' && (info.ending !== 'silent_island' || info.endingVariant !== 'silent_a')) throw new Error('應為沉默的島 A，實際 ' + info.ending + '/' + info.endingVariant);
   if ((params.ending === 'silent' || params.ending === 'silent_b') && (info.ending !== 'silent_island' || info.endingVariant !== 'silent_b')) throw new Error('應為沉默的島 B，實際 ' + info.ending + '/' + info.endingVariant);
   if (params.ending === 'nameless' && info.ending !== 'nameless_line') throw new Error('應為無名防線，實際 ' + info.ending);

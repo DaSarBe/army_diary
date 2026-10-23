@@ -348,7 +348,7 @@
         var b = document.createElement('button'); b.className = 'primary'; b.textContent = i === lines.length - 1 && !choices ? '繼續' : '下一句';
         b.onclick = function () { Sfx.sfx('click'); i++; render(); };
         $('#dBtns').appendChild(b);
-        if (auto) setTimeout(function () { if (b.parentNode) b.click(); }, 180);
+        if (auto) setTimeout(function () { if (b.parentNode) b.click(); }, sceneId === '_ending' ? 900 : 180);
         return;
       }
       if (choices && choices.length) {
