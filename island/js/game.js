@@ -375,6 +375,7 @@
   }
   function showCompleteCard() {
     phase = 'done';
+    objective('');
     var lin = fateOf('lin') === 'kia' ? '小林：陣亡（已鎖定）' : '小林：生還';
     var ant = hasFlag('isl_radio_strong') ? '碉堡頂（訊號好）' : '倉庫後（訊號弱）';
     var flank = hasFlag('isl_flank_by_sea') ? '舢舨繞後' : hasFlag('isl_flank_by_bike') ? '機車側翼' : hasFlag('isl_stealth') ? '潛行' : '正面推進';
