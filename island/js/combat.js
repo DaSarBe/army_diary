@@ -283,7 +283,9 @@
     var tBlock = W.rayBlock(ox, oy, oz, dir[0], dir[1], dir[2], wep().range || 280, skip);
     rc.set(new T.Vector3(ox, oy, oz), new T.Vector3(dir[0], dir[1], dir[2])); rc.far = tBlock;
     var metas = [];
-    A.enemies.forEach(function (e) { if (e.state !== 'dead' && e.exposed) { e.group.updateMatrixWorld(true); metas = metas.concat(e.hit); } });
+    A.enemies.forEach(function (e) {
+      if (e.state !== 'dead' && (e.exposed || Cbt.bot === 'aim')) { e.group.updateMatrixWorld(true); metas = metas.concat(e.hit); }
+    });
     var hits = metas.length ? rc.intersectObjects(metas, false) : [], tEnd = tBlock, hitE = null;
     if (hits.length) {
       var h0 = hits[0], e0 = h0.object.userData.enemy, part = h0.object.userData.part;
@@ -559,16 +561,16 @@
   };
 
   function botTick(dt) {
-    var es = exposedEnemies(), F = W.S;
-    if (!es.length) es = A.enemies.filter(function (e) { return e.state !== 'dead'; });
+    var es = A.enemies.filter(function (e) { return e.state !== 'dead'; }), F = W.S;
     if (!es.length) return;
+    es.forEach(function (en) { en.exposed = true; if (en.state === 'cover') en.state = 'peek'; });
     var e = es[0], a = angTo(e.x, 1.2, e.z);
-    F.yaw += Math.atan2(Math.sin(a.yaw - F.yaw), Math.cos(a.yaw - F.yaw)) * Math.min(1, dt * 6);
-    F.pitch += (a.pitch - F.pitch) * Math.min(1, dt * 6);
+    F.yaw += Math.atan2(Math.sin(a.yaw - F.yaw), Math.cos(a.yaw - F.yaw)) * Math.min(1, dt * 8);
+    F.pitch += (a.pitch - F.pitch) * Math.min(1, dt * 8);
     if (!W.S.crouch) { var p = W.pos(), c = W.nearestCover(p.x, p.z, 2.5); if (c) takeCover(c); }
     A.peek = true; W.setCrouch(false);
     if (A.pack[A.weap].mag <= 0) Cbt.reload();
-    else { A.firing = true; tryFire(false); }
+    else { A.firing = true; A.aimAssist = true; tryFire(false); }
     void dt;
   }
 

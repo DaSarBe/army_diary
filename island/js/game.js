@@ -61,12 +61,12 @@
   }
 
   /* ---------- 對話 ---------- */
-  function hideDlg() { $('#dlg').hidden = true; W.setMode('play'); }
+  function hideDlg() { $('#dlg').hidden = true; document.body.classList.remove('talking'); W.setMode('play'); }
   function showLines(sceneId, onDone) {
     var sc = story.scenes[sceneId]; if (!sc) { onDone(); return; }
     var lines = (sc.lines || []).slice(), choices = sc.choices, i = 0;
     function render() {
-      $('#dlg').hidden = false;
+      $('#dlg').hidden = false; document.body.classList.add('talking');
       if (i < lines.length) {
         var ln = lines[i];
         $('#dName').textContent = ln.who || '';
@@ -233,12 +233,18 @@
           var p = W.pos(), t = wp[Math.min(wi, wp.length - 1)];
           var dx = t[0] - p.x, dz = t[1] - p.z, d = Math.hypot(dx, dz);
           if (d < 3) wi++;
-          if (wi >= wp.length) { rideWatch = null; W.exitVehicle(); nextBeat(); return; }
+          if (wi >= wp.length || Math.hypot(p.x - route.land[0], p.z - route.land[1]) < 5) {
+            rideWatch = null; W.exitVehicle(); W.place(route.land[0], route.land[1]); nextBeat(); return;
+          }
           W.S.yaw = Math.atan2(-dx, -dz);
           if (W.S.veh) W.S.veh.yaw = W.S.yaw;
           W.S.px += -Math.sin(W.S.yaw) * 14 * 0.016;
           W.S.pz += -Math.cos(W.S.yaw) * 14 * 0.016;
         };
+        setTimeout(function () {
+          if (!rideWatch) return;
+          rideWatch = null; W.exitVehicle(); W.place(route.land[0], route.land[1]); nextBeat();
+        }, 14000);
       }
     };
     if (auto && v) setTimeout(function () { W.place(v.x, v.z); boardVehicle(v); }, 250);
@@ -342,7 +348,7 @@
     var b = currentBeat();
     if (b && b.place) W.place(b.place[0], b.place[1]);
     else if (b && b.id === 'assault') {
-      var land = hasFlag('isl_flank_by_sea') ? [-22, -28] : [18, -26];
+      var land = hasFlag('isl_flank_by_sea') ? [-22, -40] : [18, -26];
       W.place(land[0], land[1]);
     }
     toast('回到存檔點。同袍生死不重擲。');

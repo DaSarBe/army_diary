@@ -375,7 +375,7 @@
       var sp = vs.speed * thr;
       S.px += -Math.sin(S.veh.yaw) * sp * dt;
       S.pz += -Math.cos(S.veh.yaw) * sp * dt;
-      if (vs.water) { if (S.pz > S.waterZ + 8) S.pz = S.waterZ + 8; }
+      if (vs.water) { if (S.pz > -6) S.pz = -6; }
       else if (S.pz < S.waterZ + 1) S.pz = S.waterZ + 1;
       S.yaw = turn(S.yaw, S.veh.yaw, Math.min(1, dt * 4));
       S.veh.x = S.px; S.veh.z = S.pz; S.veh.mesh.position.set(S.px, S.veh.type === 'sampan' ? 0.05 : 0, S.pz); S.veh.mesh.rotation.y = S.veh.yaw;
