@@ -496,7 +496,6 @@
       return linDown ? 'vehicle_rail_missing' : sid;
     }
     if (sid === 'vehicle_tunnel_jeep') {
-      if (fateOf('wang') === 'kia') return 'vehicle_tunnel_jeep_kia';
       if (fateOf('akai') === 'kia') return 'vehicle_tunnel_jeep_akai_kia';
       return sid;
     }

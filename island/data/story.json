@@ -661,12 +661,6 @@
         { "who": "王班長", "text": "我是在坐好啊！" }
       ]
     },
-    "vehicle_tunnel_jeep_kia": {
-      "hint": "上吉普車。只有引擎聲。",
-      "chatter": [
-        { "who": "電台", "text": "……雜訊……" }
-      ]
-    },
     "rear_wave": {
       "lines": [
         { "who": "黃連長", "text": "終點。衝鋒兵出來了。" }
