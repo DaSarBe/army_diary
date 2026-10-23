@@ -73,6 +73,31 @@ function scanJsonFootprints() {
   });
 }
 
+function pinGroundCoords() {
+  function lv(id) { return JSON.parse(fs.readFileSync(path.join(ROOT, LEVEL_FILES[id]), 'utf8')); }
+  function beat(L, id) { return L.beats.find(b => b.id === id); }
+  const radar = lv('op2_radar');
+  const assault = beat(radar, 'station_assault');
+  const late = beat(radar, 'restore_power_late');
+  const t75 = beat(radar, 'grab_t75');
+  must(assault.optionalPower.x === -16 && assault.optionalPower.z === 65.5, '復電應在機房南面 (-16,65.5)');
+  must(late.x === -16 && late.z === 65.5, '戰後復電應在 (-16,65.5)');
+  must(t75.x === -6 && t75.z === 67.5, 'T75 應在雷達站外牆 (-6,67.5)');
+  const gun = assault.wave.placed.find(p => p.type === 'gunner' && p.z === 69);
+  must(gun && gun.x === -9, '機房內機槍兵應改到 (-9,69)');
+  must(!assault.wave.placed.some(p => p.x === -14 && p.z === 68), '機房中心機槍兵不得留下');
+  const ridge = lv('op3_ridge');
+  const dmr = beat(ridge, 'find_dmr');
+  must(dmr.x === 4 && dmr.z === 83.5, 'T65K2 應在觀測哨外牆 (4,83.5)');
+  const beach = lv('op1_landing');
+  const weak = beat(beach, 'plant_antenna').sites.isl_radio_weak;
+  must(weak.x === 18 && weak.z === 3, '弱訊號天線應在倉庫南面 (18,3)');
+  const hq = lv('op5_hq');
+  const cmd = beat(hq, 'hq_fight').wave.placed.find(p => p.type === 'commander');
+  must(cmd && cmd.x === 0 && cmd.z === 86, '指揮官應在指揮所後方 (0,86)');
+  console.log('dai-ground-pins ok');
+}
+
 const BLOCKED = {
   op2_radar: [{ id: 'old_power_on_roof', x: -16, z: 70, r: 0.8 }],
   op3_ridge: [{ id: 'old_dmr_inside', x: 4, z: 88, r: 0.8 }],
@@ -81,6 +106,7 @@ const BLOCKED = {
 
 async function main() {
   scanJsonFootprints();
+  pinGroundCoords();
   const port = 9020 + Math.floor(Math.random() * 40);
   const srv = await serve(port);
   const browser = await puppeteer.launch({
