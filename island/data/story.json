@@ -171,15 +171,17 @@
       "lines": [
         { "who": "阿凱", "text": "老方，你還活著喔？" },
         { "who": "阿凱", "text": "你胖了。" },
-        { "who": "小林", "text": "你才胖。扳手拿穩。" },
+        { "who": "小林", "text": "他沒胖，是你太久沒見到他。扳手拿穩。" },
         { "who": "阿凱", "text": "我現在賣保險。召集令下來的時候，我正在客戶家簽約。" },
         { "who": "黃連長", "text": "雷達站沒電。先把這台吉普修好，再上去。" }
       ]
     },
     "jeep_shop_missing": {
       "lines": [
-        { "who": "阿凱", "text": "老方。頻道裡少一個人。扳手還是要拿。" },
-        { "who": "黃連長", "text": "雷達站沒電。先把車修好。" }
+        { "who": "阿凱", "text": "老方，你還活著喔？" },
+        { "who": "阿凱", "text": "……小林呢？" },
+        { "who": "黃連長", "text": "他的名字我記著。雷達站沒電，先把車修好。" },
+        { "who": "阿凱", "text": "好。扳手給我。" }
       ]
     },
     "driver_choice": {
@@ -187,15 +189,49 @@
         { "who": "阿凱", "text": "誰開？我可以開，也可以坐後面那挺機槍。不想開的話我就留在車上接應。" }
       ],
       "choices": [
-        { "id": "akai_drive", "text": "阿凱開車，我跟小林上車", "flag": "isl_akai_with_you", "clear": "isl_akai_outside" },
-        { "id": "lin_drive", "text": "小林開車，阿凱上機槍", "flag": "isl_akai_with_you", "clear": "isl_akai_outside" },
-        { "id": "self_drive", "text": "我自己開，阿凱留在車上接應", "flag": "isl_akai_outside", "clear": "isl_akai_with_you" }
+        { "id": "akai_drive", "text": "阿凱開車，我跟小林上車", "flag": "isl_akai_with_you", "driver": "isl_jeep_driver_akai", "clear": "isl_akai_outside" },
+        { "id": "lin_drive", "text": "小林開車，阿凱上機槍", "flag": "isl_akai_with_you", "driver": "isl_jeep_driver_lin", "clear": "isl_akai_outside" },
+        { "id": "self_drive", "text": "我自己開，阿凱留在車上接應", "flag": "isl_akai_outside", "driver": "isl_jeep_driver_player", "clear": "isl_akai_with_you" }
+      ]
+    },
+    "driver_choice_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "我可以開。你也可以自己開，我留在車上接應。" }
+      ],
+      "choices": [
+        { "id": "akai_drive", "text": "阿凱開車，我坐副駕", "flag": "isl_akai_with_you", "driver": "isl_jeep_driver_akai", "clear": "isl_akai_outside" },
+        { "id": "self_drive", "text": "我自己開，阿凱留在車上接應", "flag": "isl_akai_outside", "driver": "isl_jeep_driver_player", "clear": "isl_akai_with_you" }
+      ]
+    },
+    "akai_outside_hint": {
+      "lines": [
+        { "who": "阿凱", "text": "裡面沒電是吧？嗯……我在外面守著比較好。車需要人看。" },
+        { "who": "小林", "text": "……好，你守著。" }
+      ]
+    },
+    "akai_outside_hint_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "裡面沒電是吧？嗯……我在外面守著比較好。車需要人看。" }
       ]
     },
     "vehicle_jeep": {
-      "hint": "上吉普車。路上會遇到巡邏。車載 T75 連射會過熱，車被打爆會被甩出去。",
+      "hint": "上吉普車。駕駛、射手、乘客可切換。射手用車載 T75，連射六秒會過熱。",
       "chatter": [
         { "who": "阿凱", "text": "這台方向盤比我那台保險業務車還重。" },
+        { "who": "黃連長", "text": "前面有車。不要停太久。" }
+      ]
+    },
+    "vehicle_jeep_lin": {
+      "hint": "上吉普車。小林開車，阿凱上機槍。連射六秒會過熱。",
+      "chatter": [
+        { "who": "阿凱", "text": "小林你慢一點，我的飯糰要掉了。" },
+        { "who": "黃連長", "text": "前面有車。不要停太久。" }
+      ]
+    },
+    "vehicle_jeep_self": {
+      "hint": "上吉普車。自己開。車載 T75 連射六秒會過熱。",
+      "chatter": [
+        { "who": "阿凱", "text": "老方你開太快，這台沒有安全氣囊。" },
         { "who": "黃連長", "text": "前面有車。不要停太久。" }
       ]
     },
@@ -216,22 +252,78 @@
         { "who": "黃連長", "text": "……復電……聽得到嗎。雜訊很大。" }
       ]
     },
+    "radar_door_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "整區沒電。備用燈偶爾閃一下。手電筒會被看到。" },
+        { "who": "黃連長", "text": "老方看得懂配電箱。" }
+      ]
+    },
     "station_assault": {
       "lines": [
         { "who": "黃連長", "text": "進站。摸黑或復電，你們選。" }
       ]
     },
+    "power_hint": {
+      "toast": "黃連長：「配電箱在機房左邊。要復電就跑過去，路上有兩個機槍手。」"
+    },
+    "power_hint_missing": {
+      "toast": "黃連長：「配電箱在機房左邊。要復電就跑過去，路上有兩個機槍手。」"
+    },
+    "rusher_warn": {
+      "toast": "小林：「黑暗裡有人衝出來！」"
+    },
+    "rusher_warn_missing": {
+      "toast": "阿凱：「有人從暗處衝出來！」"
+    },
+    "rusher_warn_outside": {
+      "toast": "黃連長：「有人從暗處衝出來。蹲好。」"
+    },
     "restore_power": {
-      "hint": "到機房配電箱復電。標籤被換過，是本島的備用線路圖。",
+      "hint": "戰鬥中可到機房配電箱復電。標籤被換過，是本島的備用線路圖。",
       "done": [
         { "who": "小林", "text": "亮了。這張線路圖不是島上自己的。有人事先摸過，而且很懂。" },
         { "who": "黃連長", "text": "記下。先把機房拿回來。" }
+      ],
+      "done_missing": [
+        { "who": "阿凱", "text": "亮了。這張線路圖……好像不是島上自己的。" },
+        { "who": "黃連長", "text": "記下。T75 在機房角落，拿過來。" }
+      ]
+    },
+    "dark_clear": {
+      "lines": [
+        { "who": "小林", "text": "沒開燈也打完了。眼睛還在調。" },
+        { "who": "黃連長", "text": "配電箱還在。要看就現在看。" }
+      ]
+    },
+    "dark_clear_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "我的手還在抖。燈沒開。" },
+        { "who": "黃連長", "text": "配電箱還在。要看就現在看。" }
+      ]
+    },
+    "dark_clear_outside": {
+      "lines": [
+        { "who": "黃連長", "text": "站裡清完了。阿凱在車上。配電箱還在。" }
+      ]
+    },
+    "restore_power_late": {
+      "hint": "打完再復電，線路圖還是看得到。這不算中途復電。",
+      "done": [
+        { "who": "小林", "text": "亮了。這張線路圖不是島上自己的。有人事先摸過，而且很懂。" },
+        { "who": "黃連長", "text": "記下。不過燈是打完才開的。" }
+      ],
+      "done_missing": [
+        { "who": "阿凱", "text": "亮了。這張線路圖……好像不是島上自己的。" },
+        { "who": "黃連長", "text": "記下。燈是打完才開的。" }
       ]
     },
     "grab_t75": {
       "hint": "機房角落有一把被拆下的 T75。",
       "done": [
         { "who": "阿凱", "text": "這挺還能打？那我以後不坐後面了，我要當射手。" }
+      ],
+      "done_outside": [
+        { "who": "阿凱", "text": "連長說你拿到 T75？那挺給我，下一程我坐後面。" }
       ]
     },
     "dark_talk": {
@@ -241,15 +333,184 @@
         { "who": "阿凱", "text": "老方！" }
       ]
     },
+    "dark_talk_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "你不准跟別人講。我怕黑。小時候被關在雜物間。" },
+        { "who": "阿凱", "text": "……以前小林會說他只跟連長講。" },
+        { "who": "阿凱", "text": "現在連這個都沒人可以講了。" }
+      ]
+    },
     "dark_talk_outside": {
       "lines": [
         { "who": "黃連長", "text": "阿凱在車上接應。你們先回來。" },
-        { "who": "小林", "text": "他怕黑。這句不要跟他講是我說的。" }
+        { "who": "小林", "text": "他一聽到沒電就說要守車。我猜他怕黑。這句不要跟他講是我說的。" }
+      ]
+    },
+    "dark_talk_outside_missing": {
+      "lines": [
+        { "who": "黃連長", "text": "阿凱在車上接應。你先回來。" },
+        { "who": "黃連長", "text": "他在無線電裡一直沒講話。你到了就知道。" }
       ]
     },
     "radar_complete": {
       "lines": [
-        { "who": "黃連長", "text": "雷達站拿回來了。下一目標稜線哨所。先休息。" },
+        { "who": "黃連長", "text": "雷達站拿回來了。電是你們中途開的。下一目標稜線哨所。先休息。" },
+        { "who": "電台", "text": "收到。" }
+      ]
+    },
+    "radar_complete_dark": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。燈沒開。下一目標稜線哨所。先休息。" },
+        { "who": "電台", "text": "收到。" }
+      ]
+    },
+    "radar_complete_missing": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。電是中途開的。下一目標稜線哨所。先休息。" },
+        { "who": "電台", "text": "收到。" }
+      ]
+    },
+    "radar_complete_dark_missing": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。燈沒開。下一目標稜線哨所。先休息。" },
+        { "who": "電台", "text": "收到。" }
+      ]
+    },
+    "radar_complete_outside": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。電是你們中途開的。下一目標稜線哨所。先休息。" },
+        { "who": "阿凱", "text": "我在車上等你們。燈亮了沒有？" }
+      ]
+    },
+    "radar_complete_outside_dark": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。燈沒開。下一目標稜線哨所。先休息。" },
+        { "who": "阿凱", "text": "我在車上等你們。燈亮了沒有？" }
+      ]
+    },
+    "ridge_rest": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "阿凱", "text": "這個便當我吃過，味道像是上個月的。" },
+        { "who": "小林", "text": "無線電我再調一次。稜線上風很大。" },
+        { "who": "黃連長", "text": "前面有人在看你們。" }
+      ]
+    },
+    "ridge_rest_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "這個便當我吃過，味道像是上個月的。" },
+        { "who": "黃連長", "text": "前面有人在看你們。" }
+      ]
+    },
+    "ridge_rest_quiet": {
+      "lines": [
+        { "who": "小林", "text": "無線電我再調一次。稜線上風很大。" },
+        { "who": "黃連長", "text": "前面有人在看你們。" }
+      ]
+    },
+    "ridge_approach": {
+      "lines": [
+        { "who": "小林", "text": "正面是岩石，一段一段壓。右邊公路可以騎機車衝過去，很吵。左邊山腹是近戰。" },
+        { "who": "黃連長", "text": "狙擊手在看。蹲下，紅點會斷。" }
+      ],
+      "choices": [
+        { "id": "walk", "text": "走岩石，用紅點預警推進", "flag": "isl_ridge_walk", "next": "ridge_fight" },
+        { "id": "bike", "text": "騎機車沿公路衝過去", "flag": "isl_bike_dash", "next": "ridge_ride" },
+        { "id": "trail", "text": "繞山腹小徑，避開狙擊", "flag": "isl_ridge_trail", "next": "ridge_fight" }
+      ]
+    },
+    "ridge_approach_missing": {
+      "lines": [
+        { "who": "黃連長", "text": "正面是岩石，一段一段壓。右邊公路可以騎機車衝過去，很吵。左邊山腹是近戰。" },
+        { "who": "黃連長", "text": "狙擊手在看。蹲下，紅點會斷。" }
+      ],
+      "choices": [
+        { "id": "walk", "text": "走岩石，用紅點預警推進", "flag": "isl_ridge_walk", "next": "ridge_fight" },
+        { "id": "bike", "text": "騎機車沿公路衝過去", "flag": "isl_bike_dash", "next": "ridge_ride" },
+        { "id": "trail", "text": "繞山腹小徑，避開狙擊", "flag": "isl_ridge_trail", "next": "ridge_fight" }
+      ]
+    },
+    "vehicle_ridge": {
+      "hint": "騎上機車。引擎聲會引來敵人，車上只能用手槍。",
+      "chatter": [
+        { "who": "阿凱", "text": "這台只有一個座位。那我坐你背上。" },
+        { "who": "小林", "text": "你想害我們翻車嗎？" }
+      ]
+    },
+    "vehicle_ridge_missing": {
+      "hint": "騎上機車。引擎聲會引來敵人，車上只能用手槍。",
+      "chatter": [
+        { "who": "阿凱", "text": "這台只有一個座位。那我坐你背上。" },
+        { "who": "黃連長", "text": "坐好。不要停太久。" }
+      ]
+    },
+    "ridge_fight": {
+      "lines": [
+        { "who": "黃連長", "text": "紅點亮了就蹲。不要跟他對視太久。" }
+      ]
+    },
+    "ridge_fight_weak": {
+      "lines": [
+        { "who": "黃連長", "text": "……蹲……雜訊很大。" }
+      ]
+    },
+    "ridge_callout": {
+      "hint": "蹲下可打斷狙擊鎖定。紅點亮起的那一秒先找石頭。"
+    },
+    "find_dmr": {
+      "hint": "觀測哨裡有一把 T65K2。",
+      "done": [
+        { "who": "小林", "text": "精準步槍。拿著，後面的路會好走一點。" }
+      ],
+      "done_missing": [
+        { "who": "阿凱", "text": "這把看得比較遠。你拿，我負責喊。" }
+      ]
+    },
+    "outpost_roster": {
+      "lines": [
+        { "who": "小林", "text": "哨所的點名單。王班長的名字被劃掉，後面寫「俘」，不是「亡」。" },
+        { "who": "黃連長", "text": "還活著。被送去坑道。下一程我們去找他。" }
+      ]
+    },
+    "outpost_roster_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "點名單。王班長後面寫「俘」。不是亡。" },
+        { "who": "黃連長", "text": "還活著。被送去坑道。" }
+      ]
+    },
+    "scout_choice": {
+      "lines": [
+        { "who": "黃連長", "text": "哨所裡有一個受傷的斥候。沒有武器，只有對講機。你們決定。" }
+      ],
+      "choices": [
+        { "id": "kill", "text": "補一槍", "flag": "isl_killed_scout", "clear": "isl_spared_scout" },
+        { "id": "bind", "text": "綁起來", "flag": "isl_spared_scout", "clear": "isl_killed_scout" },
+        { "id": "spare", "text": "放他走", "flag": "isl_spared_scout", "clear": "isl_killed_scout" }
+      ]
+    },
+    "ridge_outro_bike": {
+      "lines": [
+        { "who": "阿凱", "text": "這台只有一個座位。" },
+        { "who": "阿凱", "text": "那我坐你背上。" },
+        { "who": "小林", "text": "你想害我們翻車嗎？" }
+      ]
+    },
+    "ridge_outro_bike_missing": {
+      "lines": [
+        { "who": "阿凱", "text": "這台只有一個座位。" },
+        { "who": "阿凱", "text": "那我坐你背上。" },
+        { "who": "黃連長", "text": "坐好。下一目標坑道。" }
+      ]
+    },
+    "ridge_outro_walk": {
+      "lines": [
+        { "who": "阿凱", "text": "哨所裡這包餅乾過期了。我還是吃。" },
+        { "who": "黃連長", "text": "下一目標坑道。先把水喝完。" }
+      ]
+    },
+    "ridge_complete": {
+      "lines": [
+        { "who": "黃連長", "text": "稜線過了。王班長在坑道。下一程救人。" },
         { "who": "電台", "text": "收到。" }
       ]
     }

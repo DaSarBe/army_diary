@@ -676,7 +676,7 @@
   W.enterVehicle = function (v) {
     if (!v || v.wrecked || v.hp <= 0) return;
     if (S.carry && (v.type === 'cart' || v.type === 'bike' || v.type === 'motorcycle')) return;
-    S.veh = v; v.occupied = true; S.px = v.x; S.pz = v.z; S.yaw = v.yaw;
+    S.veh = v; v.occupied = true; v.seat = v.type === 'jeep' ? 'driver' : 'driver'; S.px = v.x; S.pz = v.z; S.yaw = v.yaw;
     W.setCrouch(false);
   };
   W.exitVehicle = function () {
@@ -684,9 +684,18 @@
     S.veh.occupied = false; S.veh.x = S.px; S.veh.z = S.pz;
     S.veh.mesh.position.set(S.px, 0, S.pz);
     syncVehCol(S.veh);
+    S.veh.seat = null;
     S.veh = null;
   };
   W.inVehicle = function () { return S.veh; };
+  W.seat = function () { return S.veh ? (S.veh.seat || 'driver') : null; };
+  W.cycleSeat = function () {
+    if (!S.veh || S.veh.type !== 'jeep') return null;
+    var order = ['driver', 'gunner', 'passenger'];
+    var i = order.indexOf(S.veh.seat || 'driver');
+    S.veh.seat = order[(i + 1) % order.length];
+    return S.veh.seat;
+  };
   W.damageVehicle = function (dmg, reason) {
     if (!S.veh || S.veh.hp == null) return;
     S.veh.hp = Math.max(0, S.veh.hp - dmg);

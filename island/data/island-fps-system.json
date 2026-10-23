@@ -170,14 +170,31 @@
       "enemies": {
         "rifleman": 6,
         "gunner": 3,
-        "scout": 3
+        "scout": 3,
+        "rusher": 1
       },
       "newMechanic": "停電區：手電筒與能見度",
       "reward": "t75_lmg",
       "vehicles": [
         "jeep",
         "generator_cart"
-      ]
+      ],
+      "powerRestore": {
+        "optionalMidCombat": true,
+        "interact": "配電箱",
+        "mustCrossGunnerLanes": 2,
+        "onRestore": {
+          "flag": "isl_power_restored",
+          "enemyAccMul": 1.1,
+          "flashlightOff": true
+        },
+        "darkFinish": "不設 isl_power_restored",
+        "lateRestore": {
+          "flag": "isl_power_restored_late",
+          "countsAsRestored": false,
+          "note": "戰鬥後才復電不算復電，只供對白"
+        }
+      }
     },
     {
       "id": "op3_ridge",
@@ -464,6 +481,18 @@
     "isl_flank_front": "op1 正面推進路線",
     "isl_stealth": "op1 潛行路線",
     "isl_chat_*": "營區／車上閒聊已觸發，純演出，不影響結局",
+    "isl_akai_with_you": "op2 阿凱同行上車",
+    "isl_akai_outside": "op2 阿凱留在車上接應",
+    "isl_power_restored": "op2 雷達站中途復電",
+    "isl_jeep_driver_akai": "op2 阿凱開吉普",
+    "isl_jeep_driver_lin": "op2 小林開吉普",
+    "isl_jeep_driver_player": "op2 玩家自己開吉普",
+    "isl_02_clear": "第 2 關雷達站完成",
+    "isl_power_restored_late": "op2 戰鬥後才復電，不算復電強攻",
+    "isl_ridge_walk": "op3 走岩石推進",
+    "isl_ridge_trail": "op3 繞山腹小徑",
+    "isl_spared_scout": "op3 綁起或放走受傷斥候",
+    "isl_killed_scout": "op3 補槍處決受傷斥候",
     "_exclusive": "op1 路線 flag（isl_flank_by_sea/by_bike/front/stealth）互斥：選定時清掉其他三個，並立刻存檔"
   },
   "saveSchema": {

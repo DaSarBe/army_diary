@@ -32,8 +32,7 @@
       "outpostName": "稜線哨所",
       "file": "data/levels/03-ridge.json",
       "unlockFlag": "isl_02_clear",
-      "clearFlag": "isl_03_clear",
-      "stub": true
+      "clearFlag": "isl_03_clear"
     },
     {
       "id": "op4_tunnel",

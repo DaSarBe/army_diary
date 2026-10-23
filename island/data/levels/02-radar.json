@@ -60,6 +60,7 @@
   "beats": [
     { "id": "jeep_shop", "type": "talk", "story": "jeep_shop", "checkpoint": true, "place": [14, 14] },
     { "id": "driver_choice", "type": "choice", "story": "driver_choice" },
+    { "id": "akai_outside_hint", "type": "talk", "story": "akai_outside_hint", "ifFlag": "isl_akai_outside" },
     {
       "id": "jeep_ride",
       "type": "vehicle",
@@ -68,6 +69,7 @@
         "default": {
           "vehicle": "jeep_main",
           "story": "vehicle_jeep",
+          "stay": true,
           "land": [8, 50],
           "waypoints": [[10, 22], [8, 34], [8, 46], [8, 50]]
         }
@@ -95,21 +97,27 @@
       "wave": {
         "id": "station",
         "name": "雷達站",
-        "enemies": { "rifleman": 6, "gunner": 3, "scout": 3 },
+        "enemies": { "rifleman": 6, "gunner": 3, "scout": 3, "rusher": 1 },
+        "placed": [
+          { "type": "gunner", "x": -10, "z": 64 },
+          { "type": "gunner", "x": -14, "z": 68 },
+          { "type": "rusher", "x": -2, "z": 56 }
+        ],
         "grace": 2.0
-      }
+      },
+      "optionalPower": { "x": -16, "z": 70, "holdMs": 2400, "label": "復電" }
     },
+    { "id": "dark_clear", "type": "talk", "story": "dark_clear", "unlessFlag": "isl_power_restored" },
     {
-      "id": "restore_power",
+      "id": "restore_power_late",
       "type": "interact",
-      "holdMs": 2400,
+      "kind": "power_late",
+      "holdMs": 1800,
       "label": "復電",
-      "kind": "power",
       "x": -16,
       "z": 70,
-      "story": "restore_power",
-      "setFlag": "isl_power_restored",
-      "checkpoint": true
+      "story": "restore_power_late",
+      "unlessFlag": "isl_power_restored"
     },
     {
       "id": "grab_t75",

@@ -1,0 +1,103 @@
+{
+  "id": "op3_ridge",
+  "name": "稜線哨所",
+  "outpost": "op3_ridge",
+  "tone": "dawn",
+  "bounds": [-48, 52, -8, 110],
+  "spawn": [8, 10],
+  "spawnYaw": 0,
+  "waterZ": -40,
+  "map": {
+    "ground": [
+      { "kind": "grass", "x": 0, "z": 48, "w": 120, "d": 140 },
+      { "kind": "sand", "x": 0, "z": 4, "w": 120, "d": 24 }
+    ],
+    "props": [
+      { "kind": "road", "x": 22, "z": 48, "w": 3.4, "d": 90 },
+      { "kind": "bld", "x": 4, "z": 88, "w": 8, "d": 6, "h": 3.2, "wall": "#5a5348", "roof": "#3a3830", "lab": "觀測哨" },
+      { "kind": "bld", "x": 14, "z": 92, "w": 6, "d": 5, "h": 2.6, "wall": "#4e5248", "roof": "#2e3228", "lab": "哨所" },
+      { "kind": "rock", "x": -10, "z": 28, "w": 3.2, "h": 1.6, "d": 2.4 },
+      { "kind": "rock", "x": 8, "z": 36, "w": 2.8, "h": 1.5, "d": 2.2 },
+      { "kind": "rock", "x": -6, "z": 48, "w": 3.0, "h": 1.7, "d": 2.4 },
+      { "kind": "rock", "x": 12, "z": 58, "w": 2.6, "h": 1.4, "d": 2.0 },
+      { "kind": "rock", "x": -14, "z": 66, "w": 3.4, "h": 1.8, "d": 2.6 },
+      { "kind": "rock", "x": 6, "z": 72, "w": 2.8, "h": 1.5, "d": 2.2 },
+      { "kind": "tree", "x": -26, "z": 22 },
+      { "kind": "tree", "x": 30, "z": 18 },
+      { "kind": "sign", "x": 8, "z": 16, "y": 2.1, "w": 3.6, "h": 0.65, "txt": "稜線哨所", "bg": "#2c4a2c", "fg": "#f2ecd0" }
+    ],
+    "covers": [
+      { "type": "rock", "x": -10, "z": 26, "w": 2.8, "h": 1.4, "d": 2.0, "ax": -10, "az": 27.4 },
+      { "type": "rock", "x": 8, "z": 34, "w": 2.6, "h": 1.3, "d": 1.8, "ax": 8, "az": 35.4 },
+      { "type": "rock", "x": -6, "z": 46, "w": 2.8, "h": 1.4, "d": 2.0, "ax": -6, "az": 47.4 },
+      { "type": "sandbag", "x": 2, "z": 62, "w": 3.4, "d": 0.9, "h": 1.0, "ax": 2, "az": 63.2 },
+      { "type": "sandbag", "x": 10, "z": 74, "w": 3.2, "d": 0.9, "h": 1.0, "ax": 10, "az": 75.2 },
+      { "type": "rock", "x": -14, "z": 64, "w": 2.8, "h": 1.5, "d": 2.0, "ax": -14, "az": 65.4 }
+    ],
+    "eCovers": [
+      { "x": -8, "z": 80, "kind": "sand" },
+      { "x": 6, "z": 84, "kind": "sand" },
+      { "x": 16, "z": 78, "kind": "sand" },
+      { "x": -4, "z": 96, "kind": "boat" },
+      { "x": 12, "z": 98, "kind": "boat" },
+      { "x": 20, "z": 70, "kind": "sand" }
+    ],
+    "npcs": [
+      { "id": "npc_signal_lin", "preset": "lin", "x": 6, "z": 12, "ry": 3.2, "name": "小林" },
+      { "id": "npc_akai", "preset": "kai", "x": 10, "z": 12.4, "ry": 3.4, "name": "阿凱" },
+      { "id": "npc_scout_wounded", "preset": "wounded", "x": 14, "z": 90, "ry": 3.14, "name": "斥候" }
+    ],
+    "vehicles": [
+      { "id": "bike_ridge", "type": "bike", "x": 22, "z": 14, "yaw": 0 }
+    ],
+    "spawns": {
+      "sea": [[-8, 100], [6, 104], [18, 102], [10, 108]],
+      "shore": [[-6, 76], [8, 72], [18, 68], [0, 54]]
+    }
+  },
+  "beats": [
+    { "id": "ridge_rest", "type": "talk", "story": "ridge_rest", "checkpoint": true, "place": [8, 10] },
+    { "id": "ridge_approach", "type": "choice", "story": "ridge_approach" },
+    {
+      "id": "ridge_ride",
+      "type": "vehicle",
+      "flag": "isl_bike_dash",
+      "routes": {
+        "isl_bike_dash": {
+          "vehicle": "bike_ridge",
+          "story": "vehicle_ridge",
+          "land": [20, 78],
+          "waypoints": [[22, 28], [22, 48], [22, 68], [20, 78]]
+        }
+      }
+    },
+    {
+      "id": "ridge_fight",
+      "type": "combat",
+      "story": "ridge_fight",
+      "checkpoint": true,
+      "wave": {
+        "id": "ridge",
+        "name": "稜線哨所",
+        "enemies": { "rifleman": 5, "sniper": 3, "rusher": 3 },
+        "trailEnemies": { "rusher": 5, "rifleman": 3 },
+        "grace": 1.8
+      }
+    },
+    {
+      "id": "find_dmr",
+      "type": "interact",
+      "holdMs": 1400,
+      "label": "撿起 T65K2",
+      "kind": "t65",
+      "x": 4,
+      "z": 88,
+      "story": "find_dmr",
+      "checkpoint": true
+    },
+    { "id": "outpost_roster", "type": "talk", "story": "outpost_roster" },
+    { "id": "scout_choice", "type": "choice", "story": "scout_choice" },
+    { "id": "ridge_outro", "type": "talk", "story": "ridge_outro_walk" },
+    { "id": "complete", "type": "complete", "story": "ridge_complete", "setFlag": "isl_03_clear" }
+  ]
+}

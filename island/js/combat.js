@@ -30,10 +30,11 @@
     rifleman: { u: '#505647', v: '#363b30', h: '#2c3128', s: '#c9976e' },
     gunner: { u: '#464b41', v: '#2e332a', h: '#252921', s: '#b98a63' },
     rusher: { u: '#5c5c54', v: '#44443d', h: '#3a3a33', s: '#d1a077' },
-    scout: { u: '#4a5244', v: '#32382c', h: '#2a3024', s: '#c9976e' }
+    scout: { u: '#4a5244', v: '#32382c', h: '#2a3024', s: '#c9976e' },
+    sniper: { u: '#3e4438', v: '#2a2e26', h: '#1e221c', s: '#c9976e' }
   };
   function buildEnemy(type, e) {
-    var P = PAL[type], g = new T.Group(), hit = [], j = {};
+    var P = PAL[type] || PAL.rifleman, g = new T.Group(), hit = [], j = {};
     function mesh(parent, geometry, col, x, y, z, part) {
       var m = new T.Mesh(geometry, mat(col)); m.position.set(x, y, z); parent.add(m);
       m.userData.enemy = e; m.userData.part = part || 'body'; if (part !== 'none') hit.push(m); return m;
@@ -99,6 +100,7 @@
     on('#bCarry', function () { if (H.onCarry) H.onCarry(); });
     on('#bWeap', function () { Cbt.cycleWeap(); });
     on('#bLight', function () { Cbt.toggleLight(); });
+    on('#bSeat', function () { Cbt.cycleSeat(); });
     var bf = $('#bFire');
     bf.addEventListener('pointerdown', function (e) { e.preventDefault(); Cbt.fireDown(); });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { bf.addEventListener(ev, function () { Cbt.fireUp(); }); });
@@ -126,6 +128,8 @@
       nades: cfg.grenade.count, medkits: cfg.health.medkitsStart, hp: cfg.health.hpMax, hpMax: cfg.health.hpMax
     };
     if (l) pack.t75 = { mag: l.magSize, mags: 1, size: l.magSize };
+    var d = cfg.weapons.t65;
+    if (d) pack.t65 = { mag: d.magSize, mags: 2, size: d.magSize };
     return pack;
   };
 
@@ -137,7 +141,9 @@
       swayT: 0, cover: null, peek: false, carrying: false, hurtT: 0, hpZero: false,
       aimAssist: W.isMobileLike(), grace: 0, flashT: 0, nadeT: 0, dummyHits: 0,
       lin: null, barks: {}, warnedBag: false, combat: false, smokeT: 0, smokeSpawn: 0, hasT75: !!(loadout && loadout.t75 && loadout.hasT75),
-      noiseOn: false, stealthWave: false, alerted: false, reinforce: null, reinforced: false, gatherMode: false, gatherKilled: 0
+      hasT65: !!(loadout && loadout.t65 && loadout.hasT65),
+      noiseOn: false, stealthWave: false, alerted: false, reinforce: null, reinforced: false, gatherMode: false, gatherKilled: 0,
+      heat: 0, overheat: false, cool: 0, buddyGunner: false
     };
     W.setWeap(A.weap);
     refreshHud();
@@ -207,14 +213,21 @@
     A.reinforced = false;
     if (o.noise) A.noiseOn = true;
     A.alerted = !A.stealthWave || !!A.noiseOn;
+    var bag = JSON.parse(JSON.stringify(o.enemies || {}));
+    (o.placed || []).forEach(function (pl) {
+      if (!pl || !pl.type) return;
+      if ((bag[pl.type] || 0) > 0) bag[pl.type]--;
+      A.enemies.push(spawnEnemy(pl.type, pl.x, pl.z));
+    });
     var list = [];
-    Object.keys(o.enemies || {}).forEach(function (k) { for (var i = 0; i < o.enemies[k]; i++) list.push(k); });
+    Object.keys(bag).forEach(function (k) { for (var i = 0; i < bag[k]; i++) list.push(k); });
     list.sort(function (a, b) { return (a === 'gunner' ? -1 : 0) - (b === 'gunner' ? -1 : 0) || Math.random() - 0.5; });
     A.queue = list;
     A.killed = keep ? (A.gatherKilled || 0) : 0;
-    A.total = list.length + live.length + A.killed;
+    A.total = list.length + A.enemies.length + A.killed;
     A.spawnT = o.grace != null ? o.grace : 2; A.grace = A.spawnT;
     if (o.lin) A.lin = { hp: o.lin.hp || 100, max: o.lin.hp || 100, x: o.lin.x, z: o.lin.z };
+    A.buddyGunner = !!o.buddyGunner;
     W.reviveCovers();
     banner(o.name || '接觸');
     $('#waveTop').hidden = false; $('#waveName').textContent = o.name || '戰鬥';
@@ -222,7 +235,8 @@
   };
   Cbt.stopWave = function () {
     if (!A) return;
-    A.combat = false; A.firing = false;
+    A.combat = false; A.firing = false; A.buddyGunner = false;
+    hideSnip();
     A.enemies.forEach(function (e) { if (e.group.parent) e.group.parent.remove(e.group); });
     A.enemies = []; A.queue = [];
     $('#waveTop').hidden = true;
@@ -274,8 +288,10 @@
     if (!A || A.reload > 0) return;
     var veh = W.inVehicle && W.inVehicle();
     if (veh && (veh.type === 'bike' || veh.type === 'motorcycle')) { Cbt.forceWeap('m9'); Cbt.msg('機車上只能用手槍', 1400); return; }
-    var order = ['t91', 'm9'];
-    if (A.hasT75 || (A.pack.t75 && A.pack.hasT75)) order = ['t91', 't75', 'm9'];
+    var order = ['t91'];
+    if (A.hasT75 || (A.pack.t75 && A.pack.hasT75)) order.push('t75');
+    if (A.hasT65 || (A.pack.t65 && A.pack.hasT65)) order.push('t65');
+    order.push('m9');
     var i = order.indexOf(A.weap); A.weap = order[(i + 1) % order.length];
     W.setWeap(A.weap); Sfx.sfx('click'); refreshHud();
   };
@@ -286,6 +302,27 @@
     A.weap = 't75'; W.setWeap('t75'); refreshHud();
     if (!quiet) Cbt.msg('繳獲 T75', 1600);
   };
+  Cbt.unlockDmr = function (quiet) {
+    if (!A || !cfg.weapons.t65) return;
+    A.hasT65 = true; A.pack.hasT65 = true;
+    if (!A.pack.t65) A.pack.t65 = { mag: cfg.weapons.t65.magSize, mags: 2, size: cfg.weapons.t65.magSize };
+    A.weap = 't65'; W.setWeap('t65'); refreshHud();
+    if (!quiet) Cbt.msg('繳獲 T65K2', 1600);
+  };
+  Cbt.cycleSeat = function () {
+    if (!W.cycleSeat) return;
+    if (A && A._seatCd > 0) return;
+    var v = W.inVehicle && W.inVehicle();
+    if (!v || v.type !== 'jeep') { Cbt.msg('只有吉普車能換座位', 1200); return; }
+    var seat = W.cycleSeat();
+    if (A) A._seatCd = ((cfg.vehicles && cfg.vehicles.jeep && cfg.vehicles.jeep.gunner && cfg.vehicles.jeep.gunner.playerCanSwitchSeatSec) || 1.5);
+    Cbt.msg(seat === 'gunner' ? '射手座位。車載 T75。' : (seat === 'passenger' ? '乘客座位。' : '駕駛座位。'), 1400);
+    refreshHud();
+  };
+  function jeepGun() {
+    var v = W.inVehicle && W.inVehicle();
+    return !!(v && v.type === 'jeep' && W.seat && W.seat() === 'gunner');
+  }
   Cbt.fireDown = function () { if (!A) return; A.firing = true; tryFire(true); };
   Cbt.fireUp = function () { if (A) A.firing = false; };
   Cbt.onAim = function (dx, dy, type) {
@@ -306,11 +343,14 @@
     else if (code === 'KeyV') { A.fireMode = A.fireMode === 'semi' ? 'auto' : 'semi'; refreshHud(); }
     else if (code === 'KeyF' && H.onInteract) H.onInteract();
     else if (code === 'KeyE' && H.onVehicle) H.onVehicle();
+    else if (code === 'KeyX') Cbt.cycleSeat();
+    else if (code === 'Digit3' && A.hasT65) { A.weap = 't65'; W.setWeap('t65'); refreshHud(); }
   };
 
   function swayAmp() {
     var a = (cfg.aiming.swayBase || 2.6);
     if (A.ads) a *= cfg.aiming.adsSwayMul || 0.5;
+    if (A.weap === 't65') a *= 0.6;
     if (A.carrying) a *= 1.4;
     return a;
   }
@@ -335,6 +375,7 @@
   }
   function canShoot() {
     if (!A || !A.active || A.reload > 0) return false;
+    if (jeepGun()) return !A.overheat;
     var veh = W.inVehicle && W.inVehicle();
     if (veh && (veh.type === 'bike' || veh.type === 'motorcycle') && A.weap !== 'm9') return false;
     if (A.carrying) return false;
@@ -344,9 +385,14 @@
   function tryFire(first) {
     if (!canShoot() || A.cd > 0) return;
     var sl = A.pack[A.weap];
-    if (sl.mag <= 0) { if (first) { Sfx.sfx('empty'); Cbt.msg('彈匣空了，按 R 換彈', 1400); } return; }
-    sl.mag--; A.cd = 60 / wep().rpm;
-    if (A.fireMode === 'semi' || A.weap === 'm9') A.firing = false;
+    if (!jeepGun() && sl.mag <= 0) { if (first) { Sfx.sfx('empty'); Cbt.msg('彈匣空了，按 R 換彈', 1400); } return; }
+    if (jeepGun()) {
+      if (A.overheat) { if (first) Cbt.msg('機槍過熱', 1200); return; }
+      A.cd = 60 / 750;
+    } else {
+      sl.mag--; A.cd = 60 / wep().rpm;
+    }
+    if (!jeepGun() && (A.fireMode === 'semi' || A.weap === 'm9' || A.weap === 't65')) A.firing = false;
     alertStealth('槍聲把人引來了');
     var F = W.S, ad = aimDir(), p = W.pos(), dir = ad.d.slice();
     var ox = p.x, oy = F.eye, oz = p.z;
@@ -369,7 +415,7 @@
     Sfx.sfx(A.weap === 'm9' ? 'pistol' : 'shot');
     flash.visible = true; A.flashT = 0.04;
     var skip = A.cover ? A.cover.col : null;
-    var tBlock = W.rayBlock(ox, oy, oz, dir[0], dir[1], dir[2], wep().range || 280, skip);
+    var tBlock = W.rayBlock(ox, oy, oz, dir[0], dir[1], dir[2], jeepGun() ? 90 : (wep().range || 280), skip);
     rc.set(new T.Vector3(ox, oy, oz), new T.Vector3(dir[0], dir[1], dir[2])); rc.far = tBlock;
     var metas = [];
     A.enemies.forEach(function (e) {
@@ -379,7 +425,7 @@
     if (hits.length) {
       var h0 = hits[0], e0 = h0.object.userData.enemy, part = h0.object.userData.part;
       tEnd = h0.distance; hitE = e0;
-      var dmg = wep().dmg * (part === 'head' ? cfg.aiming.headshotMul : part === 'limb' ? 0.7 : 1);
+      var dmg = (jeepGun() ? 24 : wep().dmg) * (part === 'head' ? cfg.aiming.headshotMul : part === 'limb' ? 0.7 : 1);
       damageEnemy(e0, dmg, part === 'head');
       hitMark(part === 'head');
     }
@@ -412,16 +458,36 @@
     var d = dustPool.filter(function (q) { return !q.s.visible; })[0]; if (!d) return;
     d.s.position.set(x, y, z); d.s.scale.set(0.5, 0.5, 1); d.s.visible = true; d.life = 0.5; d.vy = 0.8;
   }
+  var snipLn = null;
+  function ensureSnip() {
+    if (snipLn || !scene) return;
+    snipLn = new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(), new T.Vector3(0, 1, -1)]), new T.LineBasicMaterial({ color: '#ff4a4a' }));
+    snipLn.visible = false; snipLn.frustumCulled = false; scene.add(snipLn);
+  }
+  function showSnip(e, p) {
+    ensureSnip();
+    if (!snipLn) return;
+    var pos = snipLn.geometry.attributes.position;
+    pos.setXYZ(0, e.x, 1.55, e.z); pos.setXYZ(1, p.x, W.S.eye || 1.4, p.z); pos.needsUpdate = true;
+    snipLn.visible = true;
+    var ring = $('#snipWarn');
+    if (ring) { ring.hidden = false; ring.classList.add('on'); }
+  }
+  function hideSnip() {
+    if (snipLn) snipLn.visible = false;
+    var ring = $('#snipWarn');
+    if (ring) { ring.hidden = true; ring.classList.remove('on'); }
+  }
   function hitMark(head) {
     var el = $('#hitmk'); el.classList.remove('on', 'head'); void el.offsetWidth; el.classList.add('on'); if (head) el.classList.add('head');
     Sfx.sfx('hitmark');
   }
 
   function ET(k) { return (cfg.enemies.types && cfg.enemies.types[k]) || { hp: 80, acc: 0.4, dmg: 10, speed: 2.4 }; }
-  function spawnEnemy(type) {
+  function spawnEnemy(type, x, z) {
     var pts = W.S.spawns, bag = (Math.random() < 0.45 ? pts.sea : pts.shore) || pts.sea || [[0, -50]];
     var sp = bag[Math.floor(Math.random() * bag.length)];
-    var e = { type: type, hp: ET(type).hp, state: 'advance', x: sp[0] + rnd(-3, 3), z: sp[1] + rnd(-2, 2), t: 0, fireCd: rnd(0.4, 1.2), burst: 0, cover: null, exposed: true, walkT: Math.random() * 6, dieT: 0, flinch: 0, relocT: rnd(4, 6), peekT: 0, crouch: 0 };
+    var e = { type: type, hp: ET(type).hp, state: 'advance', x: x != null ? x : sp[0] + rnd(-3, 3), z: z != null ? z : sp[1] + rnd(-2, 2), t: 0, fireCd: rnd(0.4, 1.2), burst: 0, cover: null, exposed: true, walkT: Math.random() * 6, dieT: 0, flinch: 0, relocT: rnd(4, 6), peekT: 0, crouch: 0 };
     var m = buildEnemy(type, e); e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline;
     e.group.position.set(e.x, 0, e.z); scene.add(e.group);
     pickCover(e);
@@ -467,6 +533,8 @@
     if (veh && veh.type === 'jeep' && cfg.vehicles.jeep) acc *= cfg.vehicles.jeep.enemyAccMul || 0.7;
     if (A.carrying) acc *= (cfg.carry.enemyAccMul || 0.5);
     if (A.smokeT > 0) acc *= (cfg.raw && cfg.raw.smokeRule && cfg.raw.smokeRule.enemyAccMulInSmoke) || 0.6;
+    var sv = H.save && H.save();
+    if (sv && sv.flags && sv.flags.isl_power_restored) acc *= 1.1;
     if (crouched) acc *= cfg.cover.crouched.enemyAccMul;
     else if (peeking) acc *= cfg.cover.peeking.enemyAccMul;
     if (toLin) {
@@ -540,6 +608,21 @@
       if (e.state === 'advance') e.state = 'rush';
     }
     var silent = A.stealthWave && !A.alerted && !A.noiseOn;
+    if (e.type === 'sniper' && !silent) {
+      e.group.rotation.y = Math.atan2(p.x - e.x, p.z - e.z);
+      e.exposed = true;
+      var lockSec = (cfg.raw && cfg.raw.sniperTelegraph && cfg.raw.sniperTelegraph.lockSec) || 1;
+      if (W.S.crouch) {
+        e.lockT = 0; hideSnip();
+      } else {
+        e.lockT = (e.lockT || 0) + dt;
+        showSnip(e, p);
+        if (e.lockT >= lockSec) { e.lockT = 0; enemyShoot(e, 1.1); }
+      }
+      e.group.position.set(e.x, 0, e.z);
+      if (W.applyEnemyVis) W.applyEnemyVis(e);
+      return;
+    }
     var toX = e.cover ? e.cover.x : p.x, toZ = e.cover ? e.cover.z : p.z, moving = false;
     if (e.state === 'advance' || e.state === 'rush') {
       var tx = e.state === 'rush' ? p.x : toX, tz = e.state === 'rush' ? p.z - 0.6 : toZ;
@@ -650,16 +733,31 @@
     if (!A) return;
     var sl = A.pack[A.weap], hard = ((H.save && H.save().diff) || 'hardcore') === 'hardcore';
     var frac = sl.mag / sl.size, hint = magHint(frac, A.reload > 0, sl.mag === 0);
-    hudSet('#magHint', 'h', hard ? hint : (sl.mag + ' / ' + sl.size + '　' + hint), function (el, v) { el.textContent = v; });
-    hudSet('#magRes', 'r', sl.mags + '|' + A.weap, function (el) { el.textContent = '備用 ' + new Array(sl.mags + 1).join('▮') + (sl.mags ? '' : '無'); });
-    hudSet('#fireMode', 'f', A.fireMode + A.weap, function (el) { el.textContent = (A.weap === 'm9' ? '半自動' : (A.fireMode === 'semi' ? '單發' : '連發')); });
+    if (jeepGun()) {
+      var heatMax = ((cfg.vehicles && cfg.vehicles.jeep && cfg.vehicles.jeep.gunner && cfg.vehicles.jeep.gunner.overheatSec) || 6);
+      hudSet('#magHint', 'h', A.overheat ? '過熱' : ('熱 ' + Math.round(((A.heat || 0) / heatMax) * 100) + '%'), function (el, v) { el.textContent = v; });
+      hudSet('#magRes', 'r', 'mount', function (el) { el.textContent = '車載'; });
+      hudSet('#fireMode', 'f', 'mg', function (el) { el.textContent = '連發'; });
+    } else {
+      hudSet('#magHint', 'h', hard ? hint : (sl.mag + ' / ' + sl.size + '　' + hint), function (el, v) { el.textContent = v; });
+      hudSet('#magRes', 'r', sl.mags + '|' + A.weap, function (el) { el.textContent = '備用 ' + new Array(sl.mags + 1).join('▮') + (sl.mags ? '' : '無'); });
+      hudSet('#fireMode', 'f', A.fireMode + A.weap, function (el) { el.textContent = (A.weap === 'm9' || A.weap === 't65' ? '半自動' : (A.fireMode === 'semi' ? '單發' : '連發')); });
+    }
     var cs = A.carrying ? '背負中' : (A.cover ? (A.peek ? '探頭' : '掩體') : (W.S.crouch ? '蹲下' : ''));
     hudSet('#coverState', 'c', cs, function (el, v) { el.textContent = v; });
-    hudSet('#wepName', 'w', A.weap, function (el) { el.textContent = wep().name; });
+    hudSet('#wepName', 'w', A.weap + (jeepGun() ? '|mg' : ''), function (el) { el.textContent = jeepGun() ? '車載 T75' : wep().name; });
+    var seat = W.seat && W.seat();
+    var seatBtn = $('#bSeat');
+    if (seatBtn) {
+      var vnow = W.inVehicle && W.inVehicle();
+      seatBtn.hidden = !(vnow && vnow.type === 'jeep');
+      seatBtn.textContent = seat === 'gunner' ? '射手' : (seat === 'passenger' ? '乘客' : '駕駛');
+      seatBtn.classList.toggle('on', seat === 'gunner');
+    }
     var touch = W.isMobileLike();
     document.body.classList.toggle('touch', touch);
     document.body.classList.toggle('hardcore', hard);
-    $('#bWeap').textContent = A.weap === 'm9' ? 'M9' : (A.weap === 't75' ? 'T75' : 'T91');
+    $('#bWeap').textContent = A.weap === 'm9' ? 'M9' : (A.weap === 't75' ? 'T75' : (A.weap === 't65' ? 'T65' : 'T91'));
     $('#bCrouch').textContent = W.S.crouch && !A.peek ? '探頭' : '蹲下';
     $('#bCrouch').classList.toggle('on', !!W.S.crouch);
     $('#bAds').classList.toggle('on', !!A.ads);
@@ -686,7 +784,29 @@
       }
     }
     A.cd = Math.max(0, A.cd - dt);
-    if (A.firing && A.fireMode === 'auto' && (A.weap === 't91' || A.weap === 't75')) tryFire(false);
+    if (A._seatCd > 0) A._seatCd -= dt;
+    if (jeepGun()) {
+      if (A.firing && !A.overheat) {
+        A.heat = (A.heat || 0) + dt;
+        if (A.heat >= ((cfg.vehicles && cfg.vehicles.jeep && cfg.vehicles.jeep.gunner && cfg.vehicles.jeep.gunner.overheatSec) || 6)) {
+          A.overheat = true; A.firing = false; A.cool = ((cfg.vehicles && cfg.vehicles.jeep && cfg.vehicles.jeep.gunner && cfg.vehicles.jeep.gunner.cooldownSec) || 3);
+          Cbt.msg('機槍過熱', 1400);
+        }
+      } else if (!A.overheat) A.heat = Math.max(0, (A.heat || 0) - dt * 1.6);
+      if (A.overheat) {
+        A.cool = (A.cool || 0) - dt;
+        if (A.cool <= 0) { A.overheat = false; A.heat = 0; Cbt.msg('機槍冷卻好了', 1000); }
+      }
+    }
+    if (A.firing && (jeepGun() || (A.fireMode === 'auto' && (A.weap === 't91' || A.weap === 't75')))) tryFire(false);
+    if (A.buddyGunner && A.combat) {
+      A._buddyCd = (A._buddyCd || 0.5) - dt;
+      if (A._buddyCd <= 0) {
+        A._buddyCd = 0.28;
+        var be = A.enemies.filter(function (en) { return en.state !== 'dead'; })[0];
+        if (be) damageEnemy(be, 14, false);
+      }
+    }
     if (A.hurtT > 0) { A.hurtT -= dt; $('#dmgfx').style.opacity = String(Math.min(0.85, 0.25 + (1 - A.pack.hp / A.pack.hpMax) * 0.6)); }
     else $('#dmgfx').style.opacity = A.pack.hp / A.pack.hpMax < 0.25 ? '0.35' : '0';
     if (A.nade) {

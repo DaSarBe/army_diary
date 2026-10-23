@@ -1,4 +1,4 @@
-/* 島嶼守備 E2E：桌機 1280×800 與手機 390×844 各跑一輪第 1 關。 */
+/* 島嶼守備 E2E：桌機 1280×800 與手機 390×844 各跑第 1 到 3 關。 */
 const puppeteer = require('puppeteer-core');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
@@ -53,8 +53,8 @@ async function main() {
 
   await page.waitForFunction(() => {
     const s = window.__island && __island.save && __island.save();
-    return s && s.flags && s.flags.isl_02_clear;
-  }, { timeout: extra.indexOf('down=1') >= 0 ? 240000 : 180000 });
+    return s && s.flags && s.flags.isl_03_clear;
+  }, { timeout: extra.indexOf('down=1') >= 0 ? 300000 : 240000 });
 
   await sleep(500);
   await page.screenshot({ path: path.join(outDir, `${mode}-99-done.png`) });
@@ -80,12 +80,18 @@ async function main() {
   }
   if (!info.flags || !info.flags.isl_01_clear) throw new Error('第 1 關沒有打完');
   if (!info.flags.isl_02_clear) throw new Error('第 2 關沒有打完');
+  if (!info.flags.isl_03_clear) throw new Error('第 3 關沒有打完');
+  if (!info.flags.isl_spared_scout && !info.flags.isl_killed_scout) throw new Error('沒有斥候旗標');
+  if (!info.flags.isl_ridge_walk && !info.flags.isl_bike_dash && !info.flags.isl_ridge_trail) throw new Error('沒有稜線打法旗標');
   if (!info.flags.isl_flank_by_bike && !info.flags.isl_flank_by_sea && !info.flags.isl_flank_front && !info.flags.isl_stealth) throw new Error('沒有打法旗標');
   const routes = ['isl_flank_front', 'isl_flank_by_sea', 'isl_flank_by_bike', 'isl_stealth'].filter(k => info.flags[k]);
   if (routes.length !== 1) throw new Error('打法旗標沒互斥: ' + routes.join(','));
   if (typeof info.o !== 'number') throw new Error('袍澤值 o 沒寫入');
   if (!info.flags.isl_radio_strong && !info.flags.isl_radio_weak) throw new Error('沒有天線旗標');
   if (!info.flags.isl_akai_with_you && !info.flags.isl_akai_outside) throw new Error('沒有阿凱同行旗標');
+  if (!info.flags.isl_jeep_driver_akai && !info.flags.isl_jeep_driver_lin && !info.flags.isl_jeep_driver_player) throw new Error('沒有吉普駕駛旗標');
+  if (extra.indexOf('power=0') >= 0 && info.flags.isl_power_restored) throw new Error('摸黑不該設復電旗標');
+  if (extra.indexOf('power=0') < 0 && extra.indexOf('down=1') < 0 && !info.flags.isl_power_restored) throw new Error('預設應中途復電');
   if (!info.fates || (info.fates.lin !== 'alive' && info.fates.lin !== 'kia')) throw new Error('第 1 關同袍命運沒接到第 2 關');
   if (info.fates.akai !== 'alive' && info.fates.akai !== 'kia') throw new Error('阿凱沒寫入第 2 關命運');
   if (extra.indexOf('down=1') >= 0 && !info.downSeen) throw new Error('倒下重試沒有觸發');

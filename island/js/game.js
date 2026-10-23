@@ -50,7 +50,11 @@
         medkitHealPct: island.weapons.medkit.heal, medkitsStart: island.weapons.medkit.count,
         medkitUseSec: island.weapons.medkit.useSec, cancelOnHit: island.weapons.medkit.cancelOnHit
       },
-      weapons: { t91: wep('t91', 'T91 步槍', 4), m9: wep('m9', 'M9 手槍', 2), t75: island.weapons.t75_lmg ? { id: 't75', name: 'T75 機槍', dmg: island.weapons.t75_lmg.dmg, rpm: island.weapons.t75_lmg.rpm, magSize: island.weapons.t75_lmg.mag, startMags: 1, reloadSec: island.weapons.t75_lmg.reloadSec, range: island.weapons.t75_lmg.range } : null },
+      weapons: {
+        t91: wep('t91', 'T91 步槍', 4), m9: wep('m9', 'M9 手槍', 2),
+        t75: island.weapons.t75_lmg ? { id: 't75', name: 'T75 機槍', dmg: island.weapons.t75_lmg.dmg, rpm: island.weapons.t75_lmg.rpm, magSize: island.weapons.t75_lmg.mag, startMags: 1, reloadSec: island.weapons.t75_lmg.reloadSec, range: island.weapons.t75_lmg.range } : null,
+        t65: island.weapons.t65k2_dmr ? { id: 't65', name: 'T65K2', dmg: island.weapons.t65k2_dmr.dmg, rpm: island.weapons.t65k2_dmr.rpm, magSize: island.weapons.t65k2_dmr.mag, startMags: 2, reloadSec: island.weapons.t65k2_dmr.reloadSec, range: island.weapons.t65k2_dmr.range } : null
+      },
       grenade: { name: '手榴彈', count: island.weapons.frag.count, dmg: island.weapons.frag.dmg, radius: island.weapons.frag.radius, fuse: island.weapons.frag.fuseSec },
       enemies: { types: island.enemies, maxOnScreen: island.maxEnemiesOnScreen || 8 },
       vehicles: island.vehicles, props: island.props, carry: carry,
@@ -72,6 +76,9 @@
   var ANTENNA_FLAGS = ['isl_radio_strong', 'isl_radio_weak'];
   var CHAT_FLAGS = ['isl_chat_lin_ok', 'isl_chat_quiet', 'isl_chat_wang'];
   var AKAI_FLAGS = ['isl_akai_with_you', 'isl_akai_outside'];
+  var DRIVER_FLAGS = ['isl_jeep_driver_akai', 'isl_jeep_driver_lin', 'isl_jeep_driver_player'];
+  var RIDGE_FLAGS = ['isl_ridge_walk', 'isl_bike_dash', 'isl_ridge_trail'];
+  var SCOUT_FLAGS = ['isl_spared_scout', 'isl_killed_scout'];
   function exclusiveFlags(group, id) {
     group.forEach(function (f) { save.flags[f] = f === id; });
     persist();
@@ -251,7 +258,10 @@
             else if (c.flag && ANTENNA_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(ANTENNA_FLAGS, c.flag);
             else if (c.flag && CHAT_FLAGS.indexOf(c.flag) >= 0) { exclusiveFlags(CHAT_FLAGS, c.flag); playerO(); }
             else if (c.flag && AKAI_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(AKAI_FLAGS, c.flag);
+            else if (c.flag && RIDGE_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(RIDGE_FLAGS, c.flag);
+            else if (c.flag && SCOUT_FLAGS.indexOf(c.flag) >= 0) exclusiveFlags(SCOUT_FLAGS, c.flag);
             else if (c.flag) setFlag(c.flag, true);
+            if (c.driver) exclusiveFlags(DRIVER_FLAGS, c.driver);
             if (c.clear) { save.flags[c.clear] = false; persist(); }
             hideDlg();
             if (c.next) { jumpTo(c.next); return; }
@@ -267,8 +277,15 @@
           if (q.route === 'bike' && sceneId === 'approach_choice') pick = choices[2] || pick;
           if (q.route === 'front' && sceneId === 'approach_choice') pick = choices[0];
           if (q.route === 'stealth' && sceneId === 'approach_choice') pick = choices[3] || pick;
-          if (q.akai === 'out' && sceneId === 'driver_choice') pick = choices[2] || pick;
-          if ((q.akai === 'with' || !q.akai) && sceneId === 'driver_choice') pick = choices[0];
+          if (q.akai === 'out' && (sceneId === 'driver_choice' || sceneId === 'driver_choice_missing')) pick = choices[choices.length - 1];
+          if ((q.akai === 'with' || !q.akai) && (sceneId === 'driver_choice' || sceneId === 'driver_choice_missing')) pick = choices[0];
+          if (q.driver === 'lin' && sceneId === 'driver_choice') pick = choices[1] || pick;
+          if (q.ridge === 'bike' && sceneId === 'ridge_approach') pick = choices[1] || pick;
+          if (q.ridge === 'trail' && sceneId === 'ridge_approach') pick = choices[2] || pick;
+          if ((q.ridge === 'walk' || !q.ridge) && sceneId === 'ridge_approach') pick = choices[0];
+          if (q.scout === 'kill' && sceneId === 'scout_choice') pick = choices[0];
+          if (q.scout === 'bind' && sceneId === 'scout_choice') pick = choices[1] || pick;
+          if ((q.scout === 'spare' || !q.scout) && sceneId === 'scout_choice') pick = choices[2] || pick;
           setTimeout(function () { pick && $('#dBtns').querySelectorAll('button')[choices.indexOf(pick)].click(); }, 200);
         }
         return;
@@ -280,11 +297,52 @@
 
   function pickStory(sid) {
     if (!sid) return sid;
-    if (sid === 'jeep_foreshadow' && fateOf('lin') === 'kia') return 'jeep_foreshadow_missing';
-    if (sid === 'assault_start' && fateOf('lin') === 'kia') return 'assault_start_missing';
-    if (sid === 'jeep_shop' && fateOf('lin') === 'kia') return 'jeep_shop_missing';
-    if (sid === 'radar_door' && hasFlag('isl_radio_weak') && story.scenes.radar_door_weak) return 'radar_door_weak';
-    if (sid === 'dark_talk' && hasFlag('isl_akai_outside') && story.scenes.dark_talk_outside) return 'dark_talk_outside';
+    var linDown = fateOf('lin') === 'kia';
+    var akaiOut = hasFlag('isl_akai_outside');
+    var weak = hasFlag('isl_radio_weak');
+    if (sid === 'jeep_foreshadow') return linDown ? 'jeep_foreshadow_missing' : sid;
+    if (sid === 'assault_start') return linDown ? 'assault_start_missing' : sid;
+    if (sid === 'jeep_shop') return linDown ? 'jeep_shop_missing' : sid;
+    if (sid === 'driver_choice') return linDown ? 'driver_choice_missing' : sid;
+    if (sid === 'akai_outside_hint') return linDown ? 'akai_outside_hint_missing' : sid;
+    if (sid === 'vehicle_jeep') {
+      if (hasFlag('isl_jeep_driver_lin')) return 'vehicle_jeep_lin';
+      if (hasFlag('isl_jeep_driver_player')) return 'vehicle_jeep_self';
+      return 'vehicle_jeep';
+    }
+    if (sid === 'radar_door') return linDown ? 'radar_door_missing' : (weak && story.scenes.radar_door_weak ? 'radar_door_weak' : sid);
+    if (sid === 'power_hint') return linDown && story.scenes.power_hint_missing ? 'power_hint_missing' : sid;
+    if (sid === 'rusher_warn') {
+      if (akaiOut) return 'rusher_warn_outside';
+      return linDown ? 'rusher_warn_missing' : sid;
+    }
+    if (sid === 'dark_talk') {
+      if (akaiOut) return linDown ? 'dark_talk_outside_missing' : 'dark_talk_outside';
+      return linDown ? 'dark_talk_missing' : 'dark_talk';
+    }
+    if (sid === 'dark_clear') {
+      if (akaiOut) return 'dark_clear_outside';
+      return linDown ? 'dark_clear_missing' : 'dark_clear';
+    }
+    if (sid === 'radar_complete') {
+      var lit = hasFlag('isl_power_restored');
+      if (akaiOut) return lit ? 'radar_complete_outside' : 'radar_complete_outside_dark';
+      if (linDown) return lit ? 'radar_complete_missing' : 'radar_complete_dark_missing';
+      return lit ? 'radar_complete' : 'radar_complete_dark';
+    }
+    if (sid === 'ridge_rest') {
+      if (linDown) return 'ridge_rest_missing';
+      if (fateOf('akai') === 'kia') return 'ridge_rest_quiet';
+      return sid;
+    }
+    if (sid === 'ridge_approach') return linDown ? 'ridge_approach_missing' : sid;
+    if (sid === 'vehicle_ridge') return linDown ? 'vehicle_ridge_missing' : sid;
+    if (sid === 'ridge_fight') return weak && story.scenes.ridge_fight_weak ? 'ridge_fight_weak' : sid;
+    if (sid === 'outpost_roster') return linDown ? 'outpost_roster_missing' : sid;
+    if (sid === 'ridge_outro_walk') {
+      if (hasFlag('isl_bike_dash')) return linDown ? 'ridge_outro_bike_missing' : 'ridge_outro_bike';
+      return 'ridge_outro_walk';
+    }
     return sid;
   }
   function currentBeat() { return level.beats[beatI]; }
@@ -304,9 +362,13 @@
     var b = currentBeat();
     if (!b) { showCompleteCard(); return; }
     save.beat = beatI; persist();
+    if (b.ifFlag && !hasFlag(b.ifFlag)) { nextBeat(); return; }
+    if (b.unlessFlag && hasFlag(b.unlessFlag)) { nextBeat(); return; }
+    if (auto && q.power === '0' && (b.kind === 'power_late' || b.id === 'restore_power_late')) { nextBeat(); return; }
     if (b.checkpoint) markCheckpoint(b);
     if (b.place) W.place(b.place[0], b.place[1]);
     if (b.type === 'talk' || b.type === 'choice') {
+      if (b.story === 'scout_choice' && W.showNpc) W.showNpc('npc_scout_wounded', true);
       var sid = pickStory(b.story);
       showLines(sid, function () { nextBeat(); });
     } else if (b.type === 'tutorial') startTutorial(b);
@@ -352,7 +414,7 @@
 
   /* ---------- 天線 ---------- */
   function startInteract(b) {
-    if (b.kind === 'power' || b.kind === 't75') {
+    if (b.kind === 'power' || b.kind === 'power_late' || b.kind === 't75' || b.kind === 't65') {
       var sc = story.scenes[b.story] || {};
       objective(sc.hint || b.label, b.x, b.z);
       $('#fpsHint').textContent = sc.hint || b.label;
@@ -364,9 +426,17 @@
           if (W.setPower) W.setPower(true);
           toast('電來了。整層亮了。');
         }
+        if (b.kind === 'power_late') {
+          setFlag('isl_power_restored_late');
+          if (W.setPower) W.setPower(true);
+          toast('電來了。這是打完才開的。');
+        }
         if (b.kind === 't75' && Cbt.unlockT75) { Cbt.unlockT75(); save.hasT75 = true; persist(); }
-        var done = { lines: sc.done || [{ who: '', text: '好。' }] };
-        story.scenes._hold_done = done;
+        if (b.kind === 't65' && Cbt.unlockDmr) { Cbt.unlockDmr(); save.hasT65 = true; persist(); }
+        var lines = sc.done || [{ who: '', text: '好。' }];
+        if (b.kind === 't75' && hasFlag('isl_akai_outside') && sc.done_outside) lines = sc.done_outside;
+        if (fateOf('lin') === 'kia' && sc.done_missing) lines = sc.done_missing;
+        story.scenes._hold_done = { lines: lines };
         showLines('_hold_done', function () { nextBeat(); });
       };
       if (auto) setTimeout(function () { W.place(b.x, b.z); startHold(b.label, 400); }, 280);
@@ -426,20 +496,24 @@
       }
       chat();
       var vNow = W.inVehicle();
-      if (route.vehicle === 'bike_east' || (vNow && (vNow.type === 'bike' || vNow.type === 'motorcycle'))) {
-        save.engineAlerted = true;
-        var bikePlan = assaultPlan();
-        var bag = JSON.parse(JSON.stringify(bikePlan.enemies));
-        var gather = takeBag(bag, Math.ceil(countBag(bag) / 2), ['scout', 'rifleman', 'rusher']);
-        save._bikeGather = gather; persist();
+      if (vNow && (vNow.type === 'bike' || vNow.type === 'motorcycle')) {
+        save.engineAlerted = true; persist();
         if (Cbt.beginNoise) Cbt.beginNoise();
-        if (Cbt.spawnGather) Cbt.spawnGather(gather);
+        if (level && level.id === 'op1_landing') {
+          var bikePlan = assaultPlan();
+          var bag = JSON.parse(JSON.stringify(bikePlan.enemies));
+          var gather = takeBag(bag, Math.ceil(countBag(bag) / 2), ['scout', 'rifleman', 'rusher']);
+          save._bikeGather = gather; persist();
+          if (Cbt.spawnGather) Cbt.spawnGather(gather);
+        }
       }
       rideWatch = function () {
         var p = W.pos();
         if (Math.hypot(p.x - route.land[0], p.z - route.land[1]) < 4.5) {
-          rideWatch = null; W.exitVehicle(); Cbt.refresh();
-          toast('到了。下車。'); nextBeat();
+          rideWatch = null;
+          if (!route.stay) { W.exitVehicle(); Cbt.refresh(); toast('到了。下車。'); }
+          else toast('到了。可以下車，也可以繼續坐車。');
+          nextBeat();
         }
       };
       if (route.scripted) {
@@ -451,7 +525,12 @@
           var a = wps[i0], b2 = wps[i0 + 1] || a;
           W.S.px = a[0] + (b2[0] - a[0]) * t; W.S.pz = a[1] + (b2[1] - a[1]) * t;
           if (W.S.veh) { W.S.veh.x = W.S.px; W.S.veh.z = W.S.pz; W.S.veh.mesh.position.set(W.S.px, 0.05, W.S.pz); }
-          if (u >= 1) { rideWatch = null; W.exitVehicle(); W.place(route.land[0], route.land[1]); nextBeat(); }
+          if (u >= 1) {
+            rideWatch = null;
+            if (!route.stay) { W.exitVehicle(); W.place(route.land[0], route.land[1]); }
+            else { W.place(route.land[0], route.land[1]); }
+            nextBeat();
+          }
         };
       } else if (auto) {
         var wp = route.waypoints || [route.land], wi = 0;
@@ -460,7 +539,9 @@
           var dx = t[0] - p.x, dz = t[1] - p.z, d = Math.hypot(dx, dz);
           if (d < 3) wi++;
           if (wi >= wp.length || Math.hypot(p.x - route.land[0], p.z - route.land[1]) < 5) {
-            rideWatch = null; W.exitVehicle(); W.place(route.land[0], route.land[1]); nextBeat(); return;
+            rideWatch = null;
+            if (!route.stay) W.exitVehicle();
+            W.place(route.land[0], route.land[1]); nextBeat(); return;
           }
           W.S.yaw = Math.atan2(-dx, -dz);
           if (W.S.veh) W.S.veh.yaw = W.S.yaw;
@@ -469,18 +550,23 @@
         };
         setTimeout(function () {
           if (!rideWatch) return;
-          rideWatch = null; W.exitVehicle(); W.place(route.land[0], route.land[1]); nextBeat();
+          rideWatch = null;
+          if (!route.stay) W.exitVehicle();
+          W.place(route.land[0], route.land[1]); nextBeat();
         }, 14000);
       }
     };
   }
   function startVehicle(b) {
-    var flag = hasFlag('isl_flank_by_sea') ? 'isl_flank_by_sea' : (hasFlag('isl_flank_by_bike') ? 'isl_flank_by_bike' : null);
+    var flag = null;
+    Object.keys(b.routes || {}).forEach(function (k) {
+      if (!flag && (k === 'default' || hasFlag(k))) flag = k;
+    });
     if (!flag || !b.routes[flag]) flag = b.routes && b.routes.default ? 'default' : flag;
     if (!flag || !b.routes[flag]) { nextBeat(); return; }
     if (b.flag) setFlag(b.flag);
     var route = b.routes[flag];
-    var sc = story.scenes[route.story];
+    var sc = story.scenes[pickStory(route.story)] || story.scenes[route.story];
     objective(sc.hint, null, null);
     var v = W.vehicleById(route.vehicle);
     if (v) { objective(sc.hint, v.x, v.z); W.setMarks([{ x: v.x, z: v.z }, { x: route.land[0], z: route.land[1], color: '#92c47a' }]); }
@@ -509,12 +595,42 @@
       else if (W.npc('npc_signal_lin')) W.moveNpc('npc_signal_lin', linPos.x, linPos.z);
       if (hasFlag('isl_akai_outside')) W.showNpc('npc_akai', false);
       if (b.blackout && W.setBlackout) W.setBlackout(true);
-      var wave = b.wave, plan = (level && level.id === 'op1_landing') ? assaultPlan() : { enemies: JSON.parse(JSON.stringify(wave.enemies || {})) };
+      var wave = b.wave, plan = (level && level.id === 'op1_landing') ? assaultPlan() : { enemies: JSON.parse(JSON.stringify((hasFlag('isl_ridge_trail') && wave.trailEnemies) || wave.enemies || {})) };
       Cbt.startWave({
         id: wave.id, name: wave.name, enemies: plan.enemies, grace: wave.grace,
         stealth: !!plan.stealth, reinforce: plan.reinforce, keep: !!plan.keep, noise: !!plan.noise,
-        lin: fateOf('lin') === 'kia' || !W.npc('npc_signal_lin') ? null : { hp: 80, x: linPos.x, z: linPos.z }
+        lin: fateOf('lin') === 'kia' || !W.npc('npc_signal_lin') ? null : { hp: 80, x: linPos.x, z: linPos.z },
+        buddyGunner: !!(W.inVehicle() && W.inVehicle().type === 'jeep' && !hasFlag('isl_akai_outside') && (fateOf('akai') === 'alive' || fateOf('lin') === 'alive')),
+        placed: wave.placed || b.placed
       });
+      if (b.optionalPower) {
+        W.setInteract([{ id: 'power', x: b.optionalPower.x, z: b.optionalPower.z, r: 2.6, label: b.optionalPower.label || '復電', hold: b.optionalPower.holdMs || 2400 }]);
+        HHooks.pendingHold = function () {
+          W.setInteract([]);
+          setFlag('isl_power_restored');
+          if (W.setPower) W.setPower(true);
+          var scP = story.scenes.restore_power || {};
+          var lines = fateOf('lin') === 'kia' && scP.done_missing ? scP.done_missing : (scP.done || [{ who: '黃連長', text: '記下。' }]);
+          var ti = 0;
+          function bark() {
+            if (ti >= lines.length) return;
+            toast(lines[ti].who + '：「' + lines[ti].text + '」');
+            ti++;
+            if (ti < lines.length) setTimeout(bark, 1600);
+          }
+          bark();
+        };
+        var hintSc = story.scenes[pickStory('power_hint')] || story.scenes.power_hint;
+        if (hintSc && hintSc.toast) setTimeout(function () { toast(hintSc.toast); }, 900);
+        if (auto && q.power !== '0') setTimeout(function () { W.place(b.optionalPower.x, b.optionalPower.z); startHold(b.optionalPower.label || '復電', 400); }, 700);
+      }
+      if ((plan.enemies && plan.enemies.rusher) || (wave.enemies && wave.enemies.rusher)) {
+        setTimeout(function () {
+          var rs = pickStory(hasFlag('isl_akai_outside') ? 'rusher_warn_outside' : 'rusher_warn');
+          var rsc = story.scenes[rs] || story.scenes.rusher_warn;
+          if (rsc && rsc.toast) toast(rsc.toast);
+        }, 2200);
+      }
       if (plan.ammo) {
         W.setInteract([{ id: 'ammo', x: plan.ammo.x, z: plan.ammo.z, r: 2.2, label: '彈藥箱', hold: 900 }]);
         HHooks.pendingHold = function () {
@@ -565,12 +681,16 @@
   }
 
   function finishLevel(b) {
-    setFlag(b.setFlag || (level.id === 'op2_radar' ? 'isl_02_clear' : 'isl_01_clear'));
+    setFlag(b.setFlag || (level.id === 'op3_ridge' ? 'isl_03_clear' : (level.id === 'op2_radar' ? 'isl_02_clear' : 'isl_01_clear')));
     if (Cbt.session()) save.loadout = JSON.parse(JSON.stringify(Cbt.session().pack));
     if (!fateOf('lin')) lockFate('lin', 'alive');
-    if (level.id === 'op2_radar' && !fateOf('akai')) lockFate('akai', 'alive');
+    if ((level.id === 'op2_radar' || level.id === 'op3_ridge') && !fateOf('akai')) lockFate('akai', 'alive');
     var next = catalog.levels.filter(function (l) { return l.num === (level.num || 1) + 1; })[0];
-    if (next && !next.stub) { save.level = next.id; save.beat = 0; save.checkpoint = next.id === 'op2_radar' ? 'jeep_shop' : next.id; persist(); }
+    if (next && !next.stub) {
+      save.level = next.id; save.beat = 0;
+      save.checkpoint = next.id === 'op3_ridge' ? 'ridge_rest' : (next.id === 'op2_radar' ? 'jeep_shop' : next.id);
+      persist();
+    }
     showLines(pickStory(b.story), function () { showCompleteCard(); });
   }
   function showCompleteCard() {
@@ -579,12 +699,24 @@
     var lin = fateOf('lin') === 'kia' ? '小林：陣亡（已鎖定）' : '小林：生還';
     var akai = !fateOf('akai') || fateOf('akai') === 'absent' ? '阿凱：尚未登場' : (fateOf('akai') === 'kia' ? '阿凱：陣亡（已鎖定）' : '阿凱：生還');
     $('#card').hidden = false;
+    if (level.id === 'op3_ridge') {
+      var how3 = hasFlag('isl_bike_dash') ? '機車衝稜線' : hasFlag('isl_ridge_trail') ? '山腹小徑' : '岩石步行';
+      var scout = hasFlag('isl_killed_scout') ? '斥候：補一槍' : '斥候：留下';
+      $('#cIn').innerHTML = '<p class="kicker">第 3 關完成</p><h2>稜線哨所</h2><p>' + how3 + '。' + scout + '。</p><p>' + lin + '<br>' + akai + '<br>王班長：被俘（坑道）</p><p>第 4 關「坑道」將依序解鎖。</p><div class="row"><button type="button" class="primary" id="toTitle">回標題</button></div>';
+      $('#toTitle').onclick = function () { $('#card').hidden = true; showTitle(); };
+      if (auto) { save._e2e = 'clear'; persist(); }
+      return;
+    }
     if (level.id === 'op2_radar') {
       var how = hasFlag('isl_power_restored') ? '復電強攻' : '摸黑';
       var who = hasFlag('isl_akai_outside') ? '阿凱留在車上接應' : '阿凱同行';
-      $('#cIn').innerHTML = '<p class="kicker">第 2 關完成</p><h2>雷達站</h2><p>' + how + '。' + who + '。</p><p>' + lin + '<br>' + akai + '<br>王班長：失聯</p><p>第 3 關「稜線哨所」將依序解鎖。</p><div class="row"><button type="button" class="primary" id="toTitle">回標題</button></div>';
+      $('#cIn').innerHTML = '<p class="kicker">第 2 關完成</p><h2>雷達站</h2><p>' + how + '。' + who + '。</p><p>' + lin + '<br>' + akai + '<br>王班長：失聯</p><p>第 3 關「稜線哨所」已解鎖。</p><div class="row"><button type="button" class="primary" id="go3">進入第 3 關</button><button type="button" id="toTitle">回標題</button></div>';
       $('#toTitle').onclick = function () { $('#card').hidden = true; showTitle(); };
-      if (auto) { save._e2e = 'clear'; persist(); }
+      $('#go3').onclick = function () { $('#card').hidden = true; bootLevel('op3_ridge', 0); };
+      if (auto) {
+        save._e2e = 'ch2'; persist();
+        setTimeout(function () { var g = $('#go3'); if (g) g.click(); }, 280);
+      }
       return;
     }
     var ant = hasFlag('isl_radio_strong') ? '碉堡頂（訊號好）' : '倉庫後（訊號弱）';
@@ -655,7 +787,7 @@
       '<label><input type="checkbox" id="co"' + ((prev && prev.carryOver) ? ' checked' : '') + '> 承接《阿兵哥日記》存檔（預設關閉）</label>' +
       '<div class="levels">' + lvBtns + '</div>' +
       '<div class="row">' + (prev ? '<button type="button" id="cont">繼續</button>' : '') + '<button type="button" class="primary" id="ng">新的戰役</button></div>' +
-      '<p style="font-size:12px;margin-top:12px">關卡 1 到 5 依序。桌機 WASD、滑鼠瞄準、左鍵開火、C 蹲下、R 換彈。手機：左搖桿拖到底奔跑、右半邊拖視角、右下開火。</p>';
+      '<p style="font-size:12px;margin-top:12px">關卡 1 到 5 依序。桌機 WASD、滑鼠瞄準、左鍵開火、C 蹲下、R 換彈、X 換座位。手機：左搖桿拖到底奔跑、右半邊拖視角、右下開火。</p>';
     $('#ng').onclick = function () { startNew($('#nm').value, $('#df').value, $('#co').checked); };
     var c = $('#cont'); if (c) c.onclick = function () { continueSave(prev); };
     if (auto) setTimeout(function () { startNew('方子豪', q.diff || 'hardcore', false); }, 250);
@@ -670,7 +802,8 @@
   function continueSave(s) {
     save = s;
     var id = s.level || 'op1_landing';
-    if (s.flags && s.flags.isl_01_clear && !s.flags.isl_02_clear && id === 'op1_landing') id = 'op2_radar';
+    if (s.flags && s.flags.isl_02_clear && !s.flags.isl_03_clear && (id === 'op1_landing' || id === 'op2_radar')) id = 'op3_ridge';
+    else if (s.flags && s.flags.isl_01_clear && !s.flags.isl_02_clear && id === 'op1_landing') id = 'op2_radar';
     bootLevel(id, id === s.level ? (s.beat || 0) : 0);
   }
   function bootLevel(id, startBeat) {
@@ -683,8 +816,12 @@
       Cbt.begin(save.loadout || Cbt.newLoadout());
       Cbt.restoreHp();
       if (save.hasT75 && Cbt.unlockT75) Cbt.unlockT75(true);
+      if (save.hasT65 && Cbt.unlockDmr) Cbt.unlockDmr(true);
       if (fateOf('lin') === 'kia') W.showNpc('npc_signal_lin', false);
-      if (id === 'op2_radar' && !fateOf('akai')) lockFate('akai', 'alive');
+      if (fateOf('akai') === 'kia') W.showNpc('npc_akai', false);
+      if (id === 'op2_radar' && hasFlag('isl_akai_outside')) W.showNpc('npc_akai', false);
+      if ((id === 'op2_radar' || id === 'op3_ridge') && !fateOf('akai')) lockFate('akai', 'alive');
+      if (W.npc && W.npc('npc_scout_wounded')) W.showNpc('npc_scout_wounded', false);
       document.body.classList.toggle('hardcore', save.diff === 'hardcore');
       document.body.classList.toggle('touch', W.isMobileLike());
       $('#hud').hidden = false; $('#card').hidden = true;
@@ -749,7 +886,7 @@
     if (Cbt.session() && Cbt.session().lin && Cbt.session().lin.hp <= 0) lockFate('lin', 'kia');
     else rollLinFate();
     playerO();
-    if (level && level.id === 'op2_radar') { nextBeat(); return; }
+    if (level && (level.id === 'op2_radar' || level.id === 'op3_ridge')) { nextBeat(); return; }
     if (fateOf('lin') === 'kia') {
       if (save._linRadio) { nextBeat(); return; }
       save._linRadio = true; persist();
