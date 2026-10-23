@@ -641,5 +641,62 @@
       "lin_main_partner": "阿凱缺席時小林為主要搭檔"
     }
   },
+  "graphics": {
+    "defaultPref": "auto",
+    "autoStartTier": "mid",
+    "autoNeverHigh": true,
+    "autoDropFps": 40,
+    "autoSampleSec": 3,
+    "autoCooldownSec": 10,
+    "tiers": {
+      "low": {
+        "pixelRatio": 1,
+        "antialias": false,
+        "sky": "flat",
+        "fog": "linear",
+        "heightFog": false,
+        "clouds": 0,
+        "sunDisc": true,
+        "sunHalo": false,
+        "maxTex": 512,
+        "domeSeg": 8,
+        "waterWaves": false,
+        "coverDetail": false
+      },
+      "mid": {
+        "pixelRatio": 1.25,
+        "antialias": false,
+        "sky": "dome",
+        "fog": "linear",
+        "heightFog": true,
+        "clouds": 5,
+        "sunDisc": true,
+        "sunHalo": true,
+        "maxTex": 512,
+        "domeSeg": 16,
+        "waterWaves": true,
+        "coverDetail": true
+      },
+      "high": {
+        "pixelRatio": 1.75,
+        "antialias": true,
+        "sky": "dome",
+        "fog": "linear",
+        "heightFog": true,
+        "clouds": 8,
+        "sunDisc": true,
+        "sunHalo": true,
+        "maxTex": 1024,
+        "domeSeg": 24,
+        "waterWaves": true,
+        "coverDetail": true
+      }
+    },
+    "budget": {
+      "low": { "triangles": 60000, "drawCalls": 80, "maxTex": 512 },
+      "mid": { "triangles": 120000, "drawCalls": 120, "maxTex": 512 },
+      "high": { "triangles": 200000, "drawCalls": 180, "maxTex": 1024 }
+    }
+  },
   "narrationRule": "系統規則（同袍生死不重擲、第一次決定）只寫在設定與存檔，不在對白裡用系統語；對白改為人物會說的話"
 }

@@ -14,6 +14,42 @@
     });
     auto = q.auto === '1';
   }
+  function gfxButtons() {
+    var G = root.Gfx; if (!G) return '';
+    var p = G.pref();
+    function btn(id, lab) {
+      return '<button type="button" class="gfxPick' + (p === id ? ' on' : '') + '" data-gfx="' + id + '">' + lab + '</button>';
+    }
+    return '<label>畫質</label><div class="gfxRow">' + btn('auto', '自動') + btn('low', '低') + btn('mid', '中') + btn('high', '高') + '</div>' +
+      '<label><input type="checkbox" id="fpsHud"' + (G.hudOn() ? ' checked' : '') + '> 顯示效能（FPS、畫質檔、draw calls、三角面）</label>' +
+      '<p style="font-size:12px">自動預設中檔，約 3 秒內低於 40fps 降一級，不會自行升到高檔。桌機按 F3 也可開關效能顯示。</p>';
+  }
+  function bindGfxUi() {
+    var G = root.Gfx; if (!G) return;
+    var box = document.querySelectorAll('.gfxPick'), i;
+    for (i = 0; i < box.length; i++) {
+      box[i].onclick = function () {
+        var id = this.getAttribute('data-gfx');
+        G.setPref(id, function (s) { if (W.applyGfx) W.applyGfx(s); });
+        Sfx.sfx('click');
+        var all = document.querySelectorAll('.gfxPick'), j;
+        for (j = 0; j < all.length; j++) all[j].classList.toggle('on', all[j].getAttribute('data-gfx') === G.pref());
+      };
+    }
+    var h = document.getElementById('fpsHud');
+    if (h) h.onchange = function () { G.setHud(h.checked); };
+  }
+  function showSettings() {
+    var fromTitle = phase === 'title';
+    $('#card').hidden = false;
+    $('#cIn').innerHTML = '<p class="kicker">畫面</p><h2>設定</h2>' + gfxButtons() +
+      '<div class="row"><button type="button" class="primary" id="gfxClose">關閉</button></div>';
+    bindGfxUi();
+    $('#gfxClose').onclick = function () {
+      if (fromTitle) showTitle();
+      else $('#card').hidden = true;
+    };
+  }
   function testMode() { return auto || q.test === '1' || q.eval === '1'; }
   function loadJson(url) {
     return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); });
@@ -1249,8 +1285,10 @@
       '<label>難度</label><select id="df">' + opts + '</select>' +
       '<label><input type="checkbox" id="co"' + ((prev && prev.carryOver) ? ' checked' : '') + '> 承接《阿兵哥日記》存檔（預設關閉）</label>' +
       '<div class="levels">' + lvBtns + '</div>' +
+      gfxButtons() +
       '<div class="row">' + (prev ? '<button type="button" id="cont">繼續</button>' : '') + '<button type="button" class="primary" id="ng">新的戰役</button></div>' +
-      '<p style="font-size:12px;margin-top:12px">關卡 1 到 5 依序。桌機 WASD、滑鼠瞄準、左鍵開火、C 蹲下、R 換彈、X 換座位。手機：左搖桿拖到底奔跑、右半邊拖視角、右下開火。</p>';
+      '<p style="font-size:12px;margin-top:12px">關卡 1 到 5 依序。桌機 WASD、滑鼠瞄準、左鍵開火、C 蹲下、R 換彈、X 換座位、F3 效能顯示。手機：左搖桿拖到底奔跑、右半邊拖視角、右下開火；畫質與 FPS 在設定頁。</p>';
+    bindGfxUi();
     $('#ng').onclick = function () { startNew($('#nm').value, $('#df').value, $('#co').checked); };
     var c = $('#cont'); if (c) c.onclick = function () { continueSave(prev); };
     if (auto) setTimeout(function () { startNew('方子豪', q.diff || 'hardcore', false); }, 250);
@@ -1400,6 +1438,7 @@
   $('#act').addEventListener('pointerdown', function (e) { e.preventDefault(); HHooks.onInteract(); });
   $('#act').addEventListener('pointerup', cancelHold);
   $('#btnMenu').onclick = function () { showTitle(); };
+  $('#btnGfx').onclick = function () { showSettings(); };
   $('#mute').onclick = function () {
     Sfx.setMuted(!Sfx.isMuted()); $('#mute').textContent = Sfx.isMuted() ? '音效關' : '音效開'; Sfx.sfx('click');
   };
@@ -1502,9 +1541,20 @@
     root.__island.scanReach = scanReach;
     root.__island.loadMapOnly = loadMapOnly;
     root.__island.catalog = function () { return catalog; };
+    root.__island.gfxInfo = function () { return W.gfxInfo && W.gfxInfo(); };
+    root.__island.setGfx = function (v) { if (root.Gfx) root.Gfx.setPref(v, function (s) { if (W.applyGfx) W.applyGfx(s); }); };
+    root.__island.setFpsHud = function (on) { if (root.Gfx) root.Gfx.setHud(on); };
+    root.__island.dumpGfx = function () { return root.Gfx && root.Gfx.dump ? root.Gfx.dump() : (W.gfxInfo && W.gfxInfo()); };
+    root.__island.Gfx = root.Gfx;
   }
   function boot() {
     parseQuery();
+    if (root.Gfx) {
+      if (cfg.raw && cfg.raw.graphics) root.Gfx.configure(cfg.raw.graphics);
+      if (q.gfx) root.Gfx.setPref(q.gfx);
+      if (q.fpshud === '1' || q.fps === '1') root.Gfx.setHud(true);
+      if (testMode()) root.Gfx.freezeAuto(true);
+    }
     attachTestApi();
     KEY = (cfg && cfg.save && cfg.save.key) || 'island-save-0';
     var canvas = $('#gl');
@@ -1512,8 +1562,15 @@
     var ok = W.init(canvas, {});
     if (!ok) { $('#glerr').hidden = false; return; }
     Cbt.init(HHooks, cfg);
+    if (root.Gfx) { root.Gfx.toggleHud(root.Gfx.hudOn()); if (W.applyGfx) W.applyGfx(root.Gfx.spec()); }
     document.addEventListener('pointerdown', function () { Sfx.ensure(); }, { once: true });
     showTitle();
+    if (q.dumpgfx === '1') {
+      loadMapOnly('op1_landing').then(function () {
+        if (W.renderOnce) W.renderOnce();
+        if (root.Gfx && root.Gfx.dump) root.Gfx.dump();
+      });
+    }
   }
 
   Promise.all([
@@ -1543,6 +1600,11 @@
     jumpTo: jumpTo,
     loadMapOnly: loadMapOnly,
     scanReach: scanReach,
-    collectReachables: collectReachables
+    collectReachables: collectReachables,
+    gfxInfo: function () { return W.gfxInfo && W.gfxInfo(); },
+    setGfx: function (v) { if (root.Gfx) root.Gfx.setPref(v, function (s) { if (W.applyGfx) W.applyGfx(s); }); },
+    setFpsHud: function (on) { if (root.Gfx) root.Gfx.setHud(on); },
+    dumpGfx: function () { return root.Gfx && root.Gfx.dump ? root.Gfx.dump() : (W.gfxInfo && W.gfxInfo()); },
+    Gfx: root.Gfx
   };
 })(typeof self !== 'undefined' ? self : this);
