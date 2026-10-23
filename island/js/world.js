@@ -311,7 +311,8 @@
   var TONES = {
     dawn: { sky: '#c9b89a', hs: '#f0e0c4', hg: '#6d6a50', hi: 0.9, dc: '#ffd2a0', di: 0.72, star: 0.08 },
     day: { sky: '#9cc3e6', hs: '#d7e8ff', hg: '#6d7b55', hi: 0.95, dc: '#fff1d2', di: 0.8, star: 0 },
-    dusk: { sky: '#e0a77a', hs: '#f0cfa8', hg: '#6d6a50', hi: 0.85, dc: '#ffb87a', di: 0.7, star: 0.2 }
+    dusk: { sky: '#e0a77a', hs: '#f0cfa8', hg: '#6d6a50', hi: 0.85, dc: '#ffb87a', di: 0.7, star: 0.2 },
+    night: { sky: '#0b1222', hs: '#7088b8', hg: '#2a382a', hi: 0.7, dc: '#9db4e6', di: 0.4, star: 1 }
   };
   var cur, tg;
   function mkTone() { return { sky: new T.Color(), hs: new T.Color(), hg: new T.Color(), dc: new T.Color(), hi: 0, di: 0, star: 0 }; }
@@ -357,8 +358,10 @@
   }
 
   function vehSpec(type) {
-    var v = (W.cfg && W.cfg.vehicles && W.cfg.vehicles[type]) || {};
-    return { speed: v.speed || 10, steer: v.steer || 1.2, water: !!v.water, dmg: v.dmgTakenMul || 1 };
+    var key = type === 'bike' ? 'motorcycle' : type;
+    var v = (W.cfg && W.cfg.vehicles && W.cfg.vehicles[key]) || (W.cfg && W.cfg.props && W.cfg.props[key]) || {};
+    var spd = (v.speed && (v.speed.cruise || v.speed.max)) || v.speed || 10;
+    return { speed: spd, steer: v.turnRate || v.steer || 1.2, water: type === 'sampan' || !!v.water, dmg: v.armorDmgMul || 1 };
   }
 
   function update(dt) {
@@ -585,7 +588,7 @@
   W.nearestVehicle = function (x, z, maxd) {
     var best = null, bd = maxd || 2.8, i;
     for (i = 0; i < S.vehicles.length; i++) {
-      var v = S.vehicles[i]; if (v.occupied) continue;
+      var v = S.vehicles[i]; if (v.occupied || /wreck/.test(v.id || '')) continue;
       var d = Math.hypot(v.x - x, v.z - z);
       if (d < bd) { bd = d; best = v; }
     }

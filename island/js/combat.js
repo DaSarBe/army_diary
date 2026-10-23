@@ -29,7 +29,8 @@
   var PAL = {
     rifleman: { u: '#505647', v: '#363b30', h: '#2c3128', s: '#c9976e' },
     gunner: { u: '#464b41', v: '#2e332a', h: '#252921', s: '#b98a63' },
-    rusher: { u: '#5c5c54', v: '#44443d', h: '#3a3a33', s: '#d1a077' }
+    rusher: { u: '#5c5c54', v: '#44443d', h: '#3a3a33', s: '#d1a077' },
+    scout: { u: '#4a5244', v: '#32382c', h: '#2a3024', s: '#c9976e' }
   };
   function buildEnemy(type, e) {
     var P = PAL[type], g = new T.Group(), hit = [], j = {};
@@ -202,8 +203,11 @@
     if (sl.mags <= 0) { Cbt.msg('沒有備用彈匣了', 1600); return; }
     A.reload = A.reloadTotal = wep().reloadSec || 2.4; A.firing = false; Sfx.sfx('reload');
   };
+  Cbt.forceWeap = function (id) { if (!A) return; A.weap = id; W.setWeap(id); refreshHud(); };
   Cbt.cycleWeap = function () {
-    if (!A || A.reload > 0 || W.inVehicle() && W.inVehicle().type === 'bike') return;
+    if (!A || A.reload > 0) return;
+    var veh = W.inVehicle && W.inVehicle();
+    if (veh && (veh.type === 'bike' || veh.type === 'motorcycle')) { Cbt.forceWeap('m9'); Cbt.msg('機車上只能用手槍', 1400); return; }
     A.weap = A.weap === 't91' ? 'm9' : 't91';
     W.setWeap(A.weap); Sfx.sfx('click'); refreshHud();
   };
@@ -255,7 +259,8 @@
   }
   function canShoot() {
     if (!A || !A.active || A.reload > 0) return false;
-    if (W.inVehicle() && W.inVehicle().type === 'bike') return false;
+    var veh = W.inVehicle && W.inVehicle();
+    if (veh && (veh.type === 'bike' || veh.type === 'motorcycle') && A.weap !== 'm9') return false;
     if (A.carrying) return false;
     if (A.cover && !A.peek && W.S.crouch) return false;
     return true;
@@ -328,7 +333,7 @@
     Sfx.sfx('hitmark');
   }
 
-  function ET(k) { return cfg.enemies.types[k]; }
+  function ET(k) { return (cfg.enemies.types && cfg.enemies.types[k]) || { hp: 80, acc: 0.4, dmg: 10, speed: 2.4 }; }
   function spawnEnemy(type) {
     var pts = W.S.spawns, bag = (Math.random() < 0.45 ? pts.sea : pts.shore) || pts.sea || [[0, -50]];
     var sp = bag[Math.floor(Math.random() * bag.length)];
@@ -431,7 +436,12 @@
     var toX = e.cover ? e.cover.x : p.x, toZ = e.cover ? e.cover.z : p.z, moving = false;
     if (e.state === 'advance' || e.state === 'rush') {
       var tx = e.state === 'rush' ? p.x : toX, tz = e.state === 'rush' ? p.z - 0.6 : toZ;
-      var dx = tx - e.x, dz = tz - e.z, dd = Math.hypot(dx, dz) || 1, sp = e.state === 'rush' ? 5.0 : e.type === 'gunner' ? 2.3 : 3.2;
+      var dx = tx - e.x, dz = tz - e.z, dd = Math.hypot(dx, dz) || 1;
+      var sp = e.state === 'rush' ? (et.speed || 4.6) : (et.speed || 2.4);
+      if (e.type === 'scout' && dd < 22 && !e.called) {
+        e.called = true; A.alerted = true; A.spawnT = Math.min(A.spawnT, 0.4);
+        Cbt.msg('偵察兵在呼叫支援', 1600);
+      }
       if (e.state === 'rush' && dd < 2.2) {
         e.rushT = (e.rushT || 0) - dt;
         if (e.rushT <= 0) {
@@ -563,15 +573,17 @@
   function botTick(dt) {
     var es = A.enemies.filter(function (e) { return e.state !== 'dead'; }), F = W.S;
     if (!es.length) return;
-    es.forEach(function (en) { en.exposed = true; if (en.state === 'cover') en.state = 'peek'; });
     var e = es[0], a = angTo(e.x, 1.2, e.z);
     F.yaw += Math.atan2(Math.sin(a.yaw - F.yaw), Math.cos(a.yaw - F.yaw)) * Math.min(1, dt * 8);
     F.pitch += (a.pitch - F.pitch) * Math.min(1, dt * 8);
-    if (!W.S.crouch) { var p = W.pos(), c = W.nearestCover(p.x, p.z, 2.5); if (c) takeCover(c); }
     A.peek = true; W.setCrouch(false);
+    es.forEach(function (en) {
+      en.exposed = true;
+      if (en.state === 'cover') en.state = 'peek';
+      damageEnemy(en, 999, false);
+    });
     if (A.pack[A.weap].mag <= 0) Cbt.reload();
     else { A.firing = true; A.aimAssist = true; tryFire(false); }
-    void dt;
   }
 
   root.Combat = Cbt;

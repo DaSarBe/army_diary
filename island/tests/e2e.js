@@ -76,8 +76,8 @@ async function main() {
     throw new Error('console errors: ' + fatal.slice(0, 8).join(' | '));
   }
   if (!info.flags || !info.flags.isl_01_clear) throw new Error('第 1 關沒有打完');
-  if (!info.flags.isl_flank_by_bike && !info.flags.isl_flank_by_sea) throw new Error('沒有側翼旗標');
-  if (!info.flags.isl_antenna_ridge && !info.flags.isl_antenna_bunker) throw new Error('沒有天線旗標');
+  if (!info.flags.isl_flank_by_bike && !info.flags.isl_flank_by_sea && !info.flags.isl_flank_front && !info.flags.isl_stealth) throw new Error('沒有打法旗標');
+  if (!info.flags.isl_radio_strong && !info.flags.isl_radio_weak) throw new Error('沒有天線旗標');
   fs.writeFileSync(path.join(outDir, `${mode}-result.json`), JSON.stringify({ info, errors }, null, 2));
   await browser.close(); srv.close();
   log('ok');

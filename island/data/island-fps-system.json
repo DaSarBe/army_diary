@@ -1,141 +1,469 @@
 {
-  "version": "1.0",
-  "updated": "2026-10-23",
-  "owner": "Dai",
-  "title": "島嶼守備",
-  "notes": "阿兵哥日記世界觀的第一人稱續作。掩體、血量、難度沿用海灘章 fps-system.json。關卡資料從 JSON 讀取，1 到 5 關依序解鎖。",
-  "view": {
-    "default": "first",
-    "fov": 70,
-    "eyeStand": 1.62,
-    "eyeCrouch": 1.02,
-    "transitionMs": 180
-  },
-  "difficulty": {
-    "default": "hardcore",
-    "modes": {
-      "story": { "name": "劇情向", "dmgTakenMul": 0.5, "enemyAccMul": 0.6, "aimAssist": true, "canDie": false },
-      "standard": { "name": "標準", "dmgTakenMul": 1.0, "enemyAccMul": 1.0, "aimAssist": "optional", "canDie": true },
-      "hardcore": { "name": "硬派", "dmgTakenMul": 1.4, "enemyAccMul": 1.15, "aimAssist": "optional", "canDie": true, "noHud": ["ammoCount"], "note": "彈藥數不顯示，只看彈匣重量提示" }
-    },
-    "aimAssist": { "toggle": true, "defaultOnMobile": true, "snapAngleDeg": 4, "slowdownPct": 40, "hardcorePenalty": { "xpMul": 0.9 } }
-  },
-  "cover": {
-    "autoSnapM": 1.2,
-    "crouched": {
-      "enemyAccMul": 0.05,
-      "blockByRaycast": true,
-      "dmgTakenMul": { "sandbag": 0.1, "rock": 0, "bunker": 0 }
-    },
-    "peeking": { "enemyAccMul": 0.7, "dmgTakenMul": 0.5 },
-    "types": {
-      "sandbag": { "hp": 600, "damagedOnlyOnHit": true, "warnAtPct": 30 },
-      "rock": { "hp": null },
-      "bunker": { "hp": null }
-    },
-    "rusher": { "meleeNeedsHitRoll": true, "accMulBehindCover": 0.5, "noDoubleDamage": true },
-    "feedback": { "blockedHint": "掩體擋下", "sandbagWarn": "沙包要爛了，換位置！" }
-  },
-  "health": {
-    "hpMax": 100,
-    "lowHpPct": 25,
-    "medkitHealPct": 40,
-    "medkitsStart": 1,
-    "zeroHp": {
-      "action": "checkpoint",
-      "note": "主角倒下回到最近存檔點，不是 game over"
-    }
-  },
-  "aiming": {
-    "swayBase": 2.6,
-    "adsSwayMul": 0.5,
-    "recoilDeg": 0.7,
-    "recoilRecoverPerSec": 6,
-    "hit": "hitscan",
-    "headshotMul": 2.0
+  "game": "島嶼守備（暫名）",
+  "basedOn": "army_diary 世界觀；後備軍人被召回，離島逐據點奪回",
+  "engine": "three.js 網頁，電腦＋手機",
+  "reuse": [
+    "fps-system.json 的 cover / health / difficulty / aim sway / T91 規則",
+    "rpg-system.json 的 attributes / checks"
+  ],
+  "player": {
+    "hp": 100,
+    "loadoutSlots": [
+      "primary",
+      "sidearm",
+      "grenade",
+      "medkit"
+    ],
+    "fatigueAffectsSway": true
   },
   "weapons": {
     "t91": {
-      "id": "t91",
-      "name": "T91 步槍",
-      "dmg": 34,
+      "slot": "primary",
+      "dmg": 28,
       "rpm": 600,
-      "modes": ["semi", "auto"],
-      "magSize": 30,
-      "startMags": 4,
-      "range": 280,
-      "reloadSec": 2.4
+      "mag": 30,
+      "reloadSec": 2.5,
+      "range": 120,
+      "note": "預設，沿用 fps-system"
     },
     "m9": {
-      "id": "m9",
-      "name": "M9 手槍",
+      "slot": "sidearm",
       "dmg": 22,
-      "rpm": 280,
-      "modes": ["semi"],
-      "magSize": 15,
-      "startMags": 2,
-      "range": 60,
-      "reloadSec": 1.6
+      "rpm": 300,
+      "mag": 15,
+      "reloadSec": 1.6,
+      "range": 40
+    },
+    "t75_lmg": {
+      "slot": "primary",
+      "dmg": 24,
+      "rpm": 750,
+      "mag": 100,
+      "reloadSec": 5.0,
+      "range": 90,
+      "swayMul": 1.5,
+      "unlock": "據點2繳獲"
+    },
+    "t65k2_dmr": {
+      "slot": "primary",
+      "dmg": 55,
+      "rpm": 180,
+      "mag": 20,
+      "reloadSec": 2.2,
+      "range": 160,
+      "swayMul": 0.6,
+      "unlock": "據點3繳獲"
+    },
+    "frag": {
+      "slot": "grenade",
+      "dmg": 120,
+      "radius": 5,
+      "fuseSec": 3,
+      "count": 2
+    },
+    "medkit": {
+      "heal": 40,
+      "useSec": 2.5,
+      "count": 2,
+      "cancelOnHit": true
     }
   },
-  "grenade": { "name": "手榴彈", "count": 2, "dmg": 70, "radius": 5.5, "fuse": 1.1 },
   "enemies": {
-    "_desc": "不明敵軍。不寫國名。",
-    "types": {
-      "rifleman": { "hp": 100, "acc": 0.18, "dmg": 12, "behavior": "前進到掩體、探頭射擊" },
-      "gunner": { "hp": 140, "acc": 0.1, "dmg": 10, "rpm": 700, "behavior": "固定壓制" },
-      "rusher": { "hp": 80, "acc": 0.12, "dmg": 14, "behavior": "直衝逼換位" }
+    "scout": {
+      "hp": 60,
+      "acc": 0.35,
+      "dmg": 8,
+      "speed": 3.2,
+      "behavior": "遠距離探路，發現玩家會呼叫支援"
     },
-    "maxOnScreen": 8
+    "rifleman": {
+      "hp": 80,
+      "acc": 0.4,
+      "dmg": 10,
+      "speed": 2.4,
+      "behavior": "掩體間移動射擊"
+    },
+    "gunner": {
+      "hp": 120,
+      "acc": 0.3,
+      "dmg": 7,
+      "rpm": 700,
+      "speed": 1.6,
+      "behavior": "壓制射擊，打掩體耐久"
+    },
+    "rusher": {
+      "hp": 70,
+      "acc": 0.5,
+      "dmg": 18,
+      "speed": 4.6,
+      "behavior": "近戰，需命中擲骰（沿用規則）"
+    },
+    "sniper": {
+      "hp": 50,
+      "acc": 0.6,
+      "dmg": 35,
+      "speed": 1.8,
+      "behavior": "瞄準 1.5 秒有紅點預警，蹲下可躲"
+    },
+    "commander": {
+      "hp": 300,
+      "acc": 0.45,
+      "dmg": 12,
+      "speed": 2.0,
+      "behavior": "據點 boss，每損失 1/3 血呼叫一波援兵"
+    }
+  },
+  "maxEnemiesOnScreen": 8,
+  "outposts": [
+    {
+      "id": "op1_landing",
+      "name": "登陸灘頭",
+      "goal": "清空灘頭並架起無線電",
+      "enemies": {
+        "scout": 4,
+        "rifleman": 6,
+        "rusher": 2
+      },
+      "newMechanic": "教學：掩體與蹲下",
+      "reward": "t75_lmg 圖紙線索",
+      "vehicles": [
+        "sampan",
+        "motorcycle"
+      ]
+    },
+    {
+      "id": "op2_radar",
+      "name": "雷達站",
+      "goal": "奪回雷達站機房",
+      "enemies": {
+        "rifleman": 6,
+        "gunner": 3,
+        "scout": 3
+      },
+      "newMechanic": "停電區：手電筒與能見度",
+      "reward": "t75_lmg",
+      "vehicles": [
+        "jeep",
+        "generator_cart"
+      ]
+    },
+    {
+      "id": "op3_ridge",
+      "name": "稜線哨所",
+      "goal": "穿過稜線抵達哨所",
+      "enemies": {
+        "rifleman": 5,
+        "sniper": 3,
+        "rusher": 3
+      },
+      "newMechanic": "狙擊紅點預警",
+      "reward": "t65k2_dmr",
+      "vehicles": [
+        "motorcycle"
+      ]
+    },
+    {
+      "id": "op4_tunnel",
+      "name": "坑道",
+      "goal": "救出被俘同袍並撤離",
+      "enemies": {
+        "rifleman": 6,
+        "gunner": 2,
+        "rusher": 6
+      },
+      "newMechanic": "近距離戰、背人撤退（沿用 carryRules）",
+      "reward": "同袍加入",
+      "vehicles": [
+        "rail_cart",
+        "jeep"
+      ]
+    },
+    {
+      "id": "op5_hq",
+      "name": "島上指揮所",
+      "goal": "擊倒敵指揮官",
+      "enemies": {
+        "rifleman": 8,
+        "gunner": 3,
+        "sniper": 2,
+        "commander": 1
+      },
+      "newMechanic": "boss 呼叫援兵",
+      "reward": "結局判定",
+      "vehicles": [
+        "jeep"
+      ]
+    }
+  ],
+  "difficulty": {
+    "normal": {
+      "dmgTakenMul": 1.0,
+      "enemyAccMul": 1.0,
+      "aimAssist": true
+    },
+    "hardcore": {
+      "dmgTakenMul": 1.4,
+      "enemyAccMul": 1.15,
+      "aimAssist": "optional",
+      "hideAmmoCount": true
+    }
+  },
+  "checkpoints": "每據點中途與開始各一個；死亡後從最近存檔點重來，不扣袍澤值",
+  "mobile": {
+    "layout": "參考決勝時刻",
+    "leftStick": "移動",
+    "rightDrag": "視角",
+    "rightFire": "右下開火大鈕",
+    "extraButtons": [
+      "瞄準",
+      "換彈",
+      "蹲下",
+      "手榴彈",
+      "急救",
+      "上下車",
+      "背人"
+    ],
+    "autoFire": "瞄準狀態下對準敵人可自動開火（可關閉）",
+    "autoReload": true,
+    "sensitivity": {
+      "min": 0.5,
+      "default": 1.0,
+      "max": 2.0
+    },
+    "gyroOptional": true,
+    "vehicleControls": {
+      "motorcycle": "左搖桿方向，右側拖曳視角，右下為油門剎車切換按鈕",
+      "jeep": "左搖桿方向，右下開火（射手座位），座位切換鈕"
+    },
+    "layoutEditable": true
+  },
+  "todo": [
+    "等 Eve 故事大綱後對齊據點名稱與劇情旗標",
+    "結局條件與 NPC 命運機率（沿用 survivor 10–12% 的目標）",
+    "數值需模擬跑一次平衡"
+  ],
+  "stealthEnv": {
+    "blackout": {
+      "fogDensityMul": 2.5,
+      "ambientMul": 0.15,
+      "onlyFlashlightSpot": true,
+      "enemyOutlineOnlyWhenLit": true,
+      "note": "不算真光照，手機可跑"
+    }
+  },
+  "sniperTelegraph": {
+    "laserLine": "閃爍細線",
+    "reticleRing": true,
+    "lockSec": 1.0,
+    "crouchBreaksLock": true
+  },
+  "smokeRule": {
+    "carrySmokeSec": 6,
+    "enemyAccMulInSmoke": 0.6,
+    "note": "與背人 carryRules 疊乘"
+  },
+  "props": {
+    "sampan": {
+      "outpost": "op1_landing",
+      "type": "scripted_route",
+      "durationSec": 20,
+      "canShoot": true,
+      "enemyAccMul": 0.8,
+      "effect": "繞到碉堡後方，開局少 2 名步槍兵正面守軍並取得側擊位置",
+      "flag": "isl_flank_by_sea",
+      "risk": "被機槍手發現則船受損，落水損失 20 hp 並重置位置"
+    },
+    "generator_cart": {
+      "outpost": "op2_radar",
+      "type": "movable_cover",
+      "pushSpeed": 1.2,
+      "cover": {
+        "hp": 800,
+        "dmgTakenMul": 0.1,
+        "damagedOnlyOnHit": true
+      },
+      "canSprint": false,
+      "note": "推著走，可蹲在後面，不可同時背人"
+    },
+    "rail_cart": {
+      "outpost": "op4_tunnel",
+      "type": "scripted_route",
+      "durationSec": 25,
+      "carriesBuddy": true,
+      "noiseAlertsAllEnemies": true,
+      "enemyAccMul": 0.7,
+      "cartHp": 300,
+      "effect": "快速撤離，但整座坑道的敵人被驚動，終點多一波 rusher x3",
+      "flag": "isl_rail_escape"
+    }
+  },
+  "civilians": {
+    "enabled": false,
+    "note": "大綱沒有平民；被俘守軍為不可戰鬥友軍 NPC，誤傷扣 honor 並記 flag isl_friendly_fire"
+  },
+  "captives": {
+    "count": 3,
+    "rescueSec": 3,
+    "enemyTargetsThem": false,
+    "flagOnAllRescued": "isl_captives_rescued",
+    "flagOnLeft": "isl_captives_left"
+  },
+  "npcFate": {
+    "targetRates": {
+      "island_guard": "10–12%",
+      "silent_island": "約 35%",
+      "nameless_line": "其餘"
+    },
+    "akai": {
+      "killedBy": "isl_akai_kia",
+      "chance": "clamp(30-(o-50)*0.8,5,45)；isl_akai_outside 時 +10；有 sk_firstaid -10",
+      "stage": "op3~op5"
+    },
+    "wang": {
+      "killedBy": "isl_wang_kia",
+      "chance": "背人撤離途中：基準 25；用 rail_cart -10；煙霧中 -5；被擊中次數每次 +8（上限 50）",
+      "stage": "op4"
+    },
+    "lin": {
+      "killedBy": "isl_lin_kia",
+      "chance": "clamp(20-(o-50)*0.6,3,35)",
+      "stage": "op1~op5，若有登場"
+    }
+  },
+  "endingsFlags": {
+    "island_guard": "(isl_wang_rescued || (carryOver.enabled && wang_dead_in_diary && isl_key_captive_rescued)) && isl_captives_rescued && !isl_akai_kia && !isl_lin_kia && isl_commander_captured",
+    "silent_island": "count(isl_wang_kia,isl_akai_kia,isl_lin_kia)>=2 || (isl_captives_left && isl_commander_killed)",
+    "nameless_line": "else",
+    "order": "island_guard > silent_island > nameless_line",
+    "note": "flag 名稱全採 Eve 大綱 isl_*；isl_no_retreat 全程未撤退，另用於隱藏加分"
+  },
+  "playerDeath": {
+    "mode": "retry_from_checkpoint",
+    "companionFateNotResetByRetry": true,
+    "note": "重試回最近存檔點；同袍生死以第一次的結果為準，不可靠重試洗掉"
   },
   "vehicles": {
-    "bike": { "id": "bike", "name": "摩托車", "speed": 16, "dmgTakenMul": 1.25, "steer": 1.6 },
-    "jeep": { "id": "jeep", "name": "吉普車", "speed": 12, "dmgTakenMul": 0.85, "steer": 1.1, "seats": 4 },
-    "sampan": { "id": "sampan", "name": "舢舨", "speed": 7, "dmgTakenMul": 0.9, "enemyAccMul": 0.75, "water": true }
+    "motorcycle": {
+      "seats": 1,
+      "speed": {
+        "cruise": 14,
+        "max": 22
+      },
+      "turnRate": 1.8,
+      "hp": 150,
+      "canShoot": "sidearm_only",
+      "shootAccMul": 0.5,
+      "enemyAccMul": 0.6,
+      "controls": "左搖桿控制方向與油門，右側拖曳看視角",
+      "collision": {
+        "minorDmg": 10,
+        "enemyRunOverDmg": 999,
+        "obstacleStopDmg": 15
+      },
+      "dismountRule": "HP 歸零或玩家按下車鈕；翻車時玩家受 25 傷害",
+      "useCases": [
+        "op1 灘頭繞側翼（很吵）",
+        "op3 稜線道路快速通過"
+      ],
+      "engineNoise": "會吸引 100 公尺內敵人，潛行失效"
+    },
+    "jeep": {
+      "seats": 3,
+      "roles": [
+        "driver",
+        "gunner",
+        "passenger"
+      ],
+      "speed": {
+        "cruise": 10,
+        "max": 16
+      },
+      "turnRate": 1.0,
+      "hp": 500,
+      "armorDmgMul": 0.4,
+      "gunner": {
+        "weapon": "t75_lmg_mount",
+        "dmg": 24,
+        "rpm": 750,
+        "overheatSec": 6,
+        "cooldownSec": 3,
+        "playerCanSwitchSeatSec": 1.5
+      },
+      "passenger": {
+        "canShoot": "primary",
+        "accMul": 0.6
+      },
+      "enemyAccMul": 0.7,
+      "buddyAI": "阿凱/小林 可擔任駕駛或射手",
+      "hpZero": "爆炸，車上人員各受 40 傷害並下車",
+      "useCases": [
+        "op2 護送遭遇戰",
+        "op4 坑道外載運同袍與俘虜",
+        "op5 衝入指揮所廣場"
+      ],
+      "carryCapacity": "可載被救的俘虜 3 人與王班長",
+      "notAllowed": [
+        "op3 稜線道路"
+      ]
+    },
+    "common": {
+      "enterExitSec": 1.2,
+      "fuelEnabled": false,
+      "enemyRPG": {
+        "enabled": false,
+        "note": "先不做火箭筒，避免難度暴增"
+      },
+      "hardcoreDmgMul": 1.4,
+      "checkpointKeepsVehicle": true,
+      "mobileHud": "右下加一個『上/下車』鈕"
+    }
   },
-  "carry": {
-    "enemyAccMul": 0.5,
-    "dmgTakenMul": 0.6,
-    "speedMul": 0.6,
-    "cannotAds": true,
-    "hint": "背著人不能瞄準射擊"
+  "storyTone": {
+    "serious": "作戰",
+    "light": "營區與車上閒聊"
   },
-  "retry": {
-    "onDown": "checkpoint",
-    "keepCompanionFates": true,
-    "note": "同袍生死以第一次結果為準，存在 save.island.companionFates，重試不重擲"
+  "newFlags": {
+    "isl_flank_by_bike": "op1 騎摩托車繞側翼完成",
+    "isl_bike_dash": "op3 騎摩托車衝過稜線道路",
+    "isl_jeep_convoy": "op2 吉普車護送／通過遭遇戰",
+    "isl_jeep_charge": "op5 駕吉普車衝入指揮所廣場",
+    "isl_key_captive_rescued": "關鍵被俘者被救出；沿用日記且王班長已死時，取代 isl_wang_rescued",
+    "_status": "Eve 提案，Dai 已採用"
   },
-  "mobile": {
-    "layout": "cod",
-    "leftStickMove": true,
-    "stickEdgeSprint": true,
-    "rightHalfLook": true,
-    "fireBottomRight": true,
-    "ammoAboveButtons": true,
-    "buttons": ["ads", "reload", "crouch", "grenade", "medkit", "vehicle", "carry"]
+  "saveSchema": {
+    "companionFates": {
+      "wang": "alive|kia|absent",
+      "akai": "alive|kia|absent",
+      "lin": "alive|kia|absent"
+    },
+    "rule": "第一次決定即寫入存檔；重試讀取存檔，不再擲骰；陣亡同袍重試後維持缺席，閒聊換『少了人』版本",
+    "rollOnce": true,
+    "storedAt": "save.island.companionFates",
+    "also": [
+      "已觸發的 isl_* flag",
+      "是否沿用阿兵哥日記 carryOver"
+    ]
   },
-  "save": {
-    "key": "island-save-0",
-    "muteKey": "island-mute",
-    "fields": ["name", "diff", "level", "checkpoint", "flags", "companionFates", "weapons", "hp"]
+  "locations": {
+    "island_road": {
+      "name": "島上道路",
+      "outpost": "op2_radar→op3_ridge 之間",
+      "width": "窄",
+      "vehicles": [
+        "motorcycle"
+      ],
+      "jeepAllowed": false,
+      "note": "稜線道路太窄，吉普車不能上"
+    }
   },
-  "outposts": [
-    { "id": "op_south", "name": "南灘據點", "level": 1 },
-    { "id": "op_radar", "name": "雷達站", "level": 2 },
-    { "id": "op_village", "name": "漁村", "level": 3 },
-    { "id": "op_ridge", "name": "高地砲陣", "level": 4 },
-    { "id": "op_hq", "name": "指揮所", "level": 5 }
-  ],
-  "flags": {
-    "isl_antenna_ridge": "天線架在稜線",
-    "isl_antenna_bunker": "天線架在碉堡",
-    "isl_flank_by_sea": "舢舨側翼",
-    "isl_flank_by_bike": "摩托車側翼",
-    "isl_01_clear": "第 1 關完成"
-  },
-  "companions": {
-    "akai": { "npc": "npc_akai", "name": "阿凱" },
-    "lin": { "npc": "npc_signal_lin", "name": "小林" },
-    "sgt": { "npc": "npc_sgt_wang", "name": "王班長" }
+  "carryOver": {
+    "enabled": false,
+    "default": "off",
+    "note": "沿用阿兵哥日記選擇，等 Tim 決定",
+    "effects": {
+      "wang_dead_in_diary": "isl_key_captive_rescued 取代 isl_wang_rescued",
+      "akai_injured_or_absent": "op2 阿凱初始 hp 70 或缺席",
+      "lin_main_partner": "阿凱缺席時小林為主要搭檔"
+    }
   }
 }
