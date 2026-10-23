@@ -107,8 +107,10 @@ async function main() {
   if (!info.flags.isl_tunnel_stealth && !info.flags.isl_tunnel_assault && !info.flags.isl_rail_escape && !info.flags.isl_tunnel_jeep) throw new Error('沒有坑道打法旗標');
   if (!info.flags.isl_captives_rescued && !info.flags.isl_captives_left) throw new Error('沒有俘虜旗標');
   if (info.fates.wang !== 'alive' && info.fates.wang !== 'kia') throw new Error('王班長命運沒寫入');
-  if (!info.rolls || !info.rolls['lin:op1_landing'] || !info.rolls['lin:op4_tunnel']) throw new Error('小林各關擲骰沒寫入');
-  if (!info.rolls['akai:op3_ridge']) throw new Error('阿凱第 3 關擲骰沒寫入');
+  if (!info.rolls || !info.rolls['lin:op1_landing'] || !info.rolls['lin:op3_ridge'] || !info.rolls['lin:op4_tunnel']) throw new Error('小林第 1、3、4 關擲骰沒寫入');
+  if (info.rolls['lin:op2_radar']) throw new Error('小林第 2 關不該擲骰');
+  if (!info.rolls['akai:op3_ridge'] || !info.rolls['akai:op4_tunnel']) throw new Error('阿凱第 3、4 關擲骰沒寫入');
+  if (info.rolls['akai:op2_radar']) throw new Error('阿凱第 2 關不該擲骰');
   if (extra.indexOf('tunnel=rail') >= 0 && !info.flags.isl_rail_escape) throw new Error('沒有軌道車旗標');
   if (extra.indexOf('tunnel=jeep') >= 0 && !info.flags.isl_tunnel_jeep) throw new Error('沒有坑道吉普旗標');
   if (extra.indexOf('captive=leave') >= 0 && !info.flags.isl_captives_left) throw new Error('俘虜留下旗標沒設');

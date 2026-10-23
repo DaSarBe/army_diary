@@ -207,10 +207,36 @@
     if (save.companionFates[id] === 'kia') return 'kia';
     save.companionFates[id] = val; persist(); return val;
   }
+  function levelNumOf(id) {
+    return { op1_landing: 1, op2_radar: 2, op3_ridge: 3, op4_tunnel: 4, op5_hq: 5 }[id] || (level && level.num) || 1;
+  }
+  function shouldRoll(id, levelId) {
+    var table = (cfg.npcFate && cfg.npcFate.rollTable) || {};
+    var n = levelNumOf(levelId);
+    if (id === 'lin') {
+      var lb = (table.lin && table.lin.base) || { op1: 14, op2: 0, op3: 12, op4: 14, op5: 12 };
+      return !!(lb['op' + n]);
+    }
+    if (id === 'akai') {
+      var ab = (table.akai && table.akai.base) || { op3: 17, op4: 19, op5: 15 };
+      return !!(ab['op' + n]);
+    }
+    if (id === 'wang') return n === 4;
+    return false;
+  }
+  function hasFirstAid() {
+    if (!save || !save.carryOver) return false;
+    try {
+      var raw = JSON.parse(localStorage.getItem('abg2-save-0') || 'null');
+      var sk = raw && raw.G && raw.G.skills;
+      return !!(sk && sk.sk_firstaid);
+    } catch (e) { return false; }
+  }
   function chapterFate(id, levelId, force) {
     if (!save.fateRolls) save.fateRolls = {};
     if (save.companionFates[id] === 'kia') return 'kia';
     var lid = levelId || (level && level.id) || 'unk';
+    if (!force && !shouldRoll(id, lid)) return fateOf(id);
     var key = id + ':' + lid;
     if (save.fateRolls[key]) {
       if (save.fateRolls[key] === 'kia') lockFate(id, 'kia');
@@ -233,11 +259,11 @@
   function computeFate(id) {
     var o = playerO();
     var table = (cfg.npcFate && cfg.npcFate.rollTable) || {};
+    var n = (level && level.num) || 1;
     if (id === 'lin') {
       if (auto && q.fate === 'kia') return 'kia';
       if (auto) return 'alive';
       var bases = (table.lin && table.lin.base) || { op1: 14, op2: 0, op3: 12, op4: 14, op5: 12 };
-      var n = (level && level.num) || 1;
       var base = bases['op' + n] != null ? bases['op' + n] : 12;
       return Math.random() * 100 < clamp(base - (o - 50) * 0.4, 2, 30) ? 'kia' : 'alive';
     }
@@ -245,9 +271,9 @@
       if (auto && q.akai === 'kia') return 'kia';
       if (auto) return 'alive';
       var ab = (table.akai && table.akai.base) || { op3: 17, op4: 19, op5: 15 };
-      var an = (level && level.num) || 3;
-      var abase = ab['op' + an] != null ? ab['op' + an] : 17;
+      var abase = ab['op' + n] != null ? ab['op' + n] : 17;
       if (hasFlag('isl_akai_outside')) abase += 8;
+      if (hasFirstAid()) abase -= 8;
       return Math.random() * 100 < clamp(abase - (o - 50) * 0.5, 2, 35) ? 'kia' : 'alive';
     }
     if (id === 'wang') {
@@ -825,11 +851,9 @@
   function finishLevel(b) {
     setFlag(b.setFlag || (level.id === 'op4_tunnel' ? 'isl_04_clear' : (level.id === 'op3_ridge' ? 'isl_03_clear' : (level.id === 'op2_radar' ? 'isl_02_clear' : 'isl_01_clear'))));
     if (Cbt.session()) save.loadout = JSON.parse(JSON.stringify(Cbt.session().pack));
-    if (fateOf('lin') !== 'kia') chapterFate('lin', level.id);
-    if (level.id === 'op3_ridge' || level.id === 'op4_tunnel' || level.id === 'op5_hq') {
-      if (fateOf('akai') !== 'kia') chapterFate('akai', level.id);
-    }
-    if (level.id === 'op4_tunnel' && fateOf('wang') !== 'kia' && fateOf('wang') !== 'alive') chapterFate('wang', level.id);
+    if (shouldRoll('lin', level.id) && fateOf('lin') !== 'kia') chapterFate('lin', level.id);
+    if (shouldRoll('akai', level.id) && fateOf('akai') !== 'kia') chapterFate('akai', level.id);
+    if (shouldRoll('wang', level.id) && fateOf('wang') !== 'kia' && fateOf('wang') !== 'alive') chapterFate('wang', level.id);
     var next = catalog.levels.filter(function (l) { return l.num === (level.num || 1) + 1; })[0];
     if (next && !next.stub) {
       save.level = next.id; save.beat = 0;
