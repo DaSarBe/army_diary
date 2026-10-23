@@ -89,7 +89,8 @@
       part(g, 0.34, 0.03, 0.2, 0, 1.88, 0.2, o.hat);
     }
     g.scale.setScalar(0.88);
-    g.userData = { legL: legL, legR: legR, armL: armL, armR: armR, noMerge: true };
+    bakeColored(g);
+    g.userData = { noMerge: true };
     return g;
   }
   var PRE = {
@@ -135,7 +136,7 @@
       var wh = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.12, 10), M('#1a1a1a'));
       wh.rotation.z = Math.PI / 2; wh.position.set(p[0], p[1], p[2]); g.add(wh);
     });
-    g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g); return g;
+    g.position.set(x, 0, z); g.rotation.y = yaw || 0; bakeColored(g); CG.add(g); return g;
   }
   function makeJeep(x, z, yaw) {
     var g = new T.Group();
@@ -145,7 +146,7 @@
       var wh = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.22, 8), M('#222'));
       wh.rotation.z = Math.PI / 2; wh.position.set(p[0], p[1], p[2]); g.add(wh);
     });
-    g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g);
+    g.position.set(x, 0, z); g.rotation.y = yaw || 0; bakeColored(g); CG.add(g);
     return g;
   }
   function makeCart(x, z, yaw) {
@@ -156,7 +157,7 @@
       var wh = new T.Mesh(new T.CylinderGeometry(0.2, 0.2, 0.16, 8), M('#222'));
       wh.rotation.z = Math.PI / 2; wh.position.set(p[0], p[1], p[2]); g.add(wh);
     });
-    g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g);
+    g.position.set(x, 0, z); g.rotation.y = yaw || 0; bakeColored(g); CG.add(g);
     return g;
   }
   function makeRail(x, z, yaw) {
@@ -167,14 +168,14 @@
       var wh = new T.Mesh(new T.CylinderGeometry(0.18, 0.18, 0.14, 8), M('#2a2a28'));
       wh.rotation.z = Math.PI / 2; wh.position.set(p[0], p[1], p[2]); g.add(wh);
     });
-    g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g); return g;
+    g.position.set(x, 0, z); g.rotation.y = yaw || 0; bakeColored(g); CG.add(g); return g;
   }
   function makeSampan(x, z, yaw) {
     var g = new T.Group();
     var hull = new T.Mesh(UB, M('#6b4a2f')); hull.scale.set(1.4, 0.45, 4.4); hull.position.y = 0.28; g.add(hull);
     var prow = new T.Mesh(new T.ConeGeometry(0.7, 1.1, 4), M('#7a5636')); prow.rotation.x = Math.PI / 2; prow.position.set(0, 0.3, -2.4); g.add(prow);
     var seat = new T.Mesh(UB, M('#8a6a46')); seat.scale.set(1.1, 0.2, 0.8); seat.position.set(0, 0.55, 0.4); g.add(seat);
-    g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g); return g;
+    g.position.set(x, 0, z); g.rotation.y = yaw || 0; bakeColored(g); CG.add(g); return g;
   }
 
   function addNpc(id, preset, x, z, ry, name) {
@@ -233,43 +234,57 @@
   function mergeable(m) {
     return !!(m && m.isMesh && m.geometry && m.material && !m.userData.noMerge && !m.material.map && !(m.material.transparent && m.material.opacity < 0.99));
   }
-  function mergeMeshList(meshes, parent) {
-    var bags = {}, i, key, list;
-    for (i = 0; i < meshes.length; i++) {
-      if (!mergeable(meshes[i])) continue;
-      key = meshes[i].material.uuid;
-      (bags[key] || (bags[key] = [])).push(meshes[i]);
+  function invertMat(src) {
+    var m = new T.Matrix4().copy(src);
+    if (m.invert) m.invert();
+    else if (m.getInverse) m.getInverse(src);
+    return m;
+  }
+  function bakeColored(rootObj, meshes) {
+    if (!rootObj) return;
+    if (!meshes) {
+      meshes = [];
+      rootObj.updateMatrixWorld(true);
+      rootObj.traverse(function (m) { if (mergeable(m)) meshes.push(m); });
     }
-    Object.keys(bags).forEach(function (k) {
-      list = bags[k];
-      if (list.length < 2) return;
-      var pos = [], nrm = [], idx = [], off = 0;
-      var v = new T.Vector3(), vn = new T.Vector3(), nmat = new T.Matrix3();
-      list.forEach(function (m) {
-        m.updateMatrix();
-        nmat.getNormalMatrix(m.matrix);
-        var g = m.geometry, p = g.attributes.position, n = g.attributes.normal, ix = g.index, vi;
-        for (vi = 0; vi < p.count; vi++) {
-          v.fromBufferAttribute(p, vi).applyMatrix4(m.matrix);
-          pos.push(v.x, v.y, v.z);
-          if (n) {
-            vn.fromBufferAttribute(n, vi).applyMatrix3(nmat).normalize();
-            nrm.push(vn.x, vn.y, vn.z);
-          }
+    if (!meshes.length) return;
+    rootObj.updateMatrixWorld(true);
+    var inv = invertMat(rootObj.matrixWorld);
+    var pos = [], nrm = [], col = [], idx = [], off = 0;
+    var v = new T.Vector3(), vn = new T.Vector3(), nmat = new T.Matrix3(), rel = new T.Matrix4();
+    meshes.forEach(function (m) {
+      m.updateMatrixWorld(true);
+      rel.multiplyMatrices(inv, m.matrixWorld);
+      nmat.getNormalMatrix(rel);
+      var g = m.geometry, p = g.attributes.position, n = g.attributes.normal, ix = g.index, vi;
+      var c = m.material && m.material.color, cr = c ? c.r : 1, cg = c ? c.g : 1, cb = c ? c.b : 1;
+      for (vi = 0; vi < p.count; vi++) {
+        v.fromBufferAttribute(p, vi).applyMatrix4(rel);
+        pos.push(v.x, v.y, v.z);
+        if (n) {
+          vn.fromBufferAttribute(n, vi).applyMatrix3(nmat).normalize();
+          nrm.push(vn.x, vn.y, vn.z);
         }
-        if (ix) for (vi = 0; vi < ix.count; vi++) idx.push(ix.getX(vi) + off);
-        else for (vi = 0; vi < p.count; vi++) idx.push(vi + off);
-        off += p.count;
-        if (m.parent) m.parent.remove(m);
-      });
-      var ng = new T.BufferGeometry();
-      ng.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
-      if (nrm.length) ng.setAttribute('normal', new T.Float32BufferAttribute(nrm, 3));
-      ng.setIndex(idx);
-      var merged = new T.Mesh(ng, list[0].material);
-      merged.userData.merged = true;
-      parent.add(merged);
+        col.push(cr, cg, cb);
+      }
+      if (ix) for (vi = 0; vi < ix.count; vi++) idx.push(ix.getX(vi) + off);
+      else for (vi = 0; vi < p.count; vi++) idx.push(vi + off);
+      off += p.count;
+      if (m.parent) m.parent.remove(m);
     });
+    var ng = new T.BufferGeometry();
+    ng.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+    if (nrm.length) ng.setAttribute('normal', new T.Float32BufferAttribute(nrm, 3));
+    ng.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+    ng.setIndex(idx);
+    ng.computeBoundingBox();
+    ng.computeBoundingSphere();
+    var mat = new T.MeshLambertMaterial();
+    mat.vertexColors = (T.VertexColors != null) ? T.VertexColors : true;
+    var merged = new T.Mesh(ng, mat);
+    merged.userData.merged = true;
+    merged.userData.noMerge = true;
+    rootObj.add(merged);
   }
   function mergeStatic() {
     if (!CG) return;
@@ -277,14 +292,14 @@
     for (i = 0; i < CG.children.length; i++) {
       ch = CG.children[i];
       if (ch.userData && ch.userData.noMerge) continue;
-      if (ch.isMesh) top.push(ch);
+      if (ch.isMesh) { if (mergeable(ch)) top.push(ch); }
       else if (ch.isGroup) {
         inner = [];
-        ch.children.forEach(function (c) { if (c.isMesh) inner.push(c); });
-        mergeMeshList(inner, ch);
+        ch.children.forEach(function (c) { if (mergeable(c)) inner.push(c); });
+        bakeColored(ch, inner);
       }
     }
-    mergeMeshList(top, CG);
+    bakeColored(CG, top);
   }
 
   function dummyTarget(x, z) {
@@ -798,10 +813,12 @@
     brl.rotation.x = Math.PI / 2; brl.position.set(0, 0.025, -0.42); vmRifle.add(brl);
     vpart(vmRifle, 0.03, 0.08, 0.05, 0, -0.07, 0, '#26291f');
     vpart(vmRifle, 0.07, 0.07, 0.1, 0.02, -0.04, -0.2, '#d9a77a');
+    bakeColored(vmRifle);
     vm.add(vmRifle);
     vmPistol = new T.Group();
     vpart(vmPistol, 0.04, 0.08, 0.16, 0, 0, -0.12, '#2a2c28');
     vpart(vmPistol, 0.035, 0.12, 0.05, 0, -0.08, 0.02, '#3a2a22');
+    bakeColored(vmPistol);
     vmPistol.visible = false; vm.add(vmPistol);
     vm.scale.setScalar(0.62); cam.add(vm); vm.visible = false;
   }
@@ -1129,10 +1146,33 @@
     update(0);
     try { R.render(scene, cam); } catch (e) { /* ignore */ }
   };
+  function isShown(obj) {
+    while (obj) {
+      if (obj.visible === false) return false;
+      obj = obj.parent;
+    }
+    return true;
+  }
+  function countScene() {
+    var calls = 0, tris = 0;
+    if (!scene) return { calls: 0, triangles: 0 };
+    scene.traverse(function (m) {
+      if (!isShown(m)) return;
+      if (!(m.isMesh || m.isLine || m.isPoints || m.isSprite)) return;
+      calls++;
+      var g = m.geometry, n = 0;
+      if (g && g.index) n = g.index.count / 3;
+      else if (g && g.attributes && g.attributes.position) n = g.attributes.position.count / 3;
+      tris += n;
+    });
+    return { calls: calls, triangles: Math.round(tris) };
+  }
+  W.countScene = countScene;
   W.gfxInfo = function () {
     var G = root.Gfx, s = G ? G.spec() : {}, b = G ? G.budget() : {};
     var inf = (R && R.info && R.info.render) || {};
     var mem = (R && R.info && R.info.memory) || {};
+    var sc = countScene();
     return {
       pref: G ? G.pref() : 'auto',
       applied: G ? G.applied() : 'mid',
@@ -1141,11 +1181,13 @@
       fps: G ? G.fps() : 0,
       calls: inf.calls || 0,
       triangles: inf.triangles || 0,
+      sceneCalls: sc.calls,
+      sceneTriangles: sc.triangles,
       points: inf.points || 0,
       textures: mem.textures || 0,
       over: {
-        triangles: (inf.triangles || 0) > (b.triangles || 0),
-        drawCalls: (inf.calls || 0) > (b.drawCalls || 0)
+        triangles: sc.triangles > (b.triangles || 0),
+        drawCalls: sc.calls > (b.drawCalls || 0)
       }
     };
   };

@@ -157,13 +157,14 @@ async function main() {
       const g = info.info;
       console.log('[island-gfx]', JSON.stringify({
         level: info.level, pref: g.pref, applied: g.applied,
-        calls: g.calls, triangles: g.triangles, textures: g.textures,
-        budget: g.budget, over: g.over, sky: g.spec && g.spec.sky
+        calls: g.calls, triangles: g.triangles,
+        sceneCalls: g.sceneCalls, sceneTriangles: g.sceneTriangles,
+        textures: g.textures, budget: g.budget, over: g.over, sky: g.spec && g.spec.sky
       }));
       must(g.applied === tier, info.level + ' 畫質應為 ' + tier + '，實際 ' + g.applied);
-      must(g.calls > 0 && g.triangles > 0, info.level + '@' + tier + ' renderer.info 沒有輸出');
-      must(!g.over.triangles, info.level + '@' + tier + ' 三角面超預算 ' + g.triangles + '>' + g.budget.triangles);
-      must(!g.over.drawCalls, info.level + '@' + tier + ' draw calls 超預算 ' + g.calls + '>' + g.budget.drawCalls);
+      must(g.sceneCalls > 0 && g.sceneTriangles > 0, info.level + '@' + tier + ' 場景計數為 0');
+      must(!g.over.triangles, info.level + '@' + tier + ' 三角面超預算 ' + g.sceneTriangles + '>' + g.budget.triangles);
+      must(!g.over.drawCalls, info.level + '@' + tier + ' draw calls 超預算 ' + g.sceneCalls + '>' + g.budget.drawCalls);
       must((g.spec.maxTex || 0) <= g.budget.maxTex, info.level + '@' + tier + ' 貼圖上限超過預算');
       if (tier === 'low') must(g.spec.sky === 'flat' && !g.spec.heightFog, '低檔應走便宜天空');
       if (tier === 'mid' || tier === 'high') must(g.spec.sky === 'dome' && g.spec.heightFog, tier + ' 應有穹頂與高度霧');
