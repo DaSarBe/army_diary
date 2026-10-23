@@ -97,6 +97,7 @@
     },
     { "id": "outpost_roster", "type": "talk", "story": "outpost_roster" },
     { "id": "scout_choice", "type": "choice", "story": "scout_choice" },
+    { "id": "scout_silence", "type": "wait", "ms": 1500 },
     { "id": "ridge_outro", "type": "talk", "story": "ridge_outro_walk" },
     { "id": "complete", "type": "complete", "story": "ridge_complete", "setFlag": "isl_03_clear" }
   ]

@@ -258,6 +258,12 @@
         { "who": "黃連長", "text": "配電箱在機房那邊。可以摸黑打，也可以找機會復電。" }
       ]
     },
+    "radar_door_missing_weak": {
+      "lines": [
+        { "who": "阿凱", "text": "整區沒電。" },
+        { "who": "黃連長", "text": "……配電箱……機房……聽得到嗎。" }
+      ]
+    },
     "station_assault": {
       "lines": [
         { "who": "黃連長", "text": "進站。裡面全黑，聲音比眼睛可靠。" }
@@ -358,6 +364,29 @@
         { "who": "阿凱", "text": "我在車上等你們。燈亮了沒有？" }
       ]
     },
+    "radar_complete_late": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。燈是打完才開的，不過線路圖你看到了。下一目標稜線哨所。先休息。" }
+      ]
+    },
+    "radar_complete_late_outside": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。燈是打完才開的，不過線路圖你看到了。下一目標稜線哨所。先休息。" },
+        { "who": "阿凱", "text": "我在車上等你們。燈亮了沒有？" }
+      ]
+    },
+    "radar_complete_outside_weak": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。燈是你開的，記著這點。下一目標稜線哨所。先休息。" },
+        { "who": "阿凱", "text": "我在……等你們。燈……亮了沒有？" }
+      ]
+    },
+    "radar_complete_late_outside_weak": {
+      "lines": [
+        { "who": "黃連長", "text": "雷達站拿回來了。燈是打完才開的，不過線路圖你看到了。下一目標稜線哨所。先休息。" },
+        { "who": "阿凱", "text": "我在……等你們。燈……亮了沒有？" }
+      ]
+    },
     "ridge_rest": {
       "checkpoint": true,
       "lines": [
@@ -376,6 +405,12 @@
       "lines": [
         { "who": "小林", "text": "無線電我再調一次。稜線上風很大。" },
         { "who": "黃連長", "text": "前面有人在看你們。" }
+      ]
+    },
+    "ridge_rest_alone": {
+      "lines": [
+        { "who": "黃連長", "text": "稜線腳下。前面有人在看你。" },
+        { "who": "黃連長", "text": "頻道裡只剩我了。我陪你走。" }
       ]
     },
     "ridge_approach": {
@@ -403,15 +438,15 @@
     "vehicle_ridge": {
       "hint": "騎上機車。引擎聲會引來敵人，車上只能用手槍。",
       "chatter": [
-        { "who": "阿凱", "text": "這台只有一個座位。那我坐你背上。" },
-        { "who": "小林", "text": "你想害我們翻車嗎？" }
+        { "who": "黃連長", "text": "聲音太大了。對方聽得到。" },
+        { "who": "小林", "text": "我們腳程跟不上。你先走，我跟阿凱走岩石。" }
       ]
     },
     "vehicle_ridge_missing": {
       "hint": "騎上機車。引擎聲會引來敵人，車上只能用手槍。",
       "chatter": [
-        { "who": "阿凱", "text": "這台只有一個座位。那我坐你背上。" },
-        { "who": "黃連長", "text": "坐好。不要停太久。" }
+        { "who": "黃連長", "text": "聲音太大了。對方聽得到。" },
+        { "who": "阿凱", "text": "我跟不上。你先走，我走小路。" }
       ]
     },
     "ridge_fight": {
@@ -425,7 +460,8 @@
       ]
     },
     "ridge_callout": {
-      "hint": "蹲下可打斷狙擊鎖定。紅點亮起的那一秒先找石頭。"
+      "hint": "蹲下可打斷狙擊鎖定。紅點亮起的那一秒先找石頭。",
+      "toast": "小林：「左邊那塊石頭後面有人。」"
     },
     "find_dmr": {
       "hint": "觀測哨裡有一把 T65K2。",
@@ -444,7 +480,8 @@
     },
     "outpost_roster_missing": {
       "lines": [
-        { "who": "阿凱", "text": "點名單。王班長後面寫「俘」。不是亡。" },
+        { "who": "阿凱", "text": "點名單。王班長後面寫……俘。不是亡。" },
+        { "who": "阿凱", "text": "他不是亡的。" },
         { "who": "黃連長", "text": "還活著。被送去坑道。" }
       ]
     },
@@ -469,18 +506,153 @@
       "lines": [
         { "who": "阿凱", "text": "這台只有一個座位。" },
         { "who": "阿凱", "text": "那我坐你背上。" },
-        { "who": "黃連長", "text": "坐好。下一目標坑道。" }
+        { "who": "黃連長", "text": "你騎得很吵，但你到了。" }
       ]
     },
     "ridge_outro_walk": {
       "lines": [
         { "who": "阿凱", "text": "哨所裡這包餅乾過期了。我還是吃。" },
-        { "who": "黃連長", "text": "下一目標坑道。先把水喝完。" }
+        { "who": "黃連長", "text": "先把水喝完。" }
       ]
     },
     "ridge_complete": {
       "lines": [
-        { "who": "黃連長", "text": "稜線過了。王班長在坑道。下一程救人。" },
+        { "who": "黃連長", "text": "稜線過了。" },
+        { "who": "電台", "text": "收到。" }
+      ]
+    },
+    "tunnel_mouth": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "小林", "text": "老方，你有想過如果我們一起死在這，誰會先被發現嗎？" },
+        { "who": "阿凱", "text": "別講這個。我還沒簽完那張保單。" }
+      ]
+    },
+    "tunnel_mouth_missing": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "阿凱", "text": "別講誰會先被發現。我還沒簽完那張保單。" },
+        { "who": "黃連長", "text": "進去。聲音會被放大。" }
+      ]
+    },
+    "tunnel_mouth_quiet": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "小林", "text": "老方，你有想過如果我們一起死在這，誰會先被發現嗎？" },
+        { "who": "黃連長", "text": "進去。聲音會被放大。" }
+      ]
+    },
+    "tunnel_mouth_alone": {
+      "checkpoint": true,
+      "lines": [
+        { "who": "黃連長", "text": "坑道口。頻道裡只剩我了。" },
+        { "who": "黃連長", "text": "進去。聲音會被放大。我陪你走。" }
+      ]
+    },
+    "tunnel_choice": {
+      "lines": [
+        { "who": "黃連長", "text": "王班長在最深處。坑道很窄。你可以潛進去，可以清場，可以推軌道車衝出去，外面也停了一台吉普。" }
+      ],
+      "choices": [
+        { "id": "stealth", "text": "潛入救人", "flag": "isl_tunnel_stealth" },
+        { "id": "assault", "text": "強攻清場", "flag": "isl_tunnel_assault" },
+        { "id": "rail", "text": "軌道車撤離", "flag": "isl_rail_escape" },
+        { "id": "jeep", "text": "吉普車接應", "flag": "isl_tunnel_jeep" }
+      ]
+    },
+    "tunnel_fight": {
+      "lines": [
+        { "who": "黃連長", "text": "岔路有人。近距離，不要亂丟。" }
+      ]
+    },
+    "tunnel_fight_stealth": {
+      "lines": [
+        { "who": "黃連長", "text": "避開巡邏。被發現就打。" }
+      ]
+    },
+    "wang_found": {
+      "lines": [
+        { "who": "王班長", "text": "你怎麼來了？我又沒叫你。" },
+        { "who": "黃連長", "text": "腿傷了。背他出來。" }
+      ]
+    },
+    "wang_found_missing": {
+      "lines": [
+        { "who": "王班長", "text": "你怎麼來了？我又沒叫你。" },
+        { "who": "黃連長", "text": "腿傷了。背他出來。頻道裡人少了，你自己走。" }
+      ]
+    },
+    "carry_wang": {
+      "hint": "背起王班長。不能瞄準。煙霧會擋對方準頭。",
+      "done": "先送到發光的出口。"
+    },
+    "captives_choice": {
+      "lines": [
+        { "who": "黃連長", "text": "還有三個被俘的島上守軍。背不動全部。你決定。" }
+      ],
+      "choices": [
+        { "id": "rescue", "text": "回頭救他們", "flag": "isl_captives_rescued", "clear": "isl_captives_left" },
+        { "id": "leave", "text": "先帶班長走", "flag": "isl_captives_left", "clear": "isl_captives_rescued" }
+      ]
+    },
+    "rescue_captives": {
+      "hint": "解開被俘守軍。他們不能戰鬥，不要誤傷。",
+      "done": "三個人都站起來了。"
+    },
+    "vehicle_rail": {
+      "hint": "上軌道車。整座坑道會被驚動，終點會有衝鋒兵。",
+      "chatter": [
+        { "who": "黃連長", "text": "聲音太大了。" },
+        { "who": "阿凱", "text": "我在後面放煙。你先走。" }
+      ]
+    },
+    "vehicle_rail_missing": {
+      "hint": "上軌道車。整座坑道會被驚動，終點會有衝鋒兵。",
+      "chatter": [
+        { "who": "黃連長", "text": "聲音太大了。抓好。" }
+      ]
+    },
+    "vehicle_tunnel_jeep": {
+      "hint": "上吉普車。載走班長和俘虜。X 可換駕駛、射手、乘客。車載 T75 連射六秒會過熱。",
+      "chatter": [
+        { "who": "王班長", "text": "誰教你們這樣開車的？我的屁股比腿還痛。" },
+        { "who": "阿凱", "text": "班長，你先坐好。" },
+        { "who": "王班長", "text": "我是在坐好啊！" }
+      ]
+    },
+    "vehicle_tunnel_jeep_kia": {
+      "hint": "上吉普車。只有引擎聲。",
+      "chatter": [
+        { "who": "電台", "text": "……雜訊……" }
+      ]
+    },
+    "rear_wave": {
+      "lines": [
+        { "who": "黃連長", "text": "終點。衝鋒兵出來了。" }
+      ]
+    },
+    "tunnel_outro": {
+      "lines": [
+        { "who": "王班長", "text": "誰教你們這樣開車的？我的屁股比腿還痛。" },
+        { "who": "阿凱", "text": "班長，你先坐好。" },
+        { "who": "王班長", "text": "我是在坐好啊！" }
+      ]
+    },
+    "tunnel_outro_walk": {
+      "lines": [
+        { "who": "王班長", "text": "下一程我自己走。你們先把水喝完。" },
+        { "who": "黃連長", "text": "坑道過了。" }
+      ]
+    },
+    "tunnel_outro_kia": {
+      "lines": [
+        { "who": "黃連長", "text": "……" },
+        { "who": "電台", "text": "……雜訊……" }
+      ]
+    },
+    "tunnel_complete": {
+      "lines": [
+        { "who": "黃連長", "text": "坑道過了。下一目標指揮所。" },
         { "who": "電台", "text": "收到。" }
       ]
     }

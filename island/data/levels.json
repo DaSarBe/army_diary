@@ -42,8 +42,7 @@
       "outpostName": "坑道",
       "file": "data/levels/04-tunnel.json",
       "unlockFlag": "isl_03_clear",
-      "clearFlag": "isl_04_clear",
-      "stub": true
+      "clearFlag": "isl_04_clear"
     },
     {
       "id": "op5_hq",

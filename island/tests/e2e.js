@@ -1,4 +1,4 @@
-/* 島嶼守備 E2E：桌機 1280×800 與手機 390×844 各跑第 1 到 3 關。 */
+/* 島嶼守備 E2E：桌機 1280×800 與手機 390×844 各跑第 1 到 4 關。 */
 const puppeteer = require('puppeteer-core');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
@@ -51,11 +51,31 @@ async function main() {
   await sleep(400);
   await page.screenshot({ path: path.join(outDir, `${mode}-02-play.png`) });
 
+  const spec = await page.evaluate(() => {
+    const c = __island.cfg();
+    return {
+      t65sway: c && c.weapons && c.weapons.t65 && c.weapons.t65.swayMul,
+      jeepSeats: !!(__island.World && __island.World.cycleSeat),
+      jeepGun: !!(__island.Combat && __island.Combat.jeepGun)
+    };
+  });
+  if (spec.t65sway !== 0.6) throw new Error('T65K2 swayMul 應為 0.6，實際 ' + spec.t65sway);
+  if (!spec.jeepSeats) throw new Error('吉普車沒有 cycleSeat');
+
+  const ch4Shot = page.waitForFunction(() => {
+    const lv = window.__island && __island.level && __island.level();
+    return lv && lv.id === 'op4_tunnel';
+  }, { timeout: extra.indexOf('down=1') >= 0 ? 320000 : 280000 }).then(async () => {
+    await sleep(700);
+    await page.screenshot({ path: path.join(outDir, `${mode}-04-tunnel.png`) });
+  });
+
   await page.waitForFunction(() => {
     const s = window.__island && __island.save && __island.save();
-    return s && s.flags && s.flags.isl_03_clear;
-  }, { timeout: extra.indexOf('down=1') >= 0 ? 300000 : 240000 });
+    return s && s.flags && s.flags.isl_04_clear;
+  }, { timeout: extra.indexOf('down=1') >= 0 ? 360000 : 320000 });
 
+  await ch4Shot.catch(() => {});
   await sleep(500);
   await page.screenshot({ path: path.join(outDir, `${mode}-99-done.png`) });
 
@@ -65,6 +85,7 @@ async function main() {
       phase: __island.phase(),
       flags: s && s.flags,
       fates: s && s.companionFates,
+      rolls: s && s.fateRolls,
       diff: s && s.diff,
       downSeen: !!(s && s.downSeen),
       o: s && s.o,
@@ -72,6 +93,7 @@ async function main() {
       combat: !!(__island.Combat && __island.Combat.session && __island.Combat.session())
     };
   });
+  info.spec = spec;
   log('result', JSON.stringify(info));
   const fatal = errors.filter(e => /PAGEERROR|HTTP 4|HTTP 5|REQFAIL|error:/i.test(e) && !/favicon|AudioContext|pointer lock/i.test(e));
   if (fatal.length) {
@@ -81,6 +103,16 @@ async function main() {
   if (!info.flags || !info.flags.isl_01_clear) throw new Error('第 1 關沒有打完');
   if (!info.flags.isl_02_clear) throw new Error('第 2 關沒有打完');
   if (!info.flags.isl_03_clear) throw new Error('第 3 關沒有打完');
+  if (!info.flags.isl_04_clear) throw new Error('第 4 關沒有打完');
+  if (!info.flags.isl_tunnel_stealth && !info.flags.isl_tunnel_assault && !info.flags.isl_rail_escape && !info.flags.isl_tunnel_jeep) throw new Error('沒有坑道打法旗標');
+  if (!info.flags.isl_captives_rescued && !info.flags.isl_captives_left) throw new Error('沒有俘虜旗標');
+  if (info.fates.wang !== 'alive' && info.fates.wang !== 'kia') throw new Error('王班長命運沒寫入');
+  if (!info.rolls || !info.rolls['lin:op1_landing'] || !info.rolls['lin:op4_tunnel']) throw new Error('小林各關擲骰沒寫入');
+  if (!info.rolls['akai:op3_ridge']) throw new Error('阿凱第 3 關擲骰沒寫入');
+  if (extra.indexOf('tunnel=rail') >= 0 && !info.flags.isl_rail_escape) throw new Error('沒有軌道車旗標');
+  if (extra.indexOf('tunnel=jeep') >= 0 && !info.flags.isl_tunnel_jeep) throw new Error('沒有坑道吉普旗標');
+  if (extra.indexOf('captive=leave') >= 0 && !info.flags.isl_captives_left) throw new Error('俘虜留下旗標沒設');
+  if (extra.indexOf('captive=leave') < 0 && extra.indexOf('down=1') < 0 && !info.flags.isl_captives_rescued) throw new Error('預設應救出俘虜');
   if (!info.flags.isl_spared_scout && !info.flags.isl_killed_scout) throw new Error('沒有斥候旗標');
   if (!info.flags.isl_ridge_walk && !info.flags.isl_bike_dash && !info.flags.isl_ridge_trail) throw new Error('沒有稜線打法旗標');
   if (!info.flags.isl_flank_by_bike && !info.flags.isl_flank_by_sea && !info.flags.isl_flank_front && !info.flags.isl_stealth) throw new Error('沒有打法旗標');
@@ -97,7 +129,7 @@ async function main() {
   }
   if (extra.indexOf('power=0') < 0 && extra.indexOf('power=late') < 0 && extra.indexOf('down=1') < 0 && !info.flags.isl_power_restored) throw new Error('預設應中途復電');
   if (!info.fates || (info.fates.lin !== 'alive' && info.fates.lin !== 'kia')) throw new Error('第 1 關同袍命運沒接到第 2 關');
-  if (info.fates.akai !== 'alive' && info.fates.akai !== 'kia') throw new Error('阿凱沒寫入第 2 關命運');
+  if (info.fates.akai !== 'alive' && info.fates.akai !== 'kia') throw new Error('阿凱沒在第 3 關結束寫入命運');
   if (extra.indexOf('down=1') >= 0 && !info.downSeen) throw new Error('倒下重試沒有觸發');
   if (extra.indexOf('route=sea') >= 0 && !info.flags.isl_flank_by_sea) throw new Error('沒有舢舨旗標');
   if (extra.indexOf('antenna=warehouse') >= 0 && !info.flags.isl_radio_weak) throw new Error('沒有弱訊號天線');

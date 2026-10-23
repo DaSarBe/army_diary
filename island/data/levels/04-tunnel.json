@@ -1,0 +1,141 @@
+{
+  "id": "op4_tunnel",
+  "name": "坑道",
+  "outpost": "op4_tunnel",
+  "tone": "night",
+  "bounds": [-14, 14, -6, 98],
+  "spawn": [0, 8],
+  "spawnYaw": 0,
+  "waterZ": -40,
+  "map": {
+    "ground": [
+      { "kind": "sand", "x": 0, "z": 46, "w": 28, "d": 110 }
+    ],
+    "props": [
+      { "kind": "rail", "x": 0, "z": 48, "w": 1.1, "d": 86 },
+      { "kind": "bld", "x": -7.2, "z": 28, "w": 4.2, "d": 36, "h": 3.4, "wall": "#3a3832", "roof": "#2a2824" },
+      { "kind": "bld", "x": 7.2, "z": 28, "w": 4.2, "d": 36, "h": 3.4, "wall": "#3a3832", "roof": "#2a2824" },
+      { "kind": "bld", "x": -7.2, "z": 68, "w": 4.2, "d": 36, "h": 3.4, "wall": "#35332e", "roof": "#26241f" },
+      { "kind": "bld", "x": 7.2, "z": 68, "w": 4.2, "d": 36, "h": 3.4, "wall": "#35332e", "roof": "#26241f" },
+      { "kind": "crate", "x": -2.4, "z": 36, "w": 0.9, "h": 0.7, "d": 0.8 },
+      { "kind": "crate", "x": 2.6, "z": 52, "w": 0.8, "h": 0.6, "d": 0.7 },
+      { "kind": "crate", "x": -2.2, "z": 74, "w": 0.9, "h": 0.65, "d": 0.8 },
+      { "kind": "sign", "x": 0, "z": 12, "y": 2.1, "w": 3.4, "h": 0.65, "txt": "坑道", "bg": "#2c2a22", "fg": "#f2ecd0" }
+    ],
+    "covers": [
+      { "type": "sandbag", "x": -2.2, "z": 24, "w": 2.4, "d": 0.8, "h": 0.9, "ax": -2.2, "az": 25.1 },
+      { "type": "sandbag", "x": 2.4, "z": 40, "w": 2.4, "d": 0.8, "h": 0.9, "ax": 2.4, "az": 41.1 },
+      { "type": "sandbag", "x": -2.0, "z": 56, "w": 2.2, "d": 0.8, "h": 0.9, "ax": -2.0, "az": 57.1 },
+      { "type": "crate", "x": 2.2, "z": 70, "w": 1.2, "d": 0.8, "h": 0.9, "ax": 2.2, "az": 71.0 }
+    ],
+    "eCovers": [
+      { "x": -2.4, "z": 32, "kind": "sand" },
+      { "x": 2.6, "z": 44, "kind": "sand" },
+      { "x": -2.2, "z": 60, "kind": "sand" },
+      { "x": 2.4, "z": 76, "kind": "boat" },
+      { "x": 0, "z": 88, "kind": "boat" }
+    ],
+    "npcs": [
+      { "id": "npc_signal_lin", "preset": "lin", "x": -1.6, "z": 10, "ry": 3.2, "name": "小林" },
+      { "id": "npc_akai", "preset": "kai", "x": 1.8, "z": 10.2, "ry": 3.4, "name": "阿凱" },
+      { "id": "npc_sgt_wang", "preset": "sgt", "x": 0, "z": 86, "ry": 3.14, "name": "王班長" },
+      { "id": "npc_captive_1", "preset": "wounded", "x": -2.4, "z": 80, "ry": 2.4, "name": "被俘守軍" },
+      { "id": "npc_captive_2", "preset": "wounded", "x": 2.2, "z": 81, "ry": 3.6, "name": "被俘守軍" },
+      { "id": "npc_captive_3", "preset": "rec", "x": 0.4, "z": 83, "ry": 3.0, "name": "被俘守軍" }
+    ],
+    "vehicles": [
+      { "id": "rail_cart", "type": "rail_cart", "x": 0, "z": 64, "yaw": 3.14 },
+      { "id": "jeep_tunnel", "type": "jeep", "x": 4.4, "z": 8, "yaw": 0 }
+    ],
+    "spawns": {
+      "sea": [[-2, 90], [2, 92], [0, 94]],
+      "shore": [[-2, 38], [2, 48], [-2, 58], [2, 68], [0, 78]]
+    }
+  },
+  "beats": [
+    { "id": "tunnel_mouth", "type": "talk", "story": "tunnel_mouth", "checkpoint": true, "place": [0, 8] },
+    { "id": "tunnel_choice", "type": "choice", "story": "tunnel_choice" },
+    {
+      "id": "tunnel_fight",
+      "type": "combat",
+      "story": "tunnel_fight",
+      "checkpoint": true,
+      "wave": {
+        "id": "tunnel",
+        "name": "坑道",
+        "enemies": { "rifleman": 6, "gunner": 2, "rusher": 6 },
+        "stealthEnemies": { "rifleman": 3, "gunner": 1, "rusher": 2 },
+        "grace": 1.4
+      }
+    },
+    { "id": "wang_found", "type": "talk", "story": "wang_found", "place": [0, 84] },
+    {
+      "id": "carry_wang",
+      "type": "carry",
+      "npc": "npc_sgt_wang",
+      "from": [0, 86],
+      "to": [0, 14],
+      "toByFlag": {
+        "isl_rail_escape": [0, 64],
+        "isl_tunnel_jeep": [4.4, 10]
+      },
+      "checkpoint": true
+    },
+    { "id": "captives_choice", "type": "choice", "story": "captives_choice" },
+    {
+      "id": "rescue_captives",
+      "type": "rescue",
+      "story": "rescue_captives",
+      "unlessFlag": "isl_captives_left",
+      "holdMs": 3000,
+      "points": [
+        { "id": "npc_captive_1", "x": -2.4, "z": 80 },
+        { "id": "npc_captive_2", "x": 2.2, "z": 81 },
+        { "id": "npc_captive_3", "x": 0.4, "z": 83 }
+      ]
+    },
+    {
+      "id": "escape_rail",
+      "type": "vehicle",
+      "ifFlag": "isl_rail_escape",
+      "routes": {
+        "isl_rail_escape": {
+          "vehicle": "rail_cart",
+          "story": "vehicle_rail",
+          "land": [0, 16],
+          "scripted": true,
+          "durationSec": 25,
+          "waypoints": [[0, 64], [0, 48], [0, 32], [0, 16]]
+        }
+      }
+    },
+    {
+      "id": "escape_jeep",
+      "type": "vehicle",
+      "ifFlag": "isl_tunnel_jeep",
+      "routes": {
+        "isl_tunnel_jeep": {
+          "vehicle": "jeep_tunnel",
+          "story": "vehicle_tunnel_jeep",
+          "land": [6, 22],
+          "stay": true,
+          "waypoints": [[4.4, 8], [6, 16], [6, 22]]
+        }
+      }
+    },
+    {
+      "id": "rear_wave",
+      "type": "combat",
+      "story": "rear_wave",
+      "ifFlag": "isl_rail_escape",
+      "wave": {
+        "id": "rear",
+        "name": "坑道出口",
+        "enemies": { "rusher": 3 },
+        "grace": 0.8
+      }
+    },
+    { "id": "tunnel_outro", "type": "talk", "story": "tunnel_outro" },
+    { "id": "complete", "type": "complete", "story": "tunnel_complete", "setFlag": "isl_04_clear" }
+  ]
+}

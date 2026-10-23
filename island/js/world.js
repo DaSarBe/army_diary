@@ -152,6 +152,16 @@
     g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g);
     return g;
   }
+  function makeRail(x, z, yaw) {
+    var g = new T.Group();
+    var box = new T.Mesh(UB, M('#6b4a2f')); box.scale.set(1.15, 0.7, 1.6); box.position.y = 0.62; g.add(box);
+    var rim = new T.Mesh(UB, M('#4a4e42')); rim.scale.set(1.25, 0.18, 1.7); rim.position.y = 0.98; g.add(rim);
+    [[-0.48, 0.2, 0.5], [0.48, 0.2, 0.5], [-0.48, 0.2, -0.5], [0.48, 0.2, -0.5]].forEach(function (p) {
+      var wh = new T.Mesh(new T.CylinderGeometry(0.18, 0.18, 0.14, 8), M('#2a2a28'));
+      wh.rotation.z = Math.PI / 2; wh.position.set(p[0], p[1], p[2]); g.add(wh);
+    });
+    g.position.set(x, 0, z); g.rotation.y = yaw || 0; CG.add(g); return g;
+  }
   function makeSampan(x, z, yaw) {
     var g = new T.Group();
     var hull = new T.Mesh(UB, M('#6b4a2f')); hull.scale.set(1.4, 0.45, 4.4); hull.position.y = 0.28; g.add(hull);
@@ -188,6 +198,11 @@
       bx(1.4, 1.1, 0.12, p.x, 0, p.z + p.d / 2 + 0.04, '#3a382e');
     } else if (k === 'pier') bx(p.w, p.h || 0.35, p.d, p.x, 0, p.z, '#6b4a2f', true);
     else if (k === 'road') bx(p.w, 0.06, p.d, p.x, 0, p.z, '#4a4a44', false);
+    else if (k === 'rail') {
+      bx(p.w || 1.1, 0.05, p.d, p.x, 0, p.z, '#3a3a36', false);
+      bx(0.08, 0.07, p.d, p.x - 0.38, 0.02, p.z, '#6a6a62', false);
+      bx(0.08, 0.07, p.d, p.x + 0.38, 0.02, p.z, '#6a6a62', false);
+    }
     else if (k === 'sign') sign(p.txt, p.x, p.y || 2, p.z, p.w || 3, p.h || 0.7, p.bg || '#2c4a2c', p.fg || '#f2ecd0', p.ry || 0);
     else if (k === 'sand') bx(p.w, 0.08, p.d, p.x, -0.04, p.z, '#cbb98a', false);
     else if (k === 'grass') bx(p.w, 0.08, p.d, p.x, -0.03, p.z, '#5a7348', false);
@@ -233,8 +248,8 @@
     S.dummies = (map.targets || []).map(function (t) { return dummyTarget(t.x, t.z); });
     (map.npcs || []).forEach(function (n) { addNpc(n.id, n.preset, n.x, n.z, n.ry, n.name); });
     (map.vehicles || []).forEach(function (v) {
-      var mesh = v.type === 'jeep' ? makeJeep(v.x, v.z, v.yaw) : v.type === 'sampan' ? makeSampan(v.x, v.z, v.yaw) : (v.type === 'cart' || v.type === 'generator_cart') ? makeCart(v.x, v.z, v.yaw) : makeBike(v.x, v.z, v.yaw);
-      var rec = { id: v.id, type: v.type === 'generator_cart' ? 'cart' : v.type, x: v.x, z: v.z, yaw: v.yaw || 0, homeX: v.x, homeZ: v.z, homeYaw: v.yaw || 0, mesh: mesh, occupied: false, wrecked: false };
+      var mesh = v.type === 'jeep' ? makeJeep(v.x, v.z, v.yaw) : v.type === 'sampan' ? makeSampan(v.x, v.z, v.yaw) : (v.type === 'cart' || v.type === 'generator_cart') ? makeCart(v.x, v.z, v.yaw) : (v.type === 'rail_cart' || v.type === 'rail') ? makeRail(v.x, v.z, v.yaw) : makeBike(v.x, v.z, v.yaw);
+      var rec = { id: v.id, type: v.type === 'generator_cart' ? 'cart' : (v.type === 'rail' ? 'rail_cart' : v.type), x: v.x, z: v.z, yaw: v.yaw || 0, homeX: v.x, homeZ: v.z, homeYaw: v.yaw || 0, mesh: mesh, occupied: false, wrecked: false };
       attachVeh(rec);
       S.vehicles.push(rec);
     });
@@ -379,17 +394,18 @@
   }
 
   function vehSpec(type) {
-    var key = type === 'bike' ? 'motorcycle' : (type === 'cart' ? 'generator_cart' : type);
+    var key = type === 'bike' ? 'motorcycle' : (type === 'cart' ? 'generator_cart' : (type === 'rail' ? 'rail_cart' : type));
     var v = (W.cfg && W.cfg.vehicles && W.cfg.vehicles[key]) || (W.cfg && W.cfg.props && W.cfg.props[key]) || {};
     var spd = (v.speed && (v.speed.cruise || v.speed.max)) || v.pushSpeed || v.speed || 10;
     var col = v.collision || {};
     return {
       speed: spd, steer: v.turnRate || v.steer || 1.2, water: type === 'sampan' || !!v.water,
-      push: type === 'cart', hp: v.hp || (v.cover && v.cover.hp) || 150,
+      push: type === 'cart',
+      hp: v.hp || v.cartHp || (v.cover && v.cover.hp) || (type === 'rail_cart' ? 300 : 150),
       obstacleDmg: col.obstacleStopDmg || 15, minorDmg: col.minorDmg || 10,
       flipDmg: type === 'jeep' ? 40 : 25, armor: v.armorDmgMul || 1,
-      hw: type === 'jeep' ? 1.1 : type === 'cart' ? 0.85 : 0.45,
-      hd: type === 'jeep' ? 2.1 : type === 'cart' ? 1.0 : 0.9
+      hw: type === 'jeep' ? 1.1 : (type === 'cart' || type === 'rail_cart') ? 0.85 : 0.45,
+      hd: type === 'jeep' ? 2.1 : (type === 'cart' || type === 'rail_cart') ? 1.0 : 0.9
     };
   }
   function attachVeh(v) {

@@ -350,7 +350,8 @@
   function swayAmp() {
     var a = (cfg.aiming.swayBase || 2.6);
     if (A.ads) a *= cfg.aiming.adsSwayMul || 0.5;
-    if (A.weap === 't65') a *= 0.6;
+    var w = wep();
+    if (w && w.swayMul != null) a *= w.swayMul;
     if (A.carrying) a *= 1.4;
     return a;
   }
@@ -413,6 +414,15 @@
     }
     F.pitch += (cfg.aiming.recoilDeg || 0.7) * DEG; W.kick();
     Sfx.sfx(A.weap === 'm9' ? 'pistol' : 'shot');
+    if (H.onFriendlyFire && W.npc) {
+      ['npc_captive_1', 'npc_captive_2', 'npc_captive_3', 'npc_sgt_wang'].forEach(function (id) {
+        var n = W.npc(id);
+        if (!n || !n.g || n.g.visible === false) return;
+        var dx = n.x - ox, dy = 1.2 - oy, dz = n.z - oz, d = Math.hypot(dx, dy, dz);
+        if (d > 16 || d < 0.3) return;
+        if ((dx * dir[0] + dy * dir[1] + dz * dir[2]) / d > 0.93) H.onFriendlyFire();
+      });
+    }
     flash.visible = true; A.flashT = 0.04;
     var skip = A.cover ? A.cover.col : null;
     var tBlock = W.rayBlock(ox, oy, oz, dir[0], dir[1], dir[2], jeepGun() ? 90 : (wep().range || 280), skip);
@@ -573,6 +583,7 @@
     if (A.carrying) dmg *= cfg.carry.dmgTakenMul || 0.6;
     A.pack.hp = Math.max(mode.canDie === false ? 1 : 0, Math.round(A.pack.hp - dmg));
     A.hurtT = 0.35; Sfx.sfx('hurt');
+    if (A.carrying && H.onCarryHit) H.onCarryHit();
     if (H.onHp) H.onHp();
     if (A.pack.hp / A.pack.hpMax * 100 <= cfg.health.lowHpPct) Cbt.msg('體力很低，用急救包', 1600);
     if (A.pack.hp <= 0 && !A.hpZero) {
@@ -612,6 +623,7 @@
     if (e.type === 'sniper' && !silent) {
       e.group.rotation.y = Math.atan2(p.x - e.x, p.z - e.z);
       e.exposed = true;
+      if (!A._ridgeCall && H.onSniperCall) { A._ridgeCall = true; H.onSniperCall(); }
       var lockSec = (cfg.raw && cfg.raw.sniperTelegraph && cfg.raw.sniperTelegraph.lockSec) || 1;
       if (W.S.crouch) {
         e.lockT = 0; hideSnip();
@@ -773,6 +785,8 @@
     if (A.combat) $('#waveLeft').textContent = '剩餘 ' + Math.max(0, A.total - A.killed);
   }
   Cbt.refresh = refreshHud;
+  Cbt.swayAmp = swayAmp;
+  Cbt.jeepGun = jeepGun;
 
   Cbt.tick = function (dt) {
     if (!A || !A.active) return;

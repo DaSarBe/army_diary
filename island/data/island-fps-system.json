@@ -224,7 +224,36 @@
       "reward": "t65k2_dmr",
       "vehicles": [
         "motorcycle"
-      ]
+      ],
+      "routes": {
+        "walk": {
+          "flag": "isl_ridge_walk",
+          "enemies": {
+            "rifleman": 5,
+            "sniper": 3,
+            "rusher": 3
+          }
+        },
+        "bike": {
+          "flag": "isl_bike_dash",
+          "vehicle": "motorcycle",
+          "note": "引擎聲吸引 100 公尺內敵人；吉普車不可用"
+        },
+        "trail": {
+          "flag": "isl_ridge_trail",
+          "enemies": {
+            "rusher": 5,
+            "rifleman": 3
+          },
+          "note": "山腹小徑無狙擊手，近戰壓力高"
+        }
+      },
+      "radioStrongCallout": {
+        "requires": "isl_radio_strong",
+        "who": "小林",
+        "text": "左邊那塊石頭後面有人",
+        "note": "好訊號才有；狙擊手紅點第一次亮起 toast 一次，之後不再播對白"
+      }
     },
     {
       "id": "op4_tunnel",
@@ -392,6 +421,41 @@
       "killedBy": "isl_lin_kia",
       "chance": "clamp(20-(o-50)*0.6,3,35)，o 取玩家目前袍澤值，不可寫死",
       "stage": "op1~op5，若有登場"
+    },
+    "rollTable": {
+      "principle": "每個同袍每個指定關卡結束時最多擲一次；一旦陣亡即鎖定，重試不重擲；活著則該關不再擲。倒下於戰鬥中（hp<=0）等同該關擲出陣亡。o 為玩家當下袍澤值。",
+      "lin": {
+        "formula": "clamp(base-(o-50)*0.4, 2, 30)",
+        "base": {
+          "op1": 14,
+          "op2": 0,
+          "op3": 12,
+          "op4": 14,
+          "op5": 12
+        }
+      },
+      "akai": {
+        "formula": "clamp(base+outsideBonus-aidBonus-(o-50)*0.5, 2, 35)",
+        "base": {
+          "op3": 17,
+          "op4": 19,
+          "op5": 15
+        },
+        "outsideBonus": "isl_akai_outside +8",
+        "aidBonus": "有 sk_firstaid -8",
+        "note": "op2 不擲，不得在 op2/op3 開場自動鎖為活著"
+      },
+      "wang": {
+        "formula": "clamp(29 - railCart10 - smoke5 + 8*min(hits,3) - (o-50)*0.3, 5, 50)",
+        "stage": "op4 背人撤離結束時擲一次",
+        "hits": "背人途中被擊中次數"
+      },
+      "simulated": {
+        "assumption": "o~N(55,12)；akai_outside 40%；有急救 50%；rail_cart 60%；俘虜被丟下 25%；指揮官被擊斃 45%",
+        "island_guard": "約 13%",
+        "silent_island": "約 35%",
+        "nameless_line": "約 52%"
+      }
     }
   },
   "endingsFlags": {
@@ -488,7 +552,7 @@
   },
   "newFlags": {
     "isl_flank_by_bike": "op1 騎摩托車繞側翼完成",
-    "isl_bike_dash": "op3 騎摩托車衝過稜線道路",
+    "isl_bike_dash": "op3 機車衝稜線（互斥）",
     "isl_jeep_convoy": "op2 吉普車護送／通過遭遇戰",
     "isl_jeep_charge": "op5 駕吉普車衝入指揮所廣場",
     "isl_key_captive_rescued": "關鍵被俘者被救出；沿用日記且王班長已死時，取代 isl_wang_rescued",
@@ -504,7 +568,13 @@
     "isl_jeep_driver_akai": "op2 阿凱開吉普",
     "isl_jeep_driver_lin": "op2 小林開吉普（小林存活時）",
     "isl_02_clear": "op2 通關",
-    "isl_power_restored_late": "op2 戰鬥結束後才復電，不算復電"
+    "isl_power_restored_late": "op2 戰鬥結束後才復電，不算復電",
+    "isl_ridge_walk": "op3 岩石步行路線",
+    "isl_ridge_trail": "op3 山腹小徑路線（互斥）",
+    "isl_spared_scout": "op3 斥候留下／放走",
+    "isl_killed_scout": "op3 斥候補一槍",
+    "isl_03_clear": "op3 通關",
+    "_op3_exclusive": "isl_ridge_walk / isl_bike_dash / isl_ridge_trail 互斥；isl_spared_scout / isl_killed_scout 互斥；選定時清掉另一組並立刻存檔"
   },
   "saveSchema": {
     "companionFates": {
