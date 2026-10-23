@@ -738,6 +738,7 @@
   HHooks.onCover = function () { if (W.cb._tut) W.cb._tut(); };
   function rollLinFate() {
     if (fateOf('lin')) return fateOf('lin');
+    if (auto && q.fate === 'kia') return lockFate('lin', 'kia');
     if (auto && q.fate !== 'kia') return lockFate('lin', 'alive');
     var o = playerO(), ch = clamp(20 - (o - 50) * 0.6, 3, 35);
     return lockFate('lin', Math.random() * 100 < ch ? 'kia' : 'alive');
