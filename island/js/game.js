@@ -280,9 +280,9 @@
           if (q.akai === 'out' && (sceneId === 'driver_choice' || sceneId === 'driver_choice_missing')) pick = choices[choices.length - 1];
           if ((q.akai === 'with' || !q.akai) && (sceneId === 'driver_choice' || sceneId === 'driver_choice_missing')) pick = choices[0];
           if (q.driver === 'lin' && sceneId === 'driver_choice') pick = choices[1] || pick;
-          if (q.ridge === 'bike' && sceneId === 'ridge_approach') pick = choices[1] || pick;
-          if (q.ridge === 'trail' && sceneId === 'ridge_approach') pick = choices[2] || pick;
-          if ((q.ridge === 'walk' || !q.ridge) && sceneId === 'ridge_approach') pick = choices[0];
+          if (q.ridge === 'bike' && (sceneId === 'ridge_approach' || sceneId === 'ridge_approach_missing')) pick = choices[1] || pick;
+          if (q.ridge === 'trail' && (sceneId === 'ridge_approach' || sceneId === 'ridge_approach_missing')) pick = choices[2] || pick;
+          if ((q.ridge === 'walk' || !q.ridge) && (sceneId === 'ridge_approach' || sceneId === 'ridge_approach_missing')) pick = choices[0];
           if (q.scout === 'kill' && sceneId === 'scout_choice') pick = choices[0];
           if (q.scout === 'bind' && sceneId === 'scout_choice') pick = choices[1] || pick;
           if ((q.scout === 'spare' || !q.scout) && sceneId === 'scout_choice') pick = choices[2] || pick;
