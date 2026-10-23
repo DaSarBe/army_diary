@@ -95,7 +95,27 @@ function pinGroundCoords() {
   const hq = lv('op5_hq');
   const cmd = beat(hq, 'hq_fight').wave.placed.find(p => p.type === 'commander');
   must(cmd && cmd.x === 0 && cmd.z === 86, '指揮官應在指揮所後方 (0,86)');
+  must(cmd.z !== 73.5, '指揮官不得貼指揮所南牆 (0,73.5)');
   console.log('dai-ground-pins ok');
+}
+
+function nearProp(lv, x, z, kind, maxd) {
+  return (lv.map.props || []).some(p => p.kind === kind && Math.hypot((p.x || 0) - x, (p.z || 0) - z) <= (maxd || 1.2));
+}
+
+function pinEveCopy() {
+  const story = JSON.parse(fs.readFileSync(path.join(ROOT, 'island/data/story.json'), 'utf8'));
+  const sc = story.scenes || {};
+  must(sc.grab_t75 && sc.grab_t75.hint === '雷達站外牆邊的箱子裡，有一把被拆下的 T75。', 'grab_t75 hint 不符 Eve 原文');
+  must(sc.find_dmr && sc.find_dmr.hint === '觀測哨外牆邊的箱子裡，有一把 T65K2。', 'find_dmr hint 不符 Eve 原文');
+  must(sc.power_hint && sc.power_hint.toast === '小林：「配電箱在機房外牆。要復電就得跑過兩挺機槍。」', 'power_hint toast 不符 Eve 原文');
+  function lv(id) { return JSON.parse(fs.readFileSync(path.join(ROOT, LEVEL_FILES[id]), 'utf8')); }
+  const radar = lv('op2_radar');
+  const ridge = lv('op3_ridge');
+  must(nearProp(radar, -16, 65.5, 'powerbox'), '復電點旁要有配電箱');
+  must(nearProp(radar, -6, 67.5, 'crate'), 'T75 點旁要有箱子');
+  must(nearProp(ridge, 4, 83.5, 'crate'), 'T65K2 點旁要有箱子');
+  console.log('eve-copy-props ok');
 }
 
 const BLOCKED = {
@@ -107,6 +127,7 @@ const BLOCKED = {
 async function main() {
   scanJsonFootprints();
   pinGroundCoords();
+  pinEveCopy();
   const port = 9020 + Math.floor(Math.random() * 40);
   const srv = await serve(port);
   const browser = await puppeteer.launch({
