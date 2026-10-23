@@ -312,22 +312,14 @@
     }
     if (sid === 'radar_door') return linDown ? 'radar_door_missing' : (weak && story.scenes.radar_door_weak ? 'radar_door_weak' : sid);
     if (sid === 'power_hint') return linDown && story.scenes.power_hint_missing ? 'power_hint_missing' : sid;
-    if (sid === 'rusher_warn') {
-      if (akaiOut) return 'rusher_warn_outside';
-      return linDown ? 'rusher_warn_missing' : sid;
-    }
+    if (sid === 'rusher_warn') return linDown ? 'rusher_warn_missing' : sid;
     if (sid === 'dark_talk') {
       if (akaiOut) return linDown ? 'dark_talk_outside_missing' : 'dark_talk_outside';
       return linDown ? 'dark_talk_missing' : 'dark_talk';
     }
-    if (sid === 'dark_clear') {
-      if (akaiOut) return 'dark_clear_outside';
-      return linDown ? 'dark_clear_missing' : 'dark_clear';
-    }
     if (sid === 'radar_complete') {
       var lit = hasFlag('isl_power_restored');
       if (akaiOut) return lit ? 'radar_complete_outside' : 'radar_complete_outside_dark';
-      if (linDown) return lit ? 'radar_complete_missing' : 'radar_complete_dark_missing';
       return lit ? 'radar_complete' : 'radar_complete_dark';
     }
     if (sid === 'ridge_rest') {
@@ -614,7 +606,7 @@
         placed: wave.placed || b.placed
       });
       if (b.optionalPower) {
-        W.setInteract([{ id: 'power', x: b.optionalPower.x, z: b.optionalPower.z, r: 2.6, label: b.optionalPower.label || '復電', hold: b.optionalPower.holdMs || 2400 }]);
+        W.setInteract([{ id: 'power', x: b.optionalPower.x, z: b.optionalPower.z, r: 2.6, label: b.optionalPower.label || '復電', hold: b.optionalPower.holdMs || 3000 }]);
         HHooks.pendingHold = function () {
           W.setInteract([]);
           setFlag('isl_power_restored');
@@ -631,16 +623,16 @@
           bark();
         };
         var hintSc = story.scenes[pickStory('power_hint')] || story.scenes.power_hint;
-        if (hintSc && hintSc.toast) setTimeout(function () { toast(hintSc.toast); }, 900);
+        if (hintSc && hintSc.toast) setTimeout(function () { toast(hintSc.toast); }, auto ? 400 : 10000);
         if (auto && q.power !== '0') setTimeout(function () { W.place(b.optionalPower.x, b.optionalPower.z); startHold(b.optionalPower.label || '復電', 400); }, 700);
       }
-      if (b.blackout && ((plan.enemies && plan.enemies.rusher) || (wave.enemies && wave.enemies.rusher))) {
-        setTimeout(function () {
-          var rs = pickStory('rusher_warn');
-          var rsc = story.scenes[rs] || story.scenes.rusher_warn;
-          if (rsc && rsc.toast) toast(rsc.toast);
-        }, 2200);
-      }
+      HHooks._rushed = false;
+      HHooks.onRusher = function () {
+        if (HHooks._rushed || !b.blackout) return;
+        HHooks._rushed = true;
+        var rsc = story.scenes[pickStory('rusher_warn')] || story.scenes.rusher_warn;
+        if (rsc && rsc.toast) toast(rsc.toast);
+      };
       if (plan.ammo) {
         W.setInteract([{ id: 'ammo', x: plan.ammo.x, z: plan.ammo.z, r: 2.2, label: '彈藥箱', hold: 900 }]);
         HHooks.pendingHold = function () {

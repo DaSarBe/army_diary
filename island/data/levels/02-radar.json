@@ -105,14 +105,14 @@
         ],
         "grace": 2.0
       },
-      "optionalPower": { "x": -16, "z": 70, "holdMs": 2400, "label": "復電" }
+      "optionalPower": { "x": -16, "z": 70, "holdMs": 3000, "label": "復電" }
     },
-    { "id": "dark_clear", "type": "talk", "story": "dark_clear", "unlessFlag": "isl_power_restored" },
+    { "id": "no_restore_note", "type": "talk", "story": "no_restore_note", "unlessFlag": "isl_power_restored" },
     {
       "id": "restore_power_late",
       "type": "interact",
       "kind": "power_late",
-      "holdMs": 1800,
+      "holdMs": 3000,
       "label": "復電",
       "x": -16,
       "z": 70,

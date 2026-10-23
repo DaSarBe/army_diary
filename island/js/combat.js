@@ -491,6 +491,7 @@
     var m = buildEnemy(type, e); e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline;
     e.group.position.set(e.x, 0, e.z); scene.add(e.group);
     pickCover(e);
+    if (type === 'rusher' && H.onRusher) H.onRusher();
     return e;
   }
   function pickCover(e) {
