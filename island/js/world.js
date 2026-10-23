@@ -354,6 +354,7 @@
     if (lv.blackout) W.setBlackout(true);
     W.setMarks([]);
     S.mode = 'play';
+    if (root.Gfx && root.Gfx.resetPlay) root.Gfx.resetPlay();
   };
 
   /* ---------- 輸入 ---------- */
@@ -776,9 +777,11 @@
   }
   function frame(now) {
     rafId = requestAnimationFrame(frame);
-    var dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (lost || paused) return;
-    if (root.Gfx) root.Gfx.tick(now, dt, applyGfx);
+    var raw = (now - last) / 1000; last = now;
+    var dt = Math.min(0.05, raw);
+    if (lost) return;
+    if (root.Gfx) root.Gfx.tick(now, raw, applyGfx, { mode: S.mode, paused: paused });
+    if (paused) return;
     update(dt);
     try { R.render(scene, cam); } catch (e) { /* 暫時失效 */ }
     if (root.Gfx && root.Gfx.hudOn()) {

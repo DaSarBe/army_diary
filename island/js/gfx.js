@@ -10,8 +10,10 @@
     defaultPref: 'auto',
     autoStartTier: 'mid',
     autoNeverHigh: true,
-    autoDropFps: 40,
+    autoDropFps: 32,
     autoSampleSec: 3,
+    autoWarmupSec: 4,
+    autoDropStrikes: 2,
     autoCooldownSec: 10,
     tiers: {
       low: { pixelRatio: 1, antialias: false, sky: 'flat', fog: 'linear', heightFog: false, clouds: 0, sunDisc: true, sunHalo: false, maxTex: 512, domeSeg: 8, waterWaves: false, coverDetail: false },
@@ -26,7 +28,7 @@
   };
 
   var pref = 'auto', applied = 'mid', hudOn = false, freezeAuto = false;
-  var sampleT = 0, sampleFrames = 0, lastChangeMs = 0, fpsEma = 60;
+  var sampleT = 0, sampleDts = [], strikes = 0, warmupT = 0, lastChangeMs = 0, fpsEma = 60;
 
   function load() {
     try {
@@ -51,7 +53,7 @@
     if (!cfg) return;
     if (cfg.tiers) table.tiers = cfg.tiers;
     if (cfg.budget) table.budget = cfg.budget;
-    ['defaultPref', 'autoStartTier', 'autoNeverHigh', 'autoDropFps', 'autoSampleSec', 'autoCooldownSec'].forEach(function (k) {
+    ['defaultPref', 'autoStartTier', 'autoNeverHigh', 'autoDropFps', 'autoSampleSec', 'autoWarmupSec', 'autoDropStrikes', 'autoCooldownSec'].forEach(function (k) {
       if (cfg[k] != null) table[k] = cfg[k];
     });
     if (pref === 'auto') {
@@ -60,33 +62,65 @@
     }
   }
 
+  function clearSample() { sampleT = 0; sampleDts = []; }
+  function resetPlay() { warmupT = 0; strikes = 0; clearSample(); }
+
   function setPref(v, applyFn) {
     if (v !== 'auto' && v !== 'low' && v !== 'mid' && v !== 'high') return;
     pref = v;
     applied = v === 'auto' ? (table.autoStartTier || 'mid') : v;
     if (table.autoNeverHigh && pref === 'auto' && applied === 'high') applied = 'mid';
-    sampleT = 0; sampleFrames = 0; lastChangeMs = performance.now();
+    resetPlay();
+    lastChangeMs = performance.now();
     savePref();
     if (applyFn) applyFn(spec(), applied);
   }
 
-  function tick(nowMs, dt, applyFn) {
+  function median(arr) {
+    if (!arr.length) return 0;
+    var a = arr.slice().sort(function (x, y) { return x - y; });
+    var m = (a.length - 1) / 2;
+    return (a[Math.floor(m)] + a[Math.ceil(m)]) / 2;
+  }
+
+  function isHidden(ctx) {
+    if (ctx && ctx.hidden != null) return !!ctx.hidden;
+    return typeof document !== 'undefined' && !!document.hidden;
+  }
+
+  function isPlayable(ctx) {
+    ctx = ctx || {};
+    if (ctx.paused || isHidden(ctx)) return false;
+    if (ctx.mode && ctx.mode !== 'play') return false;
+    return true;
+  }
+
+  function tick(nowMs, dt, applyFn, ctx) {
     if (dt > 0 && dt < 1) fpsEma = fpsEma * 0.9 + (1 / dt) * 0.1;
     if (freezeAuto || pref !== 'auto') return;
-    sampleT += dt; sampleFrames++;
+    if (!isPlayable(ctx) || !(dt > 0) || dt > 0.25) return;
+    var warm = table.autoWarmupSec != null ? table.autoWarmupSec : 4;
+    if (warmupT < warm) { warmupT += dt; return; }
+    sampleDts.push(dt);
+    sampleT += dt;
     var need = table.autoSampleSec || 3;
-    var cool = (table.autoCooldownSec || 10) * 1000;
     if (sampleT < need) return;
-    var fps = sampleFrames / Math.max(0.001, sampleT);
-    sampleT = 0; sampleFrames = 0;
-    if (nowMs - lastChangeMs < cool) return;
-    if (fps < (table.autoDropFps || 40) && applied !== 'low') {
-      var i = ORDER.indexOf(applied);
-      if (i > 0) {
-        applied = ORDER[i - 1];
-        lastChangeMs = nowMs;
-        if (applyFn) applyFn(spec(), applied);
-      }
+    var med = median(sampleDts);
+    var fps = med > 0 ? (1 / med) : 0;
+    clearSample();
+    var cool = (table.autoCooldownSec || 10) * 1000;
+    var needStrikes = table.autoDropStrikes || 2;
+    var floor = table.autoDropFps || 32;
+    if (nowMs - lastChangeMs < cool) { strikes = 0; return; }
+    if (fps < floor && applied !== 'low') strikes++;
+    else strikes = 0;
+    if (strikes < needStrikes) return;
+    var i = ORDER.indexOf(applied);
+    if (i > 0) {
+      applied = ORDER[i - 1];
+      lastChangeMs = nowMs;
+      strikes = 0;
+      if (applyFn) applyFn(spec(), applied);
     }
   }
 
@@ -126,6 +160,7 @@
     label: function (k) { return LABELS[k] || k; },
     setPref: setPref,
     tick: tick,
+    resetPlay: resetPlay,
     freezeAuto: function (v) { freezeAuto = !!v; },
     hudOn: function () { return hudOn; },
     toggleHud: toggleHud,

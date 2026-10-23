@@ -645,8 +645,10 @@
     "defaultPref": "auto",
     "autoStartTier": "mid",
     "autoNeverHigh": true,
-    "autoDropFps": 40,
+    "autoDropFps": 32,
     "autoSampleSec": 3,
+    "autoWarmupSec": 4,
+    "autoDropStrikes": 2,
     "autoCooldownSec": 10,
     "tiers": {
       "low": {

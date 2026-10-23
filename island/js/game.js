@@ -22,7 +22,7 @@
     }
     return '<label>畫質</label><div class="gfxRow">' + btn('auto', '自動') + btn('low', '低') + btn('mid', '中') + btn('high', '高') + '</div>' +
       '<label><input type="checkbox" id="fpsHud"' + (G.hudOn() ? ' checked' : '') + '> 顯示效能（FPS、畫質檔、draw calls、三角面）</label>' +
-      '<p style="font-size:12px">自動預設中檔，約 3 秒內低於 40fps 降一級，不會自行升到高檔。桌機按 F3 也可開關效能顯示。</p>';
+      '<p style="font-size:12px">自動預設中檔；關卡可操作後再等 4 秒開始量測，連續兩次中位數低於 32fps 才降一級，不會自行升到高檔。桌機按 F3 也可開關效能顯示。</p>';
   }
   function bindGfxUi() {
     var G = root.Gfx; if (!G) return;
