@@ -573,7 +573,14 @@
     $('#fpsHint').textContent = sc.hint;
     pendingRide = { route: route, sc: sc };
     armRide(route, sc);
-    if (auto && v) setTimeout(function () { W.place(v.x, v.z); boardVehicle(v); }, 250);
+    if (auto && v) {
+      setTimeout(function () { W.place(v.x, v.z); boardVehicle(v); }, 250);
+      setTimeout(function () {
+        if (W.inVehicle()) return;
+        W.place(v.x, v.z); boardVehicle(v);
+        if (!W.inVehicle() && !rideWatch) { W.place(route.land[0], route.land[1]); nextBeat(); }
+      }, 1400);
+    }
   }
   function boardVehicle(v) {
     if (!v) v = W.nearestVehicle(W.pos().x, W.pos().z, 3.2);
