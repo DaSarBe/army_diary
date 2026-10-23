@@ -14,6 +14,7 @@
     });
     auto = q.auto === '1';
   }
+  function testMode() { return auto || q.test === '1' || q.eval === '1'; }
   function loadJson(url) {
     return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); });
   }
@@ -217,11 +218,35 @@
     if (miss[0] === 'akai') return sc.retryAkai || '黃連長：「線守住了，但阿凱的頻道沒有再開。繼續往前。」';
     return sc.retryAll || '黃連長：「線還在，人都在。繼續。」';
   }
+  function ensureFates(s) {
+    s = s || save;
+    if (!s) return s;
+    if (!s.flags) s.flags = {};
+    if (!s.fateRolls) s.fateRolls = {};
+    var cur = s.companionFates || {};
+    function one(id, kiaFlag, aliveHint) {
+      var v = cur[id];
+      if (v === 'kia' || v === 'alive' || v === 'absent') return v;
+      if (s.flags[kiaFlag]) return 'kia';
+      if (aliveHint) return 'alive';
+      return 'absent';
+    }
+    s.companionFates = {
+      wang: one('wang', 'isl_wang_kia', !!s.flags.isl_wang_rescued),
+      akai: one('akai', 'isl_akai_kia', !!(s.flags.isl_03_clear || s.fateRolls['akai:op3_ridge'])),
+      lin: one('lin', 'isl_lin_kia', !!(s.flags.isl_01_clear || s.fateRolls['lin:op1_landing']))
+    };
+    return s;
+  }
   function fateOf(id) {
-    var v = save.companionFates[id];
+    if (!save) return null;
+    if (!save.companionFates) ensureFates(save);
+    var bag = save.companionFates || {};
+    var v = bag[id];
     return (!v || v === 'absent') ? null : v;
   }
   function lockFate(id, val) {
+    if (!save.companionFates) ensureFates(save);
     if (save.companionFates[id] === 'kia') return 'kia';
     save.companionFates[id] = val; persist(); return val;
   }
@@ -252,6 +277,7 @@
     } catch (e) { return false; }
   }
   function chapterFate(id, levelId, force) {
+    if (!save.companionFates) ensureFates(save);
     if (!save.fateRolls) save.fateRolls = {};
     if (save.companionFates[id] === 'kia') return 'kia';
     var lid = levelId || (level && level.id) || 'unk';
@@ -329,16 +355,22 @@
   }
 
   /* ---------- 對話 ---------- */
-  function hideDlg() { $('#dlg').hidden = true; document.body.classList.remove('talking'); W.setMode('play'); }
+  function hideDlg(keepLocked) {
+    $('#dlg').hidden = true;
+    if (keepLocked) return;
+    document.body.classList.remove('talking');
+    W.setMode('play');
+  }
   function showLines(sceneId, onDone) {
     var sc = story.scenes[sceneId]; if (!sc) { onDone(); return; }
     var lines = (sc.lines || []).slice(), choices = sc.choices, i = 0;
     function render() {
       $('#dlg').hidden = false; document.body.classList.add('talking');
+      if (W.setMode) W.setMode('talk');
       if (i < lines.length) {
         var ln = lines[i];
         if (ln.pause) {
-          hideDlg();
+          hideDlg(true);
           fade('', ln.pause, function () { i++; render(); });
           return;
         }
@@ -956,7 +988,7 @@
   }
   function pickEnding() {
     var kiaN = kiaCount();
-    var wangOk = hasFlag('isl_wang_rescued') || hasFlag('isl_key_captive_rescued');
+    var wangOk = (hasFlag('isl_wang_rescued') || hasFlag('isl_key_captive_rescued')) && fateOf('wang') !== 'kia';
     if (wangOk && hasFlag('isl_captives_rescued') && fateOf('akai') !== 'kia' && fateOf('lin') !== 'kia' && hasFlag('isl_commander_captured')) return 'island_guard';
     if (kiaN >= 2 || (hasFlag('isl_captives_left') && hasFlag('isl_commander_killed'))) return 'silent_island';
     return 'nameless_line';
@@ -1003,8 +1035,13 @@
       add('電台', '……');
     } else {
       if (kiaN === 0) {
-        add('黃連長', '指揮官倒下了。地圖上還有別的據點。');
-        variant = 'nameless_none';
+        if (hasFlag('isl_commander_captured')) {
+          add('黃連長', '指揮官被帶走了。地圖上還有別的據點。');
+          variant = 'nameless_captured';
+        } else {
+          add('黃連長', '指揮官倒下了。地圖上還有別的據點。');
+          variant = 'nameless_none';
+        }
       } else {
         add('黃連長', '名單上少一個名字，我會親自簽。');
         if (linK) { add('黃連長', '南灘通信，小林。'); variant = 'nameless_lin'; }
@@ -1226,7 +1263,7 @@
     bootLevel('op1_landing', 0);
   }
   function continueSave(s) {
-    save = s;
+    save = ensureFates(s || {});
     var id = s.level || 'op1_landing';
     if (s.flags && s.flags.isl_04_clear && !s.flags.isl_05_clear && (id === 'op1_landing' || id === 'op2_radar' || id === 'op3_ridge' || id === 'op4_tunnel')) id = 'op5_hq';
     else if (s.flags && s.flags.isl_03_clear && !s.flags.isl_04_clear && (id === 'op1_landing' || id === 'op2_radar' || id === 'op3_ridge')) id = 'op4_tunnel';
@@ -1364,8 +1401,20 @@
   $('#glRetry').onclick = function () { location.reload(); };
   $('#mute').textContent = Sfx.isMuted() ? '音效關' : '音效開';
 
+  function attachTestApi() {
+    if (!testMode() || !root.__island) return;
+    root.__island.evalStoryState = evalStoryState;
+    root.__island.ensureFates = ensureFates;
+    root.__island.continueSave = continueSave;
+    root.__island.hideDlg = hideDlg;
+    root.__island.pickStory = pickStory;
+    root.__island.pickEnding = pickEnding;
+    root.__island.buildEndingScene = buildEndingScene;
+    root.__island.canCapture = canCapture;
+  }
   function boot() {
     parseQuery();
+    attachTestApi();
     KEY = (cfg && cfg.save && cfg.save.key) || 'island-save-0';
     var canvas = $('#gl');
     if (!root.THREE) { $('#glerr').hidden = false; return; }
@@ -1400,11 +1449,6 @@
     World: W, Combat: Cbt,
     startNew: function (n, d) { startNew(n, d); },
     nextBeat: nextBeat,
-    jumpTo: jumpTo,
-    pickStory: pickStory,
-    pickEnding: pickEnding,
-    buildEndingScene: buildEndingScene,
-    evalStoryState: evalStoryState,
-    canCapture: canCapture
+    jumpTo: jumpTo
   };
 })(typeof self !== 'undefined' ? self : this);

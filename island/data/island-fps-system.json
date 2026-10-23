@@ -613,7 +613,7 @@
     },
     "rule": "第一次決定即寫入存檔；重試讀取存檔，不再擲骰；陣亡同袍重試後維持缺席，閒聊換『少了人』版本",
     "rollOnce": true,
-    "storedAt": "save.island.companionFates",
+    "storedAt": "save.companionFates",
     "also": [
       "已觸發的 isl_* flag",
       "是否沿用阿兵哥日記 carryOver"

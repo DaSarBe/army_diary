@@ -97,7 +97,7 @@ async function main() {
       const n = document.getElementById('dName');
       if (!dlg || dlg.hidden || !t || !t.textContent) return false;
       const s = ((n && n.textContent) || '') + t.textContent;
-      return /回來就好|便當。我說話算話|名單我會親自簽|坑道裡還有三個名字|這不是勝利|離島防務順利恢復|指揮官倒下了|去過島上|南灘通信|他關掉電視/.test(s);
+      return /回來就好|便當。我說話算話|名單我會親自簽|坑道裡還有三個名字|這不是勝利|離島防務順利恢復|指揮官倒下了|指揮官被帶走了|去過島上|南灘通信|他關掉電視/.test(s);
     }, { timeout: 20000 });
     await page.screenshot({ path: path.join(outDir, `${mode}-ending-dlg.png`) });
   } catch (e) { log('ending dlg shot skipped', e.message); }
@@ -170,7 +170,11 @@ async function main() {
     if (!/離島防務順利恢復/.test(joined)) throw new Error('無名防線缺少新聞「離島防務順利恢復」');
     if (!/他關掉電視，沒有說話/.test(joined)) throw new Error('無名防線缺少關電視旁白');
     if (/^方子豪:\s*$/m.test(joined)) throw new Error('無名防線不該有空的方子豪對話框');
-    if (info.fates.lin !== 'kia' && info.fates.akai !== 'kia' && info.fates.wang !== 'kia' && !/指揮官倒下了/.test(joined)) throw new Error('無名防線無人死應有前綴');
+    if (info.fates.lin !== 'kia' && info.fates.akai !== 'kia' && info.fates.wang !== 'kia') {
+      if (info.flags.isl_commander_captured && !/指揮官被帶走了/.test(joined)) throw new Error('無名防線活捉應播被帶走了');
+      if (info.flags.isl_commander_killed && !/指揮官倒下了/.test(joined)) throw new Error('無名防線擊斃應播倒下了');
+      if (info.flags.isl_commander_captured && /指揮官倒下了/.test(joined)) throw new Error('無名防線活捉不該播倒下了');
+    }
     if (info.fates.lin === 'kia' && info.fates.akai !== 'kia' && info.fates.wang !== 'kia' && !/南灘通信，小林/.test(joined)) throw new Error('無名防線小林陣亡前綴錯誤');
     if (info.fates.akai === 'kia' && info.fates.lin !== 'kia' && info.fates.wang !== 'kia' && !/還沒簽完那張保單/.test(joined)) throw new Error('無名防線阿凱陣亡前綴錯誤');
     if (info.fates.wang === 'kia' && info.fates.lin !== 'kia' && info.fates.akai !== 'kia' && !/他帶過的人/.test(joined)) throw new Error('無名防線王班長陣亡前綴錯誤');

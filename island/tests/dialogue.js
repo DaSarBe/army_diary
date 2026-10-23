@@ -31,7 +31,9 @@ async function main() {
     args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']
   });
   const page = await browser.newPage();
-  await page.goto(`http://localhost:${port}/island/index.html`, { waitUntil: 'load' });
+  const pageErrs = [];
+  page.on('pageerror', e => pageErrs.push(e.message));
+  await page.goto(`http://localhost:${port}/island/index.html?test=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__island && __island.evalStoryState, { timeout: 20000 });
 
   const cases = await page.evaluate(() => {
@@ -112,6 +114,14 @@ async function main() {
       captureOk: ev({
         wang: 'alive', akai: 'alive', lin: 'alive',
         flags: { isl_killed_scout: true, isl_radio_strong: true, isl_captives_rescued: true, isl_commander_captured: true }
+      }),
+      namelessCaptured: ev({
+        wang: 'alive', akai: 'alive', lin: 'alive',
+        flags: { isl_captives_left: true, isl_commander_captured: true }
+      }),
+      wangKiaBlocked: ev({
+        wang: 'kia', akai: 'alive', lin: 'alive',
+        flags: { isl_key_captive_rescued: true, isl_captives_rescued: true, isl_commander_captured: true }
       })
     };
   });
@@ -212,6 +222,55 @@ async function main() {
 
   must(cases.forcedNo.canCapture === false, '殺斥候且弱訊號不能活捉');
   must(cases.captureOk.canCapture === true, '殺斥候但強訊號可以活捉');
+
+  must(cases.namelessCaptured.ending === 'nameless_line', '活捉但留下俘虜應進無名防線');
+  must(has(cases.namelessCaptured.lines, /指揮官被帶走了/), '活捉無名應播被帶走了');
+  must(none(cases.namelessCaptured.lines, /指揮官倒下了/), '活捉無名不該播倒下了');
+  must(cases.namelessNone.variant === 'nameless_none', '擊斃無名應為 none');
+  must(has(cases.namelessNone.lines, /指揮官倒下了/), '擊斃無名維持倒下了');
+
+  must(cases.wangKiaBlocked.ending !== 'island_guard', '王班長陣亡不可走島嶼守衛');
+  must(cases.wangKiaBlocked.ending === 'nameless_line', '王班長陣亡＋活捉應進無名防線');
+
+  const legacy = await page.evaluate(() => {
+    try {
+      const old = { name: '舊檔', diff: 'story', level: 'op2_radar', flags: { isl_01_clear: true, isl_wang_kia: true } };
+      const migrated = __island.ensureFates(JSON.parse(JSON.stringify(old)));
+      const fates = migrated.companionFates;
+      document.body.classList.add('talking');
+      __island.World.setMode('talk');
+      __island.hideDlg(true);
+      const pause = { talking: document.body.classList.contains('talking'), mode: __island.World.S.mode };
+      __island.hideDlg();
+      const after = { talking: document.body.classList.contains('talking'), mode: __island.World.S.mode };
+      return { error: null, fates, pause, after };
+    } catch (e) {
+      return { error: e.message };
+    }
+  });
+  must(!legacy.error, '舊存檔遷移拋錯: ' + (legacy.error || ''));
+  must(legacy.fates && legacy.fates.lin === 'alive', '缺欄位舊檔第 1 關已過應補小林 alive');
+  must(legacy.fates && legacy.fates.wang === 'kia', '缺欄位舊檔有 isl_wang_kia 應補王班長 kia');
+  must(legacy.fates && legacy.fates.akai === 'absent', '缺欄位舊檔未過第 3 關阿凱應 absent');
+  must(legacy.pause.talking && legacy.pause.mode !== 'play', '結局黑場不該還操控');
+  must(legacy.after.mode === 'play' && !legacy.after.talking, '對話結束才回到 play');
+
+  const page2 = await browser.newPage();
+  await page2.goto(`http://localhost:${port}/island/index.html`, { waitUntil: 'load' });
+  await page2.waitForFunction(() => window.__island, { timeout: 20000 });
+  const gated = await page2.evaluate(() => typeof __island.evalStoryState);
+  must(gated === 'undefined', '正式站不該公開 evalStoryState，實際 ' + gated);
+  await page2.close();
+
+  await page.evaluate(() => {
+    const old = { name: '舊檔', diff: 'story', level: 'op2_radar', flags: { isl_01_clear: true } };
+    __island.continueSave(old);
+  });
+  await page.waitForFunction(() => {
+    const s = window.__island && __island.save && __island.save();
+    return s && s.companionFates && typeof s.companionFates.lin === 'string';
+  }, { timeout: 20000 });
+  must(!pageErrs.length, '舊存檔繼續遊戲當機: ' + pageErrs.join(' | '));
 
   const outDir = path.join(__dirname, 'out');
   fs.mkdirSync(outDir, { recursive: true });
