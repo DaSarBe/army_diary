@@ -87,6 +87,22 @@
     g.setIndex(new THREE.BufferAttribute(out, 1));
     return g;
   }
+  function meshList(rootObj) {
+    var out = [];
+    rootObj.traverse(function (m) {
+      if (m.isMesh && m.geometry && m.geometry.attributes && m.geometry.attributes.position) out.push(m);
+    });
+    return out;
+  }
+  function limitRoot(rootObj, target) {
+    var total = countTris(rootObj);
+    if (!target || total <= target) return;
+    var meshes = meshList(rootObj), ratio = target / total;
+    meshes.forEach(function (m) {
+      var t = Math.max(8, Math.floor(countTris(m) * ratio));
+      m.geometry = limitGeometry(m.geometry, t);
+    });
+  }
 
   function loadGltf(url) {
     return new Promise(function (resolve, reject) {
@@ -259,9 +275,9 @@
     var skin = spec.skin || '#d9a77a';
     var cap = CAP[C.tier] || CAP.mid;
     var camo = side === 'ally';
+    if (C.tier !== 'high') limitRoot(rootObj, cap);
     rootObj.traverse(function (m) {
       if (!m.isMesh) return;
-      if (C.tier !== 'high') m.geometry = limitGeometry(m.geometry, cap);
       var src = m.material && m.material.map;
       var map = tintTexture(src, cloth, skin, camo);
       m.material = new THREE.MeshLambertMaterial({
