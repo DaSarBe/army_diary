@@ -5,10 +5,10 @@
   var C = { ready: false, gltf: null, tex: { male: null, female: null }, err: null, wait: [], tri: 0 };
   var FEMALE = { mom: 1, cook: 1, gma: 1, fr3: 1 };
   var TINT = {
-    sgt: '#c5d2a4', cpt: '#b8c48c', rec: '#cfe0b0', kai: '#c8d6a8', sen: '#c2d09a',
-    mom: '#f0c4cc', dad: '#c5d4ea', gpa: '#dce4c8', fr1: '#e8c48a', fr2: '#b8ddd8',
-    fr3: '#deb0d8', med: '#f2f2ee', cook: '#f3ead4', barber: '#ecece6', post: '#b7c8a4',
-    gma: '#e6c8b4'
+    sgt: '#e4edc8', cpt: '#dde6c0', rec: '#eaf3d4', kai: '#e6efd0', sen: '#e2ebc6',
+    mom: '#fff0f2', dad: '#e8f0fa', gpa: '#f2f6e6', fr1: '#fff1dc', fr2: '#e6f6f4',
+    fr3: '#f8e8f6', med: '#ffffff', cook: '#fff8ec', barber: '#f7f7f4', post: '#e2edcc',
+    gma: '#f8eee6'
   };
 
   function done(err) {
@@ -79,7 +79,8 @@
     var rootObj = THREE.SkeletonUtils.clone(C.gltf.scene);
     var female = !!(spec.long || FEMALE[spec.preset] || (spec.hair && spec.long));
     var tex = female ? C.tex.female : C.tex.male;
-    var tint = spec.tint || TINT[spec.preset] || spec.shirt || '#d4d0c4';
+    var mil = spec.shirt && /#5b6b3c|#566338|#6a7a44|#4d5a33/i.test(spec.shirt);
+    var tint = spec.tint || TINT[spec.preset] || (mil ? '#e6efd0' : '#ffffff');
     rootObj.traverse(function (m) {
       if (!m.isMesh) return;
       var map = (m.material && m.material.map) || tex;
