@@ -310,11 +310,15 @@
   function disposeNode(obj) {
     if (!obj) return;
     obj.traverse(function (m) {
+      if (m.skeleton && m.skeleton.boneTexture) {
+        if (m.skeleton.boneTexture.dispose) m.skeleton.boneTexture.dispose();
+        m.skeleton.boneTexture = null;
+      }
       if (m.geometry && m.geometry.dispose) m.geometry.dispose();
       var mats = m.material ? (Array.isArray(m.material) ? m.material : [m.material]) : [];
       mats.forEach(function (mat) {
         if (!mat) return;
-        if (mat.map && mat.map.userData && mat.map.userData.owned && mat.map.dispose) mat.map.dispose();
+        if (mat.map && mat.map.dispose) mat.map.dispose();
         if (mat.dispose) mat.dispose();
       });
     });
