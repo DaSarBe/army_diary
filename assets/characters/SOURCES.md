@@ -4,7 +4,7 @@
 
 | 名稱 | 作者 | 網址 | 授權 | 本專案用法 |
 | --- | --- | --- | --- | --- |
-| Animated Characters 3 | Kenney (www.kenney.nl) | https://kenney.nl/assets/animated-characters-3 ；鏡像 https://opengameart.org/content/animated-characters-3 、https://archive.org/download/kenney_animated-characters-3 | CC0 1.0 Universal | `character.glb`（由 `source/*.fbx` 轉出，含 idle／run）、官方 `humanMaleA.png`／`humanFemaleA.png`。run 當作走路，播放速率較慢。 |
+| Animated Characters 3 | Kenney (www.kenney.nl) | https://kenney.nl/assets/animated-characters-3 ；鏡像 https://opengameart.org/content/animated-characters-3 、https://archive.org/download/kenney_animated-characters-3 | CC0 1.0 Universal | `character.glb`（由 `tools/kenney-fbx/*.fbx` 轉出，含 idle／run）、官方 `humanMaleA.png`／`humanFemaleA.png`。run 當作走路，播放速率較慢。FBX 原檔不隨 GitHub Pages 發布。 |
 | 中性綠軍服 skin（衍生） | 本專案改色，底圖 Kenney | 同上 Kenney 包 | CC0 1.0（衍生自官方 atlas） | `uniform_a.png`（短黑髮、中膚）、`uniform_b.png`（淺膚、軍帽）、`uniform_c.png`（深膚、軍帽）。綠上衣綠褲黑鞋，無國家或政權標誌、無臂章。 |
 | License.txt | Kenney | 隨包附帶 | CC0 聲明原文 | `assets/characters/kenney/License.txt` |
 

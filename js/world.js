@@ -947,10 +947,7 @@
     if (root.Gfx) root.Gfx.tick(now, raw, applyGfx, { mode: S.mode === 'world' || S.mode === 'fps' ? 'play' : S.mode, paused: paused || lost });
     if (lost || paused) return;
     update(dt);
-    try {
-      if (usePost && composer) composer.render();
-      else R.render(scene, cam);
-    } catch (e) { /* context 暫時失效時略過這一幀 */ }
+    try { drawScene(); } catch (e) { /* context 暫時失效時略過這一幀 */ }
     if (root.Gfx && root.Gfx.hudOn()) {
       gfxHudT += dt;
       if (gfxHudT > 0.35) {
@@ -968,11 +965,32 @@
     var cap = W.isMobileLike() ? Math.min(1.5, want) : want;
     return Math.min(window.devicePixelRatio || 1, cap);
   }
+  function beginFrameStats() {
+    if (!R || !R.info) return;
+    R.info.autoReset = false;
+    if (typeof R.info.reset === 'function') R.info.reset();
+  }
+  function drawScene() {
+    beginFrameStats();
+    if (usePost && composer) composer.render();
+    else R.render(scene, cam);
+  }
+  function applyShadowType(s) {
+    var soft = !!(s && s.shadows && s.shadowFilter === 'pcfsoft' && THREE.PCFSoftShadowMap != null);
+    if (soft) R.shadowMap.type = THREE.PCFSoftShadowMap;
+    else if (THREE.PCFShadowMap != null) R.shadowMap.type = THREE.PCFShadowMap;
+  }
+  function liveShadowFilter() {
+    if (!R || !R.shadowMap || !R.shadowMap.enabled) return 'none';
+    if (THREE.PCFSoftShadowMap != null && R.shadowMap.type === THREE.PCFSoftShadowMap) return 'pcfsoft';
+    if (THREE.PCFShadowMap != null && R.shadowMap.type === THREE.PCFShadowMap) return 'pcf';
+    return 'other';
+  }
   function applyShadows(s) {
     if (!R || !sun) return;
     var on = !!(s && s.shadows);
     R.shadowMap.enabled = on;
-    if (THREE.PCFSoftShadowMap) R.shadowMap.type = THREE.PCFSoftShadowMap;
+    applyShadowType(s);
     sun.castShadow = on;
     var sz = (s && s.shadowMap) || 1024;
     if (on && sun.shadow && sun.shadow.mapSize && sun.shadow.mapSize.x !== sz) {
@@ -1029,7 +1047,8 @@
       if (!R.getContext()) return false;
     } catch (e) { return false; }
     R.shadowMap.enabled = false;
-    if (THREE.PCFSoftShadowMap) R.shadowMap.type = THREE.PCFSoftShadowMap;
+    if (THREE.PCFShadowMap != null) R.shadowMap.type = THREE.PCFShadowMap;
+    if (R.info) R.info.autoReset = false;
     R.setPixelRatio(gfxPixelRatio(root.Gfx && Gfx.spec()));
     scene = new THREE.Scene(); cam = new THREE.PerspectiveCamera(60, 1, 0.05, 260); scene.add(cam);
     scene.fog = new THREE.Fog('#9cc3e6', 38, 115);
@@ -1194,21 +1213,19 @@
       triangles: inf.triangles || 0,
       sceneCalls: sc.calls,
       sceneTriangles: sc.triangles,
+      shadowFilter: liveShadowFilter(),
       charTriangles: root.Chars ? root.Chars.triCount() : 0,
       textures: mem.textures || 0,
       over: {
-        triangles: sc.triangles > (b.triangles || 0),
-        drawCalls: sc.calls > (b.drawCalls || 0)
+        triangles: (inf.triangles || 0) > (b.triangles || 0),
+        drawCalls: (inf.calls || 0) > (b.drawCalls || 0)
       }
     };
   };
   W.renderOnce = function () {
     if (!R || !scene || !cam) return;
     update(0);
-    try {
-      if (usePost && composer) composer.render();
-      else R.render(scene, cam);
-    } catch (e) { /* ignore */ }
+    try { drawScene(); } catch (e) { /* ignore */ }
   };
   W.charsReady = function () { return !!(root.Chars && root.Chars.ready()); };
   W.onCharsReady = function () {

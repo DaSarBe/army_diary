@@ -24,7 +24,7 @@ function serve(port) {
 function must(cond, msg) { if (!cond) throw new Error(msg); }
 
 const TIERS = ['low', 'mid', 'high'];
-const TABLE_KEYS = ['pixelRatio', 'antialias', 'shadows', 'bloom', 'vignette', 'toneMapping', 'maxTex'];
+const TABLE_KEYS = ['pixelRatio', 'antialias', 'shadows', 'bloom', 'vignette', 'toneMapping', 'shadowFilter', 'maxTex'];
 const BUDGET = {
   low: { triangles: 60000, drawCalls: 80 },
   mid: { triangles: 120000, drawCalls: 120 },
@@ -49,8 +49,12 @@ function pinJsonTable() {
   });
   must(g.tiers.low.shadows === false && g.tiers.low.bloom === false && g.tiers.low.vignette === false, '低檔應關陰影與後製');
   must(g.tiers.low.pixelRatio === 1, '低檔像素比應為 1');
+  must(g.tiers.low.shadowFilter === 'none', '低檔陰影濾鏡應為 none');
   must(g.tiers.mid.shadows === true && g.tiers.high.shadows === true, '中高檔應有陰影');
-  must(g.tiers.mid.bloom === true && g.tiers.high.bloom === true, '中高檔應有泛光');
+  must(g.tiers.mid.bloom === false && g.tiers.mid.vignette === true && g.tiers.mid.toneMapping === true, '中檔應關泛光、只留暗角與色調');
+  must(g.tiers.mid.shadowFilter === 'pcf', '中檔陰影應為 PCFShadowMap');
+  must(g.tiers.high.bloom === true && g.tiers.high.vignette === true, '高檔應有泛光與暗角');
+  must(g.tiers.high.shadowFilter === 'pcfsoft', '高檔陰影應為 PCFSoftShadowMap');
   console.log('json-graphics-table ok');
 }
 
@@ -226,17 +230,30 @@ async function main() {
     const g = info.info;
     const cap = BUDGET[tier];
     console.log('[camp1-gfx]', JSON.stringify({
-      tier: info.tier, sceneTriangles: g.sceneTriangles, sceneCalls: g.sceneCalls,
-      capTriangles: cap.triangles, capCalls: cap.drawCalls, charTriangles: g.charTriangles, models: info.models
+      tier: info.tier, calls: g.calls, triangles: g.triangles,
+      sceneCalls: g.sceneCalls, sceneTriangles: g.sceneTriangles,
+      capTriangles: cap.triangles, capCalls: cap.drawCalls,
+      charTriangles: g.charTriangles, models: info.models,
+      shadowFilter: g.shadowFilter, bloom: g.spec.bloom, vignette: g.spec.vignette, over: g.over
     }));
     must(g.applied === tier, 'camp1 畫質應為 ' + tier + '，實際 ' + g.applied);
-    must(g.sceneCalls > 0 && g.sceneTriangles > 0, 'camp1@' + tier + ' 場景計數為 0');
+    must(g.calls > 0 && g.triangles > 0, 'camp1@' + tier + ' renderer.info 整幀計數為 0');
     must(g.charTriangles <= 3000, '角色三角面超標 ' + g.charTriangles);
     must(info.models > 0, 'camp1@' + tier + ' 應有 GLTF 角色');
-    must(g.sceneTriangles <= cap.triangles, 'camp1@' + tier + ' 三角面超預算 ' + g.sceneTriangles + '>' + cap.triangles);
-    must(g.sceneCalls <= cap.drawCalls, 'camp1@' + tier + ' draw calls 超預算 ' + g.sceneCalls + '>' + cap.drawCalls);
-    if (tier === 'low') must(g.spec.shadows === false && g.spec.bloom === false && g.spec.pixelRatio === 1, '低檔應關陰影／後製且像素比 1');
-    if (tier === 'mid' || tier === 'high') must(g.spec.shadows === true && g.spec.bloom === true, tier + ' 應有陰影與泛光');
+    must(g.triangles <= cap.triangles, 'camp1@' + tier + ' 整幀三角面超預算 ' + g.triangles + '>' + cap.triangles + '（不放寬）');
+    must(g.calls <= cap.drawCalls, 'camp1@' + tier + ' 整幀 draw calls 超預算 ' + g.calls + '>' + cap.drawCalls + '（不放寬）');
+    if (tier === 'low') {
+      must(g.spec.shadows === false && g.spec.bloom === false && g.spec.pixelRatio === 1, '低檔應關陰影／後製且像素比 1');
+      must(g.shadowFilter === 'none', '低檔實際陰影濾鏡應為 none，實際 ' + g.shadowFilter);
+    }
+    if (tier === 'mid') {
+      must(g.spec.shadows === true && g.spec.bloom === false && g.spec.vignette === true && g.spec.toneMapping === true, '中檔應有陰影、關泛光、留暗角與色調');
+      must(g.shadowFilter === 'pcf', '中檔實際陰影應為 PCF，實際 ' + g.shadowFilter);
+    }
+    if (tier === 'high') {
+      must(g.spec.shadows === true && g.spec.bloom === true && g.spec.vignette === true, '高檔應有陰影、泛光與暗角');
+      must(g.shadowFilter === 'pcfsoft', '高檔實際陰影應為 PCFSoft，實際 ' + g.shadowFilter);
+    }
   }
 
   const reach = await page.evaluate(() => {
@@ -283,7 +300,7 @@ async function main() {
   srv.close();
   if (pageErrs.length) console.warn('page errors', pageErrs.slice(0, 6));
   reports.forEach(r => {
-    console.log('camp1\t' + r.tier + '\ttri=' + r.info.sceneTriangles + '/' + BUDGET[r.tier].triangles + '\tdc=' + r.info.sceneCalls + '/' + BUDGET[r.tier].drawCalls);
+    console.log('camp1\t' + r.tier + '\ttri=' + r.info.triangles + '/' + BUDGET[r.tier].triangles + '\tdc=' + r.info.calls + '/' + BUDGET[r.tier].drawCalls + '\tfilter=' + r.info.shadowFilter + '\tbloom=' + r.info.spec.bloom);
   });
   console.log('gfx-camp1 ok', reports.length, 'samples');
 }

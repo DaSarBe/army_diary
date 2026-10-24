@@ -39,7 +39,8 @@ data/rpg-system.json  Dai 的系統（屬性、判定公式、等級、技能、
 data/tuning.json    實作端補充與微調（海岸新結局、T91、門檻都集中在這裡）
 vendor/three.min.js three.js r128（本地備份，不依賴 CDN）
 vendor/GLTFLoader.js 與後製（r128 examples）
-assets/characters/  CC0 角色（Kenney Animated Characters 3）
+assets/characters/  CC0 角色（Kenney Animated Characters 3 的 glTF／PNG）
+tools/kenney-fbx/   Kenney FBX 原檔（不隨 GitHub Pages 發布）
 data/army-gfx.json  主遊戲畫質表與預算
 tests/              模擬與 E2E 測試
 ```
@@ -71,7 +72,7 @@ E2E 需要本機有 Chrome（預設 `/usr/local/bin/google-chrome`，可用環�
 
 ## 部署
 
-推送到 `main` 時，`.github/workflows/pages.yml` 會把整個 repo 部署到 GitHub Pages。
+推送到 `main` 時，`.github/workflows/pages.yml` 會把網站檔部署到 GitHub Pages。上傳前會刪除 `tools/`，所以 Kenney Animated Characters 3 的 FBX 原檔（`tools/kenney-fbx/`：`characterMedium.fbx`、`idle.fbx`、`run.fbx`）不會出現在公開網站路徑。執行時只用 `assets/characters/kenney/character.glb` 與 PNG。
 
 ## 數值調校說明
 

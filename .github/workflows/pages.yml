@@ -25,6 +25,8 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Strip unpublished sources
+        run: rm -rf tools
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
