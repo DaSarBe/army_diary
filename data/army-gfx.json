@@ -1,0 +1,21 @@
+{
+  "defaultPref": "auto",
+  "autoStartTier": "mid",
+  "autoNeverHigh": true,
+  "autoDropFps": 32,
+  "autoSampleSec": 3,
+  "autoWarmupSec": 4,
+  "autoDropStrikes": 2,
+  "autoCooldownSec": 10,
+  "characterTriangles": 3000,
+  "tiers": {
+    "low": { "pixelRatio": 1, "antialias": false, "shadows": false, "bloom": false, "vignette": false, "toneMapping": true, "toneExposure": 1.0, "shadowMap": 0, "maxTex": 512 },
+    "mid": { "pixelRatio": 1.25, "antialias": false, "shadows": true, "bloom": true, "vignette": true, "toneMapping": true, "toneExposure": 1.05, "shadowMap": 1024, "bloomStr": 0.22, "bloomRad": 0.38, "bloomThr": 0.86, "vignetteDark": 0.22, "maxTex": 512 },
+    "high": { "pixelRatio": 1.75, "antialias": true, "shadows": true, "bloom": true, "vignette": true, "toneMapping": true, "toneExposure": 1.08, "shadowMap": 2048, "bloomStr": 0.32, "bloomRad": 0.48, "bloomThr": 0.82, "vignetteDark": 0.3, "maxTex": 1024 }
+  },
+  "budget": {
+    "low": { "triangles": 60000, "drawCalls": 80, "maxTex": 512 },
+    "mid": { "triangles": 120000, "drawCalls": 120, "maxTex": 512 },
+    "high": { "triangles": 200000, "drawCalls": 180, "maxTex": 1024 }
+  }
+}

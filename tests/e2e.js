@@ -12,7 +12,7 @@ const BEACH = process.env.BEACH || 'survive', CMD = process.env.CMD || 'hold', R
 const DIE_WAVE = process.env.DIE_WAVE || 'wave2', DOWN = (process.env.DOWN || (BEACH === 'medevac' ? 'medevac' : 'retry')).split(',');
 const STOP = process.env.STOP_AFTER || '';
 const REHAB = process.env.REHAB || '';
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json' };
 
 function serve(port) {
   return new Promise(res => {
