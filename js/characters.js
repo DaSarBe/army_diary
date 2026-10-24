@@ -1,15 +1,10 @@
-/* Kenney CC0 角色：GLTF + AnimationMixer（待機／走路）。只在營區試做場景使用。 */
+/* Kenney CC0 角色：GLTF + AnimationMixer。軍服 atlas 由官方 skin 改色，flipY 與 UV 對齊。 */
 (function (root) {
   'use strict';
   var THREE = root.THREE;
-  var C = { ready: false, gltf: null, tex: { male: null, female: null }, err: null, wait: [], tri: 0 };
+  var C = { ready: false, gltf: null, tex: {}, err: null, wait: [], tri: 0, milI: 0 };
   var FEMALE = { mom: 1, cook: 1, gma: 1, fr3: 1 };
-  var TINT = {
-    sgt: '#e4edc8', cpt: '#dde6c0', rec: '#eaf3d4', kai: '#e6efd0', sen: '#e2ebc6',
-    mom: '#fff0f2', dad: '#e8f0fa', gpa: '#f2f6e6', fr1: '#fff1dc', fr2: '#e6f6f4',
-    fr3: '#f8e8f6', med: '#ffffff', cook: '#fff8ec', barber: '#f7f7f4', post: '#e2edcc',
-    gma: '#f8eee6'
-  };
+  var CAP = { sgt: 1, cpt: 1, sen: 1, post: 1 };
 
   function done(err) {
     C.err = err || null;
@@ -45,8 +40,9 @@
   function loadTex(url) {
     return new Promise(function (resolve, reject) {
       new THREE.TextureLoader().load(url, function (t) {
-        t.flipY = false;
-        if (THREE.sRGBEncoding) t.encoding = THREE.sRGBEncoding;
+        /* Kenney atlas 是一般 PNG（臉在圖上方）；UV 的頭在 V≈0.8，必須 flipY。 */
+        t.flipY = true;
+        t.encoding = THREE.LinearEncoding || t.encoding;
         t.needsUpdate = true;
         resolve(t);
       }, undefined, reject);
@@ -56,16 +52,23 @@
   function start() {
     if (!THREE || !THREE.GLTFLoader) { done(new Error('no-gltf')); return; }
     var loader = new THREE.GLTFLoader();
+    var base = 'assets/characters/kenney/';
     Promise.all([
       new Promise(function (resolve, reject) {
-        loader.load('assets/characters/kenney/character.glb', resolve, undefined, reject);
+        loader.load(base + 'character.glb', resolve, undefined, reject);
       }),
-      loadTex('assets/characters/kenney/humanMaleA.png'),
-      loadTex('assets/characters/kenney/humanFemaleA.png')
+      loadTex(base + 'humanMaleA.png'),
+      loadTex(base + 'humanFemaleA.png'),
+      loadTex(base + 'uniform_a.png'),
+      loadTex(base + 'uniform_b.png'),
+      loadTex(base + 'uniform_c.png')
     ]).then(function (all) {
       C.gltf = all[0];
       C.tex.male = all[1];
       C.tex.female = all[2];
+      C.tex.ua = all[3];
+      C.tex.ub = all[4];
+      C.tex.uc = all[5];
       C.tri = countTris(C.gltf.scene);
       done(null);
     }).catch(function (e) { done(e); });
@@ -73,22 +76,32 @@
 
   function dummy() { return { rotation: { x: 0, y: 0, z: 0 } }; }
 
+  function isMil(spec) {
+    if (CAP[spec.preset] || spec.preset === 'rec' || spec.preset === 'kai') return true;
+    return !!(spec.shirt && /#5b6b3c|#566338|#6a7a44|#4d5a33|#2f6b3f/i.test(spec.shirt));
+  }
+
+  function pickTex(spec) {
+    if (spec.long || FEMALE[spec.preset]) return C.tex.female;
+    if (!isMil(spec)) return C.tex.male;
+    if (CAP[spec.preset]) return C.tex.ub;
+    var keys = ['ua', 'ub', 'uc'];
+    return C.tex[keys[(C.milI++) % 3]];
+  }
+
   function make(spec) {
     spec = spec || {};
     if (!C.ready || !C.gltf || !THREE.SkeletonUtils) return null;
     var rootObj = THREE.SkeletonUtils.clone(C.gltf.scene);
-    var female = !!(spec.long || FEMALE[spec.preset] || (spec.hair && spec.long));
-    var tex = female ? C.tex.female : C.tex.male;
-    var mil = spec.shirt && /#5b6b3c|#566338|#6a7a44|#4d5a33/i.test(spec.shirt);
-    var tint = spec.tint || TINT[spec.preset] || (mil ? '#e6efd0' : '#ffffff');
+    var tex = pickTex(spec) || C.tex.ua;
     rootObj.traverse(function (m) {
       if (!m.isMesh) return;
-      var map = (m.material && m.material.map) || tex;
       m.material = new THREE.MeshLambertMaterial({
-        map: tex || map,
-        color: tint,
+        map: tex,
+        color: '#ffffff',
         skinning: true
       });
+      if (m.material.map) m.material.map.flipY = true;
       m.castShadow = true;
       m.receiveShadow = true;
       m.frustumCulled = false;
@@ -122,7 +135,7 @@
     var g = new THREE.Group();
     g.add(rootObj);
     g.userData = {
-      mixer: mixer, setMove: setMove, model: true, tri: C.tri,
+      mixer: mixer, setMove: setMove, model: true, tri: C.tri, skin: tex,
       legL: dummy(), legR: dummy(), armL: dummy(), armR: dummy()
     };
     return g;
@@ -136,6 +149,14 @@
     triCount: function () { return C.tri; },
     whenReady: function (fn) { if (C.ready || C.err) fn(C.err); else C.wait.push(fn); },
     make: make,
-    countTris: countTris
+    countTris: countTris,
+    texInfo: function () {
+      var t = C.tex.ua || C.tex.male;
+      return {
+        flipY: t ? t.flipY : null,
+        keys: Object.keys(C.tex),
+        w: t && t.image ? t.image.width : 0
+      };
+    }
   };
 })(typeof self !== 'undefined' ? self : this);

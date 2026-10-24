@@ -95,7 +95,11 @@ async function main() {
   must(table.hud === true, '?fpshud=1 應開啟 FPS 顯示');
   must(table.hudHidden === false, 'FPS 疊層應可見');
   must(table.charTri > 0 && table.charTri <= 3000, '單個角色應 ≤3000 三角面，實際 ' + table.charTri);
-  console.log('gfx-defaults ok charTri=' + table.charTri);
+  const tex = await page.evaluate(() => window.Chars.texInfo());
+  must(tex.flipY === true, '軍服 PNG 應對齊 Kenney UV，flipY 應為 true，實際 ' + tex.flipY);
+  must(tex.keys.indexOf('ua') >= 0 && tex.keys.indexOf('ub') >= 0 && tex.keys.indexOf('uc') >= 0, '應載入 3 種軍服 skin');
+  must(tex.w === 256, 'skin 應為 256 圖集，實際 ' + tex.w);
+  console.log('gfx-defaults ok charTri=' + table.charTri, 'tex', JSON.stringify(tex));
 
   const autoLogic = await page.evaluate(() => {
     const G = window.Gfx;
