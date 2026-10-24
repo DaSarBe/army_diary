@@ -154,6 +154,51 @@
     return out;
   }
 
+  function clothColor(name, side, spec) {
+    var n = String(name || '').toLowerCase();
+    var sand = !!(spec && spec.sand);
+    if (n.indexOf('face') >= 0 || n.indexOf('skin') >= 0) return (spec && spec.skin) || '#d9a77a';
+    if (side === 'ally') {
+      if (n.indexOf('helmet') >= 0) return '#1e3a16';
+      if (n.indexOf('black') >= 0 || n.indexOf('belt') >= 0) return '#1a2414';
+      if (n.indexOf('pants') >= 0) return '#2a401c';
+      if (n.indexOf('darkgreen') >= 0) return '#1f3d16';
+      return '#2f6a24';
+    }
+    if (sand) {
+      if (n.indexOf('helmet') >= 0 || n.indexOf('grey') >= 0 || n.indexOf('gray') >= 0) return '#8a7340';
+      if (n.indexOf('black') >= 0 || n.indexOf('details') >= 0) return '#5a4a28';
+      return '#d0a85c';
+    }
+    if (n.indexOf('helmet') >= 0) return '#2a3a50';
+    if (n.indexOf('black') >= 0) return '#1a222c';
+    if (n.indexOf('grey') >= 0 || n.indexOf('gray') >= 0) return '#4a5564';
+    return '#3e5168';
+  }
+  function camoMap(baseHex) {
+    var key = 'camo|' + baseHex;
+    if (C.maps[key]) return C.maps[key];
+    var cvs = document.createElement('canvas'); cvs.width = 64; cvs.height = 64;
+    var ctx = cvs.getContext('2d'), i, j;
+    var cl = hexRgb(baseHex), d = hexRgb('#163010'), l = hexRgb('#5a7a32');
+    var img = ctx.createImageData(64, 64), p = img.data;
+    for (j = 0; j < 64; j++) {
+      for (i = 0; i < 64; i++) {
+        var blob = Math.sin(i * 0.41) * Math.cos(j * 0.33) + Math.sin((i + j) * 0.17);
+        var c = blob > 0.42 ? l : (blob < -0.32 ? d : cl);
+        var o = (j * 64 + i) * 4;
+        p[o] = c.r; p[o + 1] = c.g; p[o + 2] = c.b; p[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    var tex = new THREE.CanvasTexture(cvs);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(3, 3);
+    tex.needsUpdate = true;
+    C.maps[key] = tex;
+    return tex;
+  }
+
   function dummy() { return { rotation: { x: 0, y: 0, z: 0 }, position: { x: 0, y: 0, z: 0 } }; }
 
   function accMesh(geo, col, x, y, z, rx) {
@@ -281,10 +326,14 @@
     if (C.tier !== 'high') limitRoot(rootObj, cap);
     rootObj.traverse(function (m) {
       if (!m.isMesh) return;
+      var matName = (m.material && m.material.name) || m.name || '';
+      var isFace = /face|skin/i.test(matName);
+      var col = clothColor(matName, side, spec);
       var src = m.material && m.material.map;
-      var map = tintTexture(src, cloth, skin, camo);
+      var map = (src && src.image) ? tintTexture(src, cloth, skin, camo && !isFace) : null;
+      if (!map && camo && !isFace) map = camoMap(col);
       m.material = new THREE.MeshLambertMaterial({
-        map: map, color: '#ffffff', skinning: !!(m.skeleton || (m.material && m.material.skinning))
+        map: map, color: map ? '#ffffff' : col, skinning: !!(m.skeleton || (m.material && m.material.skinning))
       });
       m.frustumCulled = false;
       m.userData.side = side;
