@@ -119,6 +119,42 @@
     return 0;
   }
 
+  function findBone(rootObj, names) {
+    var exact = null, fuzzy = null;
+    if (!rootObj) return null;
+    rootObj.traverse(function (o) {
+      var nm = (o.name || '').toLowerCase();
+      var k;
+      for (k = 0; k < names.length; k++) {
+        if (nm === names[k]) { if (!exact) exact = o; }
+        else if (!fuzzy && nm.indexOf(names[k]) >= 0) fuzzy = o;
+      }
+    });
+    return exact || fuzzy;
+  }
+
+  /* 槍本地 +X 是槍口。數值是 FistR 骨骼空間：握把在掌心、槍口沿拳骨向前。
+     旋轉讓扁平的 XY 槍面立起來（彈匣朝下），位置把握把拉回掌心。 */
+  var GUN_HOLD = {
+    t91: { scale: 0.34, pos: [0.06, 0.02, 0.04], rot: [0.00, -1.57, 1.57], muzzle: 2.85, guard: 1.35 },
+    t75: { scale: 0.22, pos: [0.07, 0.02, 0.06], rot: [0.00, -1.57, 1.57], muzzle: 3.50, guard: 1.55 },
+    t65: { scale: 0.17, pos: [0.06, 0.01, 0.08], rot: [0.00, -1.57, 1.57], muzzle: 5.10, guard: 1.90 },
+    m9: { scale: 0.15, pos: [0.03, 0.03, 0.02], rot: [0.20, -1.57, 1.57], muzzle: 1.40, guard: 0 }
+  };
+  var VM_HOLD = {
+    t91: { scale: 0.12, pos: [0.20, -0.15, -0.30], rot: [0.40, 1.20, 0.18] },
+    t75: { scale: 0.09, pos: [0.19, -0.16, -0.28], rot: [0.42, 1.18, 0.16] },
+    t65: { scale: 0.08, pos: [0.20, -0.14, -0.34], rot: [0.38, 1.22, 0.14] },
+    m9: { scale: 0.14, pos: [0.22, -0.12, -0.26], rot: [0.35, 1.15, 0.22] }
+  };
+
+  function applyHold(obj, hold) {
+    if (!obj || !hold) return;
+    obj.position.set(hold.pos[0], hold.pos[1], hold.pos[2]);
+    obj.rotation.set(hold.rot[0], hold.rot[1], hold.rot[2]);
+    obj.scale.setScalar(hold.scale);
+  }
+
   function gearPieces(spec, col, ys) {
     ys = ys || 1;
     var acc = [];
@@ -189,11 +225,14 @@
     var mat = new THREE.MeshLambertMaterial({ skinning: !!skeleton });
     mat.vertexColors = (THREE.VertexColors != null) ? THREE.VertexColors : true;
     var out = skeleton && THREE.SkinnedMesh ? new THREE.SkinnedMesh(ng, mat) : new THREE.Mesh(ng, mat);
-    if (skeleton) {
-      try { out.bind(skeleton, bind || out.bindMatrix); } catch (e) { /* keep */ }
-    }
     out.frustumCulled = false;
     (parent || new THREE.Group()).add(out);
+    if (skeleton) {
+      out.updateMatrixWorld(true);
+      try { out.bind(skeleton); } catch (e) {
+        try { out.bind(skeleton, bind || out.bindMatrix); } catch (e2) { /* keep */ }
+      }
+    }
     return out;
   }
 
@@ -330,10 +369,55 @@
     if (g && g.userData) g.userData.dead = true;
   }
 
-  function bindAnim(rootObj, clips) {
-    var idle = pickClip(clips, ['|idle', 'idle']);
-    var walk = pickClip(clips, ['|walk', 'walk']);
-    var shoot = pickClip(clips, ['shoot', 'punch']);
+  function boneAlongY(bone) {
+    if (!bone || !bone.children || !bone.children.length) return true;
+    var c = bone.children[0], p = c.position;
+    return Math.abs(p.y) >= Math.abs(p.x) && Math.abs(p.y) >= Math.abs(p.z);
+  }
+
+  function lookBoneAt(bone, worldTarget, axis) {
+    if (!bone || !bone.parent) return;
+    bone.parent.updateMatrixWorld(true);
+    var origin = new THREE.Vector3().setFromMatrixPosition(bone.matrixWorld);
+    var dir = worldTarget.clone().sub(origin);
+    if (dir.lengthSq() < 1e-6) return;
+    dir.normalize();
+    var inv = new THREE.Matrix4().copy(bone.parent.matrixWorld);
+    if (inv.invert) inv.invert(); else if (inv.getInverse) inv.getInverse(bone.parent.matrixWorld);
+    dir.transformDirection(inv);
+    var from = axis || (boneAlongY(bone) ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1));
+    bone.quaternion.setFromUnitVectors(from, dir);
+  }
+
+  function poseSupport(g) {
+    if (!g || !g.userData) return;
+    var spec = g.userData.spec, gun = g.userData.gun, rootObj = g.userData.root;
+    if (!spec || !gun || !rootObj || spec.gun === 'm9') return;
+    var hold = GUN_HOLD[spec.gun] || GUN_HOLD.t91;
+    if (!hold.guard) return;
+    var upper = findBone(rootObj, ['upperarml']);
+    var lower = findBone(rootObj, ['lowerarml']);
+    var guard = g.userData.guard;
+    if (!guard && gun) {
+      gun.traverse(function (o) { if (o.userData && o.userData.part === 'guard') guard = o; });
+    }
+    if (!upper || !lower || !guard) return;
+    g.updateMatrixWorld(true);
+    var target = new THREE.Vector3();
+    guard.getWorldPosition(target);
+    lookBoneAt(upper, target);
+    lower.updateMatrixWorld(true);
+    lookBoneAt(lower, target);
+  }
+
+  function bindAnim(rootObj, clips, armed) {
+    var idle = armed
+      ? pickClip(clips, ['idle_gun', 'gun_idle', 'shoot_onehanded', 'gun_shoot', 'idle_aim', '|idle', 'idle'])
+      : pickClip(clips, ['|idle', 'idle']);
+    var walk = armed
+      ? pickClip(clips, ['run_gun', 'walk_gun', 'walk_aim', 'walk', '|walk'])
+      : pickClip(clips, ['|walk', 'walk']);
+    var shoot = pickClip(clips, ['gun_shoot', 'shoot_onehanded', 'shoot', 'punch']);
     var hit = pickClip(clips, ['recievehit', 'receivehit', 'hit']);
     var die = pickClip(clips, ['defeat', 'death', 'die']);
     var carry = pickClip(clips, ['walk_carry', 'carry']);
@@ -360,7 +444,7 @@
       });
       if (next === 'die' && acts.die) { acts.die.setLoop(THREE.LoopOnce, 1); acts.die.clampWhenFinished = true; }
     }
-    return { mixer: mixer, setAnim: setAnim, acts: acts };
+    return { mixer: mixer, setAnim: setAnim, getAnim: function () { return cur; }, acts: acts };
   }
 
   function buildRoot(model, spec, side) {
@@ -382,8 +466,56 @@
       skin.userData.part = 'body';
       bakeGear(skin, spec, side, ys);
     }
-    var anim = bindAnim(rootObj, gltf.animations || []);
+    var armed = !!(spec && spec.gun);
+    var anim = bindAnim(rootObj, gltf.animations || [], armed);
     return { root: rootObj, skin: skin, anim: anim, ys: ys };
+  }
+
+  function attachWorldGun(g) {
+    if (!g || !g.userData) return null;
+    var id = (g.userData.spec && g.userData.spec.gun) || 't91';
+    var gun = g.userData.gun;
+    if (gun && gun.parent) gun.parent.remove(gun);
+    if (!gun) {
+      gun = makeGun(id);
+      if (!gun) return null;
+      gun.traverse(function (m) { if (m.isMesh) m.userData.side = g.userData.side; });
+      g.userData.gun = gun;
+    }
+    applyHold(gun, GUN_HOLD[id] || GUN_HOLD.t91);
+    var hand = findBone(g.userData.root, ['fistr', 'fist.r', 'handr', 'hand.r', 'righthand', 'right_hand']);
+    if (hand) hand.add(gun);
+    else g.add(gun);
+    var hold = GUN_HOLD[id] || GUN_HOLD.t91;
+    var muzzle = g.userData.muzzle;
+    if (!muzzle) {
+      muzzle = new THREE.Object3D();
+      g.userData.muzzle = muzzle;
+    }
+    if (muzzle.parent) muzzle.parent.remove(muzzle);
+    muzzle.position.set((hold.muzzle || 2.8), 0, 0);
+    gun.add(muzzle);
+    var guard = g.userData.guard;
+    if (!guard) {
+      guard = new THREE.Object3D();
+      g.userData.guard = guard;
+    }
+    if (guard.parent) guard.parent.remove(guard);
+    guard.position.set((hold.guard || 1.4), 0, 0);
+    guard.userData.part = 'guard';
+    gun.add(guard);
+    return gun;
+  }
+
+  function wrapMixer(g, mixer) {
+    if (!mixer || mixer.userData && mixer.userData.posed) return mixer;
+    var rawUp = mixer.update.bind(mixer);
+    mixer.update = function (dt) {
+      rawUp(dt);
+      poseSupport(g);
+    };
+    mixer.userData = { posed: true };
+    return mixer;
   }
 
   function instantiate(model, spec, side) {
@@ -393,12 +525,9 @@
     g.add(built.root);
     var arrow = null;
     if (side === 'ally') arrow = addArrow(g);
-    var muzzle = new THREE.Object3D(); muzzle.position.set(0.16, 1.28 * built.ys, 0.42); g.add(muzzle);
-    var gun = makeWorldGun(spec.gun || 't91', built.ys);
-    if (gun) {
-      gun.traverse(function (m) { if (m.isMesh) m.userData.side = side; });
-      g.add(gun);
-    }
+    var muzzle = new THREE.Object3D();
+    g.userData = { root: built.root, spec: spec, side: side, muzzle: muzzle };
+    var gun = attachWorldGun(g);
     var hit = [];
     g.traverse(function (m) {
       if (m.isMesh && !m.userData.iff) { m.userData.side = side; hit.push(m); }
@@ -406,8 +535,10 @@
     var tri = countTris(g);
     noteTris(tri);
     g.userData = {
-      mixer: built.anim.mixer, setAnim: built.anim.setAnim, model: true, modelKey: model, spec: spec, side: side,
-      tri: tri, muzzle: muzzle, hit: hit, arrow: arrow, nameSpr: null, noMerge: true,
+      mixer: built.anim.mixer, setAnim: built.anim.setAnim, getAnim: built.anim.getAnim,
+      model: true, modelKey: model, spec: spec, side: side,
+      tri: tri, muzzle: g.userData.muzzle || muzzle, guard: g.userData.guard || null,
+      hit: hit, arrow: arrow, nameSpr: null, noMerge: true,
       root: built.root, skin: built.skin, gun: gun,
       legL: dummy(), legR: dummy(), armL: dummy(), armR: dummy(),
       dispose: function () {
@@ -416,12 +547,19 @@
       }
     };
     if (arrow) placeArrow(g);
+    if (built.anim.mixer) {
+      g.userData.mixer = wrapMixer(g, built.anim.mixer);
+      g.userData.mixer.update(0.2);
+    }
     C.live.push(g);
     return g;
   }
 
   function swapLiveLod(g) {
     if (!g || !g.userData || !g.userData.model || g.userData.dead) return;
+    var prev = g.userData.getAnim ? g.userData.getAnim() : 'idle';
+    var gun = g.userData.gun;
+    if (gun && gun.parent) gun.parent.remove(gun);
     var built = buildRoot(g.userData.modelKey, g.userData.spec, g.userData.side);
     if (!built) return;
     var old = g.userData.root;
@@ -430,8 +568,12 @@
     g.add(built.root);
     g.userData.root = built.root;
     g.userData.skin = built.skin;
-    g.userData.mixer = built.anim.mixer;
+    g.userData.mixer = wrapMixer(g, built.anim.mixer);
     g.userData.setAnim = built.anim.setAnim;
+    g.userData.getAnim = built.anim.getAnim;
+    attachWorldGun(g);
+    if (prev && g.userData.setAnim) g.userData.setAnim(prev);
+    if (g.userData.mixer) g.userData.mixer.update(0.15);
     var hit = [];
     g.traverse(function (m) {
       if (m.isMesh && !m.userData.iff) { m.userData.side = g.userData.side; hit.push(m); }
@@ -550,35 +692,19 @@
   function makeWorldGun(id, ys) {
     var g = makeGun(id);
     if (!g) return null;
-    var box = new THREE.Box3().setFromObject(g);
-    var size = box.getSize(new THREE.Vector3());
-    var longest = Math.max(size.x, size.y, size.z) || 1;
-    var len = { t91: 0.72, t75: 0.88, t65: 0.98, m9: 0.26 };
-    g.rotation.set(0, 0, 0);
-    g.scale.setScalar((len[id] || 0.7) / longest);
-    g.updateMatrixWorld(true);
-    box.setFromObject(g);
-    var c = box.getCenter(new THREE.Vector3());
-    g.position.set(0.20 - c.x, 1.14 * (ys || 1) - c.y, -0.28 - c.z);
+    applyHold(g, GUN_HOLD[id] || GUN_HOLD.t91);
+    void ys;
     return g;
   }
   function makeViewmodel() {
     var vm = new THREE.Group();
     var hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.045, 0.08), new THREE.MeshLambertMaterial({ color: '#3f6a2c' }));
-    hand.position.set(0.04, -0.08, -0.22); vm.add(hand);
-    var guns = {}, len = { t91: 0.38, t75: 0.42, t65: 0.46, m9: 0.20 };
+    hand.position.set(0.16, -0.18, -0.22); vm.add(hand);
+    var guns = {};
     ['t91', 't75', 't65', 'm9'].forEach(function (id) {
       var g = makeGun(id);
       if (!g) return;
-      var box = new THREE.Box3().setFromObject(g);
-      var size = box.getSize(new THREE.Vector3());
-      var longest = Math.max(size.x, size.y, size.z) || 1;
-      g.rotation.set(0, -Math.PI / 2, 0);
-      g.scale.setScalar((len[id] || 0.36) / longest);
-      g.updateMatrixWorld(true);
-      box.setFromObject(g);
-      var c = box.getCenter(new THREE.Vector3());
-      g.position.set(-c.x + 0.12, -c.y - 0.12, -c.z - 0.28);
+      applyHold(g, VM_HOLD[id] || VM_HOLD.t91);
       g.visible = id === 't91';
       vm.add(g); guns[id] = g;
     });
@@ -617,6 +743,14 @@
     makeGun: makeGun,
     makeWorldGun: makeWorldGun,
     makeViewmodel: makeViewmodel,
+    setGunHold: function (id, hold) {
+      if (!GUN_HOLD[id] || !hold) return;
+      Object.keys(hold).forEach(function (k) { GUN_HOLD[id][k] = hold[k]; });
+      C.live.forEach(function (g) {
+        if (g.userData && g.userData.spec && g.userData.spec.gun === id) attachWorldGun(g);
+      });
+    },
+    gunHold: function (id) { return GUN_HOLD[id]; },
     countTris: countTris,
     charCalls: charCalls,
     forget: forget,
