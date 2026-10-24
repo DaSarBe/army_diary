@@ -3,7 +3,7 @@ const puppeteer = require('puppeteer-core');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const CHROME = process.env.CHROME || '/usr/local/bin/google-chrome';
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json' };
 
 function serve(port) {
   return new Promise(res => {
@@ -49,6 +49,7 @@ function pinJsonTable() {
   must(g.tiers.low.heightFog === false && g.tiers.low.clouds === 0, '低檔不應有高度霧／雲');
   must(g.tiers.mid.heightFog === true && g.tiers.high.heightFog === true, '中高檔應有高度霧');
   must(g.tiers.low.maxTex === 512 && g.tiers.high.maxTex === 1024, '貼圖上限 低512／高1024');
+  must(g.characterTriangles.low === 600 && g.characterTriangles.mid === 1500 && g.characterTriangles.high === 3000, '單角角色面數上限應為 600／1500／3000');
   console.log('json-graphics-table ok');
 }
 
@@ -66,6 +67,7 @@ async function main() {
   await page.setViewport({ width: 1280, height: 800 });
   await page.goto(`http://localhost:${port}/island/index.html?test=1&fpshud=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__island && __island.loadMapOnly && __island.World && __island.World.ok && window.Gfx, { timeout: 20000 });
+  await page.waitForFunction(() => !window.Chars || Chars.ready() || Chars.error(), { timeout: 25000 });
 
   const table = await page.evaluate(() => {
     const G = window.Gfx;
@@ -211,7 +213,12 @@ async function main() {
     for (const id of LEVELS) {
       const info = await page.evaluate(async (levelId, gfxTier) => {
         window.__island.setGfx(gfxTier);
+        if (window.Chars && Chars.setTier) await Chars.setTier(gfxTier);
         await window.__island.loadMapOnly(levelId);
+        if (window.Chars && !Chars.ready() && Chars.whenReady) {
+          await new Promise(function (r) { Chars.whenReady(r); });
+        }
+        if (window.World && World.onCharsReady) World.onCharsReady();
         const W = window.__island.World;
         W.place(W.S.spawn[0], W.S.spawn[1]);
         W.renderOnce();
@@ -223,23 +230,26 @@ async function main() {
       reports.push(info);
       const g = info.info;
       const cap = BUDGET[tier];
+      const charCap = { low: 600, mid: 1500, high: 3000 }[tier];
       const row = {
         level: info.level, tier: info.tier,
+        calls: g.calls, triangles: g.triangles,
         sceneTriangles: g.sceneTriangles, sceneCalls: g.sceneCalls,
         capTriangles: cap.triangles, capCalls: cap.drawCalls,
-        rendererTriangles: g.triangles, rendererCalls: g.calls
+        charTriangles: g.charTriangles, charCap: charCap
       };
       console.log('[island-gfx]', JSON.stringify(row));
       must(g.applied === tier, info.level + ' 畫質應為 ' + tier + '，實際 ' + g.applied);
-      must(g.sceneCalls > 0 && g.sceneTriangles > 0, info.level + '@' + tier + ' 場景計數為 0');
-      if (g.sceneTriangles > cap.triangles) {
-        over.push(info.level + '@' + tier + ' 三角面 ' + g.sceneTriangles + '>' + cap.triangles);
+      must(g.calls > 0 && g.triangles > 0, info.level + '@' + tier + ' renderer.info 整幀計數為 0');
+      if (g.triangles > cap.triangles) {
+        over.push(info.level + '@' + tier + ' 整幀三角面 ' + g.triangles + '>' + cap.triangles);
       }
-      if (g.sceneCalls > cap.drawCalls) {
-        over.push(info.level + '@' + tier + ' draw calls ' + g.sceneCalls + '>' + cap.drawCalls);
+      if (g.calls > cap.drawCalls) {
+        over.push(info.level + '@' + tier + ' 整幀 draw calls ' + g.calls + '>' + cap.drawCalls);
       }
-      must(g.sceneTriangles <= cap.triangles, info.level + '@' + tier + ' 三角面超預算 ' + g.sceneTriangles + '>' + cap.triangles + '（不得放寬預算）');
-      must(g.sceneCalls <= cap.drawCalls, info.level + '@' + tier + ' draw calls 超預算 ' + g.sceneCalls + '>' + cap.drawCalls + '（不得放寬預算）');
+      must(g.triangles <= cap.triangles, info.level + '@' + tier + ' 整幀三角面超預算 ' + g.triangles + '>' + cap.triangles + '（不得放寬預算）');
+      must(g.calls <= cap.drawCalls, info.level + '@' + tier + ' 整幀 draw calls 超預算 ' + g.calls + '>' + cap.drawCalls + '（不得放寬預算）');
+      must(g.charTriangles > 0 && g.charTriangles <= charCap, info.level + '@' + tier + ' 單一角色三角面 ' + g.charTriangles + ' 應 ≤' + charCap);
       must((g.spec.maxTex || 0) <= g.budget.maxTex, info.level + '@' + tier + ' 貼圖上限超過預算');
       if (tier === 'low') must(g.spec.sky === 'flat' && !g.spec.heightFog, '低檔應走便宜天空');
       if (tier === 'mid' || tier === 'high') must(g.spec.sky === 'dome' && g.spec.heightFog, tier + ' 應有穹頂與高度霧');
@@ -248,7 +258,7 @@ async function main() {
   if (over.length) throw new Error('預算超標（未放寬）：' + over.join('; '));
   console.log('budget-assert ok');
   reports.forEach(r => {
-    console.log(r.level + '\t' + r.tier + '\ttri=' + r.info.sceneTriangles + '/' + BUDGET[r.tier].triangles + '\tdc=' + r.info.sceneCalls + '/' + BUDGET[r.tier].drawCalls);
+    console.log(r.level + '\t' + r.tier + '\ttri=' + r.info.triangles + '/' + BUDGET[r.tier].triangles + '\tdc=' + r.info.calls + '/' + BUDGET[r.tier].drawCalls + '\tchar=' + r.info.charTriangles);
   });
 
   const hudText = await page.evaluate(() => {

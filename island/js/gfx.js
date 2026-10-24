@@ -24,7 +24,8 @@
       low: { triangles: 60000, drawCalls: 80, maxTex: 512 },
       mid: { triangles: 120000, drawCalls: 120, maxTex: 512 },
       high: { triangles: 200000, drawCalls: 180, maxTex: 1024 }
-    }
+    },
+    characterTriangles: { low: 600, mid: 1500, high: 3000 }
   };
 
   var pref = 'auto', applied = 'mid', hudOn = false, freezeAuto = false;
@@ -53,6 +54,7 @@
     if (!cfg) return;
     if (cfg.tiers) table.tiers = cfg.tiers;
     if (cfg.budget) table.budget = cfg.budget;
+    if (cfg.characterTriangles) table.characterTriangles = cfg.characterTriangles;
     ['defaultPref', 'autoStartTier', 'autoNeverHigh', 'autoDropFps', 'autoSampleSec', 'autoWarmupSec', 'autoDropStrikes', 'autoCooldownSec'].forEach(function (k) {
       if (cfg[k] != null) table[k] = cfg[k];
     });

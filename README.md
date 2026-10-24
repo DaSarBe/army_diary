@@ -40,7 +40,9 @@ data/tuning.json    實作端補充與微調（海岸新結局、T91、門檻都
 vendor/three.min.js three.js r128（本地備份，不依賴 CDN）
 vendor/GLTFLoader.js 與後製（r128 examples）
 assets/characters/  CC0 角色（Kenney Animated Characters 3 的 glTF／PNG）
+island/assets/quaternius/  島嶼守備 Quaternius 角色／槍 GLB（CC0）
 tools/kenney-fbx/   Kenney FBX 原檔（不隨 GitHub Pages 發布）
+tools/quaternius/   Quaternius FBX 原檔（不隨 GitHub Pages 發布）
 data/army-gfx.json  主遊戲畫質表與預算
 tests/              模擬與 E2E 測試
 ```

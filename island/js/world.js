@@ -71,6 +71,10 @@
   }
 
   function person(o) {
+    if (root.Chars && Chars.ready()) {
+      var gm = Chars.makeAlly(o);
+      if (gm) return gm;
+    }
     var g = new T.Group();
     function part(par, w, h, d, x, y, z, col) { var m = new T.Mesh(UB, M(col)); m.scale.set(w, h, d); m.position.set(x, y, z); par.add(m); return m; }
     var sk = o.skin || '#e0b08a';
@@ -179,10 +183,14 @@
   }
 
   function addNpc(id, preset, x, z, ry, name) {
-    var g = person(PRE[preset] || PRE.rec); g.position.set(x, 0, z); g.rotation.y = ry || 0; CG.add(g);
+    var spec = Object.assign({ preset: preset }, PRE[preset] || PRE.rec);
+    var g = person(spec); g.position.set(x, 0, z); g.rotation.y = ry || 0; CG.add(g);
     var col = { x0: x - 0.35, x1: x + 0.35, z0: z - 0.35, z1: z + 0.35, noRay: true }; S.cols.push(col);
     var n = { id: id, g: g, x: x, z: z, col: col, name: name || '', preset: preset };
-    if (name) { var lb = label(name, '#ffffff', '#1c2218', 0.0078); lb.position.set(0, 2.75, 0); g.add(lb); n.lbl = lb; }
+    if (name) {
+      var lb = label(name, '#d6ecff', '#143056', 0.0078); lb.position.set(0, 2.55, 0); lb.visible = false; g.add(lb); n.lbl = lb;
+      if (g.userData) g.userData.nameSpr = lb;
+    }
     S.npcs[id] = n;
     return n;
   }
@@ -647,6 +655,7 @@
     /* 抗鋸齒只能在建立 renderer 時設定，切檔不重建 WebGL context（手機會閃）。 */
     buildSky(s);
     if (R) resize();
+    if (root.Chars && Chars.setTier && root.Gfx) Chars.setTier(Gfx.applied());
   }
   W.applyGfx = applyGfx;
 
@@ -748,13 +757,23 @@
       vm.visible = !S.veh;
       vm.position.set(0.18, -0.22 + S.kick * 0.02, -0.44 + S.kick * 0.07);
       vm.rotation.x = S.kick * 0.12 + Math.sin(S.t * 1.6) * 0.004;
-      if (vmRifle) vmRifle.visible = S.weap !== 'm9';
-      if (vmPistol) vmPistol.visible = S.weap === 'm9';
+      var guns = vm.userData && vm.userData.guns;
+      if (guns) {
+        Object.keys(guns).forEach(function (k) { if (guns[k]) guns[k].visible = k === S.weap; });
+      } else {
+        if (vmRifle) vmRifle.visible = S.weap !== 'm9';
+        if (vmPistol) vmPistol.visible = S.weap === 'm9';
+      }
     }
     Object.keys(S.npcs).forEach(function (id) {
       var n = S.npcs[id]; if (!n || !n.g.visible) return;
       var ud = n.g.userData, sw = Math.sin(S.t * 3 + n.x) * 0.04;
-      if (ud && ud.armR) ud.armR.rotation.x = sw;
+      if (ud && ud.mixer) ud.mixer.update(dt);
+      if (ud && ud.setAnim) ud.setAnim('idle', false);
+      else if (ud && ud.armR) ud.armR.rotation.x = sw;
+      var near = Math.hypot(S.px - n.x, S.pz - n.z) < 8;
+      if (n.lbl) n.lbl.visible = near;
+      if (ud && ud.arrow) ud.arrow.visible = true;
     });
     if (W.cb.onTick) W.cb.onTick(dt);
     stars.position.copy(cam.position);
@@ -783,7 +802,10 @@
     if (root.Gfx) root.Gfx.tick(now, raw, applyGfx, { mode: S.mode, paused: paused });
     if (paused) return;
     update(dt);
-    try { R.render(scene, cam); } catch (e) { /* 暫時失效 */ }
+    try {
+      if (R.info) { R.info.autoReset = false; if (R.info.reset) R.info.reset(); }
+      R.render(scene, cam);
+    } catch (e) { /* 暫時失效 */ }
     if (root.Gfx && root.Gfx.hudOn()) {
       gfxHudT += dt;
       if (gfxHudT > 0.35) {
@@ -805,6 +827,13 @@
   }
 
   function buildViewmodel() {
+    if (vm && vm.parent) vm.parent.remove(vm);
+    if (root.Chars && Chars.ready() && Chars.makeViewmodel) {
+      vm = Chars.makeViewmodel();
+      vmRifle = vmPistol = null;
+      cam.add(vm); vm.visible = false;
+      return;
+    }
     vm = new T.Group();
     function vpart(parent, w, h, d, x, y, z, col) {
       var m = new T.Mesh(UB, new T.MeshLambertMaterial({ color: col })); m.scale.set(w, h, d); m.position.set(x, y, z); parent.add(m); return m;
@@ -1147,7 +1176,35 @@
   W.renderOnce = function () {
     if (!R || !scene || !cam) return;
     update(0);
-    try { R.render(scene, cam); } catch (e) { /* ignore */ }
+    try {
+      if (R.info) { R.info.autoReset = false; if (R.info.reset) R.info.reset(); }
+      R.render(scene, cam);
+    } catch (e) { /* ignore */ }
+  };
+  W.onCharsReady = function () {
+    if (!S || !CG) { buildViewmodel(); return; }
+    Object.keys(S.npcs).forEach(function (id) {
+      var n = S.npcs[id];
+      if (!n || !n.g) return;
+      var ng = person(Object.assign({ preset: n.preset }, PRE[n.preset] || PRE.rec));
+      ng.position.copy(n.g.position); ng.rotation.copy(n.g.rotation);
+      if (n.lbl) { n.g.remove(n.lbl); ng.add(n.lbl); if (ng.userData) ng.userData.nameSpr = n.lbl; }
+      if (n.g.parent) { n.g.parent.add(ng); n.g.parent.remove(n.g); }
+      n.g = ng;
+    });
+    buildViewmodel();
+    if (root.Combat && root.Combat.onCharsReady) root.Combat.onCharsReady();
+  };
+  W.allyMeshes = function () {
+    var out = [];
+    Object.keys(S.npcs).forEach(function (id) {
+      var n = S.npcs[id];
+      if (!n || !n.g || n.g.visible === false) return;
+      n.g.traverse(function (m) {
+        if (m.isMesh && m.userData && m.userData.side === 'ally' && !m.userData.iff) out.push(m);
+      });
+    });
+    return out;
   };
   function isShown(obj) {
     while (obj) {
@@ -1187,10 +1244,11 @@
       sceneCalls: sc.calls,
       sceneTriangles: sc.triangles,
       points: inf.points || 0,
+      charTriangles: root.Chars ? root.Chars.triCount(G ? G.applied() : 'mid') : 0,
       textures: mem.textures || 0,
       over: {
-        triangles: sc.triangles > (b.triangles || 0),
-        drawCalls: sc.calls > (b.drawCalls || 0)
+        triangles: (inf.triangles || 0) > (b.triangles || 0),
+        drawCalls: (inf.calls || 0) > (b.drawCalls || 0)
       }
     };
   };

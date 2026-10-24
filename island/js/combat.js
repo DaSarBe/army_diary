@@ -35,6 +35,18 @@
     commander: { u: '#3a3e48', v: '#2a2e36', h: '#1a1e26', s: '#c9976e' }
   };
   function buildEnemy(type, e) {
+    if (root.Chars && Chars.ready() && Chars.makeEnemy) {
+      var gm = Chars.makeEnemy(type, e);
+      if (gm) {
+        var hitM = (gm.userData && gm.userData.hit) || [];
+        hitM.forEach(function (m) { m.userData.enemy = e; m.userData.part = m.userData.part || 'body'; });
+        return {
+          group: gm, hit: hitM,
+          joints: { muzzle: gm.userData.muzzle || new T.Object3D(), thL: null, thR: null },
+          outline: null, mixer: gm.userData.mixer, setAnim: gm.userData.setAnim
+        };
+      }
+    }
     var P = PAL[type] || PAL.rifleman, g = new T.Group(), hit = [], j = {};
     function mesh(parent, geometry, col, x, y, z, part) {
       var m = new T.Mesh(geometry, mat(col)); m.position.set(x, y, z); parent.add(m);
@@ -385,6 +397,23 @@
     }
     return false;
   }
+  function hoverKind() {
+    if (!A || !W.camera) return null;
+    var ad = aimDir(), p = W.pos(), F = W.S;
+    rc.set(new T.Vector3(p.x, F.eye, p.z), new T.Vector3(ad.d[0], ad.d[1], ad.d[2]));
+    rc.far = 70;
+    var allies = (W.allyMeshes && W.allyMeshes()) || [];
+    var foes = [];
+    (A.enemies || []).forEach(function (e) {
+      if (e && e.state !== 'dead' && e.hit) foes = foes.concat(e.hit);
+    });
+    var ha = allies.length ? rc.intersectObjects(allies, false) : [];
+    var hf = foes.length ? rc.intersectObjects(foes, false) : [];
+    var da = ha[0] ? ha[0].distance : 1e9, df = hf[0] ? hf[0].distance : 1e9;
+    if (da < df && da < 70) return 'ally';
+    if (df < 70) return 'enemy';
+    return null;
+  }
   function canShoot() {
     if (!A || !A.active || A.reload > 0) return false;
     if (jeepGun()) return !A.overheat;
@@ -396,6 +425,10 @@
   }
   function tryFire(first) {
     if (!canShoot() || A.cd > 0) return;
+    if (hoverKind() === 'ally') {
+      Cbt.msg('友軍，不能開槍', 1400);
+      return;
+    }
     var sl = A.pack[A.weap];
     if (!jeepGun() && sl.mag <= 0) { if (first) { Sfx.sfx('empty'); Cbt.msg('彈匣空了，按 R 換彈', 1400); } return; }
     if (jeepGun()) {
@@ -513,7 +546,7 @@
       var nudged = W.nudgeOutside(e.x, e.z, 1.5);
       e.x = nudged.x; e.z = nudged.z;
     }
-    var m = buildEnemy(type, e); e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline;
+    var m = buildEnemy(type, e); e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline; e.setAnim = m.setAnim; e.mixer = m.mixer;
     e.group.position.set(e.x, 0, e.z); scene.add(e.group);
     pickCover(e);
     if (type === 'rusher' && H.onRusher) H.onRusher();
@@ -631,8 +664,13 @@
   function updateEnemy(e, dt) {
     var p = W.pos(), j = e.j, et = ET(e.type);
     if (e.state === 'dead') {
-      e.dieT += dt; var k = Math.min(1, e.dieT / 0.55);
-      e.group.rotation.x = -k * 1.45;
+      e.dieT += dt;
+      if (e.setAnim) e.setAnim('die', false);
+      else {
+        var k = Math.min(1, e.dieT / 0.55);
+        e.group.rotation.x = -k * 1.45;
+      }
+      if (e.mixer) e.mixer.update(dt);
       if (e.dieT > 3.2 && e.group.parent) { e.group.parent.remove(e.group); e.gone = true; }
       return;
     }
@@ -700,7 +738,9 @@
     }
     e.group.position.set(e.x, 0, e.z);
     if (W.applyEnemyVis) W.applyEnemyVis(e);
-    if (j && j.thL) {
+    if (e.setAnim) e.setAnim(e.state === 'peek' ? 'shoot' : (moving ? (e.state === 'rush' ? 'run' : 'walk') : 'idle'), moving);
+    if (e.mixer) e.mixer.update(dt);
+    else if (j && j.thL) {
       var sw = moving ? Math.sin(e.t * 9) * 0.6 : 0;
       j.thL.rotation.x = sw; j.thR.rotation.x = -sw;
     }
@@ -810,6 +850,11 @@
     $('#bCarry').classList.toggle('on', !!A.carrying);
     $('#xhair').classList.toggle('ads', !!A.ads);
     $('#xhair').classList.toggle('lock', !!(A.aimAssist && overTarget()));
+    var hk = hoverKind();
+    $('#xhair').classList.toggle('foe', hk === 'enemy');
+    $('#xhair').classList.toggle('friend', hk === 'ally');
+    var ih = $('#iffHint');
+    if (ih) { ih.hidden = hk !== 'ally'; ih.classList.toggle('on', hk === 'ally'); }
     if (A.combat) $('#waveLeft').textContent = '剩餘 ' + Math.max(0, A.total - A.killed);
   }
   Cbt.refresh = refreshHud;
@@ -898,6 +943,21 @@
     if (A.pack[A.weap].mag <= 0) Cbt.reload();
     else { A.firing = true; A.aimAssist = true; tryFire(false); }
   }
+
+  Cbt.onCharsReady = function () {
+    if (!A || !A.enemies) return;
+    A.enemies.forEach(function (e) {
+      if (!e || e.state === 'dead') return;
+      var old = e.group;
+      var m = buildEnemy(e.type, e);
+      e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline;
+      e.setAnim = m.setAnim; e.mixer = m.mixer;
+      e.group.position.set(e.x, e.group.position.y || 0, e.z);
+      if (old && old.rotation) e.group.rotation.copy(old.rotation);
+      if (old && old.parent) { old.parent.add(e.group); old.parent.remove(old); }
+      else if (scene) scene.add(e.group);
+    });
+  };
 
   root.Combat = Cbt;
 })(typeof self !== 'undefined' ? self : this);

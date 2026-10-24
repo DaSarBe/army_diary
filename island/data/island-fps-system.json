@@ -698,7 +698,8 @@
       "low": { "triangles": 60000, "drawCalls": 80, "maxTex": 512 },
       "mid": { "triangles": 120000, "drawCalls": 120, "maxTex": 512 },
       "high": { "triangles": 200000, "drawCalls": 180, "maxTex": 1024 }
-    }
+    },
+    "characterTriangles": { "low": 600, "mid": 1500, "high": 3000 }
   },
   "narrationRule": "系統規則（同袍生死不重擲、第一次決定）只寫在設定與存檔，不在對白裡用系統語；對白改為人物會說的話"
 }
