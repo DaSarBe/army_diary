@@ -43,6 +43,10 @@ button{font-family:inherit;color:inherit;font-size:inherit}
 #side button{min-width:60px;min-height:38px;padding:4px 10px;border-radius:10px;background:var(--hud);border:1px solid var(--line);font-size:14px;cursor:pointer}
 #side button:active{background:var(--panel-2)}
 #side button .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brass);margin-left:4px}
+#gfxHud{position:fixed;z-index:9;top:calc(var(--sat) + 8px);left:max(8px,var(--sal));padding:4px 8px;border-radius:8px;background:rgba(8,10,7,.72);border:1px solid var(--line);font-size:11px;line-height:1.35;letter-spacing:.02em;color:#d6dcc6;pointer-events:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+#hud:not([hidden]) ~ #gfxHud{top:calc(var(--hudh) + 44px)}
+.gfxRow{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.gfxRow button.on{border-color:var(--brass);color:var(--brass);font-weight:700}
 
 #joy{position:fixed;left:calc(max(18px,var(--sal)) + 8px);bottom:calc(30px + var(--sab));width:128px;height:128px;border-radius:50%;background:rgba(21,26,19,.5);border:2px solid var(--line);z-index:4;touch-action:none;user-select:none;-webkit-user-select:none}
 #knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:var(--brass);opacity:.85;pointer-events:none}

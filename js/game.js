@@ -1063,6 +1063,28 @@
     });
   }
   /* ---------- 面板：選單 ---------- */
+  function gfxButtons() {
+    var Gfx = root.Gfx; if (!Gfx) return '';
+    var p = Gfx.pref();
+    function btn(id, lab) {
+      return '<button type="button" class="gfxPick' + (p === id ? ' on' : '') + '" data-gfx="' + id + '">' + lab + '</button>';
+    }
+    return '<h3>畫質</h3><div class="gfxRow">' + btn('auto', '自動') + btn('low', '低') + btn('mid', '中') + btn('high', '高') + '</div>' +
+      '<div class="item"><div class="d"><b>效能顯示</b><small>FPS、畫質檔、draw calls、三角面（F3）</small></div><button class="btn" style="width:auto" id="fpsHudBtn">' + (Gfx.hudOn() ? '顯示中' : '關閉') + '</button></div>' +
+      '<p class="note">自動從中檔起跳，可操作後再等 4 秒量測；連續兩次中位數低於 32fps 才降一級，不會自行升到高檔。低檔關閉陰影與後製、像素比 1。</p>';
+  }
+  function bindGfxUi(rootEl) {
+    var Gfx = root.Gfx; if (!Gfx || !rootEl) return;
+    rootEl.querySelectorAll('.gfxPick').forEach(function (el) {
+      el.addEventListener('click', function () {
+        Gfx.setPref(el.getAttribute('data-gfx'), function (s) { if (W.applyGfx) W.applyGfx(s); });
+        Sfx.sfx('click');
+        menuPanel();
+      });
+    });
+    var hb = rootEl.querySelector('#fpsHudBtn');
+    if (hb) hb.addEventListener('click', function () { Gfx.toggleHud(); menuPanel(); });
+  }
   function menuPanel() {
     if (!UI.panelOpen()) UI.panel('選單', function () { W.setMode('world'); });
     UI.panelTabs(null);
@@ -1070,6 +1092,7 @@
     [1, 2, 3].forEach(function (s) { h += '<div class="item"><div class="d"><b>欄位 ' + s + '</b><small>' + esc(saveInfo(readSave(s))) + '</small></div><button class="btn" style="width:auto" data-sv="' + s + '">存檔</button></div>'; });
     var au = readSave(0);
     h += '<div class="item"><div class="d"><b>自動存檔</b><small>' + esc(saveInfo(au)) + '（每次完成任務與過夜時更新）</small></div></div>';
+    h += gfxButtons();
     h += '<h3>設定</h3><div class="item"><div class="d"><b>音效</b><small>用瀏覽器即時合成，不需要音檔</small></div><button class="btn" style="width:auto" id="mt">' + (Sfx.isMuted() ? '已靜音' : '開啟中') + '</button></div>';
     h += '<h3>操作說明</h3><p class="note">移動：左下搖桿，或電腦 W A S D／方向鍵。轉視角：拖曳畫面。互動：右下按鈕，或按 E／空白鍵。找頭上有「!」的人接任務，「?」表示可以回報。到寢室休息、過日子。</p>';
     h += '<h3>結局</h3><div class="row"><button data-a="book">結局圖鑑（' + unlocked().length + ' / ' + E.allEndings().length + '）</button></div>';
@@ -1082,6 +1105,7 @@
       UI.closePanel();
       UI.card({ kicker: '確認', title: '回到標題畫面？', body: ['未存檔的進度會遺失（自動存檔不受影響）。'], buttons: [{ t: '回到標題', fn: title }, { t: '取消' }] });
     });
+    bindGfxUi(b);
   }
   function syncMute() { $('#mute').textContent = Sfx.isMuted() ? '音效關' : '音效開'; }
 
@@ -1495,7 +1519,10 @@
     $('#track').addEventListener('click', function () { openPanel('journal'); });
     $('#glRetry').addEventListener('click', function () { location.reload(); });
     document.addEventListener('pointerdown', function () { Sfx.ensure(); }, { once: true });
-    window.addEventListener('keydown', function (e) { if (e.code === 'Escape') { if (UI.panelOpen()) UI.closePanel(); else if (phase === 'play' && !overlays()) openPanel('menu'); } });
+    window.addEventListener('keydown', function (e) {
+      if (e.code === 'Escape') { if (UI.panelOpen()) UI.closePanel(); else if (phase === 'play' && !overlays()) openPanel('menu'); }
+      if (e.code === 'F3' && root.Gfx) { e.preventDefault(); root.Gfx.toggleHud(); }
+    });
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) { W.pause(); Sfx.suspend(); } else { W.resume(); Sfx.resume(); }
     });
@@ -1512,9 +1539,20 @@
   }
   function boot() {
     bindUi();
-    var files = ['story', 'rpg-system', 'tuning', 'fps-system', 'story_beach'];
+    var files = ['story', 'rpg-system', 'tuning', 'fps-system', 'story_beach', 'army-gfx'];
     Promise.all(files.map(function (f) { return fetch('data/' + f + '.json').then(function (r) { if (!r.ok) throw new Error(f); return r.json(); }); })).then(function (a) {
       E.init(a[0], a[1], a[2], { fps: a[3], beach: a[4] }); D = E.data(); D.beach = a[4]; W.story = D.story;
+      if (root.Gfx) {
+        root.Gfx.configure(a[5]);
+        var q = {};
+        (location.search || '').replace(/^\?/, '').split('&').forEach(function (p) {
+          if (!p) return; var i = p.indexOf('='), k = decodeURIComponent(i < 0 ? p : p.slice(0, i)), v = i < 0 ? '1' : decodeURIComponent(p.slice(i + 1));
+          q[k] = v;
+        });
+        if (q.gfx) root.Gfx.setPref(q.gfx);
+        if (q.fpshud === '1') root.Gfx.setHud(true);
+        if (q.test === '1' || q.auto === '1') root.Gfx.freezeAuto(true);
+      }
       if (!initWorld()) { $('#glerr').hidden = false; return; }
       installBeachHooks(); applyFlagWorld();
       if (/[?&]auto=1/.test(location.search)) { MG.auto = true; FPS.bot = 'aim'; }
@@ -1533,7 +1571,8 @@
     interact: function () { W.interact(); },
     inter: function () { return (W.S.inter || []).map(function (i) { return { x: i.x, z: i.z, label: i.label, prompt: i.prompt }; }); },
     holdOn: function () { return holdOn; },
-    renderer: function () { return W.renderer && W.renderer(); }
+    renderer: function () { return W.renderer && W.renderer(); },
+    gfx: function () { return W.gfxInfo ? W.gfxInfo() : null; }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })(typeof self !== 'undefined' ? self : this);

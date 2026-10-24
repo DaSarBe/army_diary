@@ -24,6 +24,8 @@ index.html          頁面
 css/game.css        樣式（手機優先）
 js/engine.js        核心規則：屬性、判定、任務、獎勵、時間、結局（純邏輯，Node 與瀏覽器共用）
 js/places.js        地點座標、中文名稱、任務步驟規劃器
+js/gfx.js           畫質檔（低／中／高／自動）、自動降級、FPS 疊層
+js/characters.js    camp1 角色 GLTF 與 AnimationMixer
 js/world.js         three.js 世界：地圖、角色、搖桿/WASD、鏡頭、NPC、拾取物
 js/minigames.js     小遊戲：連點、射擊、抽籤、節奏、限時、潛行等
 js/fps.js           漢光海岸：第一人稱射擊、掩體、敵人與波次
@@ -36,6 +38,10 @@ data/fps-system.json   海岸戰鬥數值（原樣保留）
 data/rpg-system.json  Dai 的系統（屬性、判定公式、等級、技能、裝備、結局條件、小遊戲）
 data/tuning.json    實作端補充與微調（海岸新結局、T91、門檻都集中在這裡）
 vendor/three.min.js three.js r128（本地備份，不依賴 CDN）
+vendor/GLTFLoader.js 與後製（r128 examples）
+assets/characters/  CC0 角色（Kenney Animated Characters 3 的 glTF／PNG）
+tools/kenney-fbx/   Kenney FBX 原檔（不隨 GitHub Pages 發布）
+data/army-gfx.json  主遊戲畫質表與預算
 tests/              模擬與 E2E 測試
 ```
 
@@ -59,13 +65,14 @@ node sim.js 3000          # 邏輯層大量隨機遊玩，列出各結局機率
 node tune.js 6000 random  # 搜尋結局門檻（結果寫進 data/tuning.json 的 endingOverrides）
 node e2e.js desktop       # headless Chrome，桌機尺寸，用真實 UI 從頭玩到結局
 node e2e.js mobile        # headless Chrome，手機尺寸（390×844、觸控）
+node gfx-camp1.js         # 新訓中心畫面預算、角色面數、自動降級
 ```
 
 E2E 需要本機有 Chrome（預設 `/usr/local/bin/google-chrome`，可用環境變數 `CHROME` 指定）。小遊戲在測試時啟用內建自動遊玩（`?auto=1`），其餘操作都走畫面上的按鈕與互動。
 
 ## 部署
 
-推送到 `main` 時，`.github/workflows/pages.yml` 會把整個 repo 部署到 GitHub Pages。
+推送到 `main` 時，`.github/workflows/pages.yml` 會把網站檔部署到 GitHub Pages。上傳前會刪除 `tools/`，所以 Kenney Animated Characters 3 的 FBX 原檔（`tools/kenney-fbx/`：`characterMedium.fbx`、`idle.fbx`、`run.fbx`）不會出現在公開網站路徑。執行時只用 `assets/characters/kenney/character.glb` 與 PNG。
 
 ## 數值調校說明
 
