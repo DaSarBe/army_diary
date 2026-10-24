@@ -523,10 +523,10 @@
   }
 
   function gunColor(id) {
-    if (id === 't75') return '#3a3228';
-    if (id === 't65') return '#1e2420';
-    if (id === 'm9') return '#2a2c28';
-    return '#2c2f2a';
+    if (id === 't75') return '#5a4a38';
+    if (id === 't65') return '#3a4238';
+    if (id === 'm9') return '#4a4c46';
+    return '#4a4e46';
   }
 
   function makeGun(id) {
@@ -554,12 +554,12 @@
     var size = box.getSize(new THREE.Vector3());
     var longest = Math.max(size.x, size.y, size.z) || 1;
     var len = { t91: 0.72, t75: 0.88, t65: 0.98, m9: 0.26 };
-    g.rotation.set(0, Math.PI / 2, 0);
+    g.rotation.set(0, 0, 0);
     g.scale.setScalar((len[id] || 0.7) / longest);
     g.updateMatrixWorld(true);
     box.setFromObject(g);
     var c = box.getCenter(new THREE.Vector3());
-    g.position.set(0.22 - c.x, 1.16 * (ys || 1) - c.y, 0.34 - c.z);
+    g.position.set(0.20 - c.x, 1.14 * (ys || 1) - c.y, -0.28 - c.z);
     return g;
   }
   function makeViewmodel() {
