@@ -53,7 +53,11 @@ button{font-family:inherit;color:inherit;font-size:inherit;cursor:pointer}
 #xhair i{position:absolute;left:-15px;top:-15px;width:30px;height:30px;border:2px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.5)}
 #xhair i::after{content:"";position:absolute;left:12px;top:12px;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px #000}
 #xhair.lock i{border-color:#f2c94c}
+#xhair.foe i{border-color:#e24b4b}
+#xhair.friend i{border-color:#3dcc6a}
 #xhair.ads i{width:22px;height:22px;left:-11px;top:-11px}
+#iffHint{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);padding:3px 10px;border-radius:10px;background:rgba(21,26,19,.82);border:1px solid #3dcc6a;color:#9ee0a8;font-size:13px;opacity:0;pointer-events:none;white-space:nowrap}
+#iffHint.on{opacity:1}
 #hitmk{position:absolute;left:50%;top:50%;width:0;height:0;opacity:0}
 #hitmk b{position:absolute;left:-14px;top:-14px;width:28px;height:28px;background:linear-gradient(45deg,transparent 46%,#fff 46% 54%,transparent 54%),linear-gradient(-45deg,transparent 46%,#fff 46% 54%,transparent 54%)}
 #hitmk.on{animation:hm .25s ease-out}
