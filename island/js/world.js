@@ -18,7 +18,8 @@
     cols: [], covers: [], eCovers: [], npcs: {}, temps: [], vehicles: [], inter: [], near: null,
     marks: [], water: null, waterZ: -44, mode: 'title', w: 1, h: 1, veh: null, carry: false,
     spawns: { sea: [], shore: [] }, sprint: 0, weap: 't91',
-    blackout: false, powerOn: false, flashlight: false, fogNear: 42, fogFar: 130, toneName: 'dawn'
+    blackout: false, powerOn: false, flashlight: false, fogNear: 42, fogFar: 130, toneName: 'dawn',
+    hideLabels: false
   };
   W.S = S;
 
@@ -326,10 +327,14 @@
 
   W.loadLevel = function (lv, cfg) {
     W.cfg = cfg;
+    Object.keys(S.npcs || {}).forEach(function (id) {
+      var n = S.npcs[id];
+      if (n && n.g && n.g.userData && n.g.userData.dispose) n.g.userData.dispose();
+    });
     if (CG) scene.remove(CG);
     CG = new T.Group(); scene.add(CG);
     S.cols = []; S.covers = []; S.eCovers = []; S.npcs = {}; S.temps = []; S.vehicles = []; S.inter = []; S.near = null;
-    S.veh = null; S.carry = false;
+    S.veh = null; S.carry = false; S.hideLabels = false;
     S.marks = []; S.water = null; SIGNS.length = 0; MATS = {}; floodCache = null;
     S.bounds = lv.bounds || [-50, 50, -60, 50];
     S.spawn = lv.spawn || [0, 38];
@@ -656,6 +661,7 @@
     buildSky(s);
     if (R) resize();
     if (root.Chars && Chars.setTier && root.Gfx) Chars.setTier(Gfx.applied());
+    if (root.Combat && Combat.syncHits) Combat.syncHits();
   }
   W.applyGfx = applyGfx;
 
@@ -772,7 +778,7 @@
       if (ud && ud.setAnim) ud.setAnim('idle', false);
       else if (ud && ud.armR) ud.armR.rotation.x = sw;
       var near = Math.hypot(S.px - n.x, S.pz - n.z) < 8;
-      if (n.lbl) n.lbl.visible = near;
+      if (n.lbl) n.lbl.visible = !S.hideLabels && near;
       if (ud && ud.arrow) ud.arrow.visible = true;
     });
     if (W.cb.onTick) W.cb.onTick(dt);
@@ -1189,6 +1195,7 @@
     Object.keys(S.npcs).forEach(function (id) {
       var n = S.npcs[id];
       if (!n || !n.g) return;
+      if (n.g.userData && n.g.userData.model) return;
       var ng = person(Object.assign({ preset: n.preset }, PRE[n.preset] || PRE.rec));
       ng.position.copy(n.g.position); ng.rotation.copy(n.g.rotation);
       if (n.lbl) { n.g.remove(n.lbl); ng.add(n.lbl); if (ng.userData) ng.userData.nameSpr = n.lbl; }
@@ -1198,6 +1205,7 @@
     buildViewmodel();
     if (root.Combat && root.Combat.onCharsReady) root.Combat.onCharsReady();
   };
+  W.hideNpcLabels = function (on) { S.hideLabels = !!on; };
   W.allyMeshes = function () {
     var out = [];
     Object.keys(S.npcs).forEach(function (id) {
@@ -1248,7 +1256,14 @@
       sceneTriangles: sc.triangles,
       points: inf.points || 0,
       charTriangles: root.Chars ? root.Chars.triCount(G ? G.applied() : 'mid') : 0,
+      charCalls: (function () {
+        var mx = 0;
+        if (!root.Chars || !Chars.live) return 0;
+        Chars.live().forEach(function (g) { mx = Math.max(mx, Chars.charCalls(g)); });
+        return mx;
+      })(),
       textures: mem.textures || 0,
+      geometries: mem.geometries || 0,
       over: {
         triangles: (inf.triangles || 0) > (b.triangles || 0),
         drawCalls: (inf.calls || 0) > (b.drawCalls || 0)

@@ -1527,6 +1527,30 @@
       return lv.id;
     });
   }
+  function maxWaveBag(lv) {
+    var best = {}, bestN = 0;
+    (lv.beats || []).forEach(function (b) {
+      var w = b && b.wave;
+      if (!w) return;
+      ['enemies', 'trailEnemies', 'stealthEnemies'].forEach(function (k) {
+        var bag = w[k];
+        if (!bag) return;
+        var n = 0;
+        Object.keys(bag).forEach(function (t) { n += bag[t] || 0; });
+        if (n > bestN) { bestN = n; best = bag; }
+      });
+    });
+    return { bag: best, count: bestN };
+  }
+  function prepareWorstCase(id) {
+    return loadMapOnly(id).then(function () {
+      if (W.hideNpcLabels) W.hideNpcLabels(true);
+      var mx = maxWaveBag(level);
+      var n = 0;
+      if (Cbt.spawnBudget) n = Cbt.spawnBudget(mx.bag);
+      return { id: id, bag: mx.bag, enemies: n, npcs: Object.keys((W.S && W.S.npcs) || {}).length };
+    });
+  }
   function attachTestApi() {
     if (!testMode() || !root.__island) return;
     root.__island.evalStoryState = evalStoryState;
@@ -1540,6 +1564,7 @@
     root.__island.collectReachables = collectReachables;
     root.__island.scanReach = scanReach;
     root.__island.loadMapOnly = loadMapOnly;
+    root.__island.prepareWorstCase = prepareWorstCase;
     root.__island.catalog = function () { return catalog; };
     root.__island.gfxInfo = function () { return W.gfxInfo && W.gfxInfo(); };
     root.__island.setGfx = function (v) { if (root.Gfx) root.Gfx.setPref(v, function (s) { if (W.applyGfx) W.applyGfx(s); }); };
@@ -1599,6 +1624,7 @@
     nextBeat: nextBeat,
     jumpTo: jumpTo,
     loadMapOnly: loadMapOnly,
+    prepareWorstCase: prepareWorstCase,
     scanReach: scanReach,
     collectReachables: collectReachables,
     gfxInfo: function () { return W.gfxInfo && W.gfxInfo(); },

@@ -1,23 +1,22 @@
-/* Quaternius CC0 角色／槍：GLTF + AnimationMixer，敵我配色與 LOD。 */
+/* Quaternius CC0 角色／槍：預先 LOD GLB、單材質頂點色、敵我辨識。 */
 (function (root) {
   'use strict';
   var THREE = root.THREE;
-  var C = { ready: false, err: null, wait: [], gltfs: {}, guns: {}, maps: {}, tri: { low: 0, mid: 0, high: 0 }, tier: 'mid', ei: 0, ai: 0 };
+  var C = {
+    ready: false, err: null, wait: [], gltfs: {}, maps: {},
+    tri: { low: 0, mid: 0, high: 0 }, tier: 'mid', ei: 0, ai: 0, live: []
+  };
 
   var BASE = 'assets/quaternius/';
-  var MODELS = {
-    soldier: 'soldier_male',
-    blue: 'blue_soldier_male',
-    casual: 'casual_bald',
-    ninja: 'ninja_sand'
-  };
+  var MODELS = { soldier: 'soldier_male', blue: 'blue_soldier_male', casual: 'casual_bald', ninja: 'ninja_sand' };
   var GUNS = { t91: 'rifle_t91.glb', t75: 'rifle_t75.glb', t65: 'rifle_t65.glb', m9: 'pistol_m9.glb' };
   var CAP = { low: 600, mid: 1500, high: 3000 };
+  var TIERS = ['low', 'mid', 'high'];
 
   var NAMED = {
     lin: { model: 'casual', scale: 1.00, skin: '#e2b48a', hat: 'none', hair: 'short', pack: true, vest: false },
     kai: { model: 'casual', scale: 0.93, skin: '#a87450', hat: 'cap', hair: 'none', pack: false, vest: true },
-    sgt: { model: 'soldier', scale: 1.10, skin: '#c49268', hat: 'none', hair: 'none', pack: false, vest: true },
+    sgt: { model: 'casual', scale: 1.12, skin: '#c49268', hat: 'none', helm: 'officer', pack: false, vest: true },
     rec: { model: 'soldier', scale: 1.00, skin: '#d9a77a', hat: 'none', hair: 'none', pack: false, vest: false },
     wounded: { model: 'casual', scale: 0.98, skin: '#c48a6a', hat: 'none', hair: 'none', pack: false, vest: false }
   };
@@ -48,19 +47,20 @@
     var n = 0;
     if (!rootObj) return 0;
     rootObj.traverse(function (m) {
-      if (!m.isMesh || !m.geometry) return;
+      if (!m.isMesh || !m.geometry || m.userData.iff) return;
       var g = m.geometry;
       if (g.index) n += g.index.count / 3;
       else if (g.attributes && g.attributes.position) n += g.attributes.position.count / 3;
     });
     return Math.round(n);
   }
-
+  function noteTris(n) {
+    C.tri[C.tier] = Math.max(C.tri[C.tier] || 0, n || 0);
+  }
   function hexRgb(hex) {
     var n = parseInt(String(hex).replace('#', ''), 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   }
-
   function pickClip(clips, keys) {
     var i, c, nm, k;
     for (k = 0; k < keys.length; k++) {
@@ -71,40 +71,11 @@
     }
     return null;
   }
-
-  function fileFor(model) {
+  function fileFor(model, tier) {
     var stem = MODELS[model] || MODELS.soldier;
-    return BASE + stem + '.glb';
-  }
-  function limitGeometry(geo, target) {
-    var g = geo.clone();
-    if (!g.index || !target) return g;
-    var src = g.index.array, tris = src.length / 3;
-    if (tris <= target) return g;
-    var Ctor = src.length > 65535 ? Uint32Array : Uint16Array;
-    var out = new Ctor(target * 3), step = tris / target, i, t;
-    for (i = 0; i < target; i++) {
-      t = Math.min(tris - 1, Math.floor(i * step)) * 3;
-      out[i * 3] = src[t]; out[i * 3 + 1] = src[t + 1]; out[i * 3 + 2] = src[t + 2];
-    }
-    g.setIndex(new THREE.BufferAttribute(out, 1));
-    return g;
-  }
-  function meshList(rootObj) {
-    var out = [];
-    rootObj.traverse(function (m) {
-      if (m.isMesh && m.geometry && m.geometry.attributes && m.geometry.attributes.position) out.push(m);
-    });
-    return out;
-  }
-  function limitRoot(rootObj, target) {
-    var total = countTris(rootObj);
-    if (!target || total <= target) return;
-    var meshes = meshList(rootObj), ratio = target / total;
-    meshes.forEach(function (m) {
-      var t = Math.max(8, Math.floor(countTris(m) * ratio));
-      m.geometry = limitGeometry(m.geometry, t);
-    });
+    var t = tier || C.tier || 'mid';
+    if (t === 'high') return BASE + stem + '.glb';
+    return BASE + stem + '_' + t + '.glb';
   }
 
   function loadGltf(url) {
@@ -114,52 +85,12 @@
     });
   }
 
-  function tintTexture(tex, cloth, skinHex, camo) {
-    if (!tex || !tex.image) return tex;
-    var key = (tex.uuid || '') + '|' + cloth + '|' + (skinHex || '') + '|' + (camo ? 'c' : 's');
-    if (C.maps[key]) return C.maps[key];
-    var img = tex.image, w = img.width || 256, h = img.height || 256;
-    var cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
-    var ctx = cvs.getContext('2d');
-    try { ctx.drawImage(img, 0, 0, w, h); } catch (e) { return tex; }
-    var data = ctx.getImageData(0, 0, w, h), p = data.data, i;
-    var cl = hexRgb(cloth), sk = hexRgb(skinHex || '#d9a77a');
-    var cDark = hexRgb('#1a3a14'), cLite = hexRgb('#6b8f3a');
-    for (i = 0; i < p.length; i += 4) {
-      var r = p[i], g = p[i + 1], b = p[i + 2];
-      var isSkin = r > 88 && r > g + 8 && g > b && (r - b) > 20 && (r + g + b) < 640;
-      if (isSkin) {
-        p[i] = Math.min(255, r * 0.35 + sk.r * 0.65);
-        p[i + 1] = Math.min(255, g * 0.35 + sk.g * 0.65);
-        p[i + 2] = Math.min(255, b * 0.35 + sk.b * 0.65);
-      } else if (camo) {
-        var px = (i / 4) % w, py = ((i / 4) / w) | 0;
-        var blob = Math.sin(px * 0.21) * Math.cos(py * 0.17) + Math.sin((px + py) * 0.09);
-        var pick = blob > 0.38 ? cLite : (blob < -0.28 ? cDark : cl);
-        p[i] = Math.min(255, r * 0.16 + pick.r * 0.84);
-        p[i + 1] = Math.min(255, g * 0.16 + pick.g * 0.84);
-        p[i + 2] = Math.min(255, b * 0.16 + pick.b * 0.84);
-      } else {
-        p[i] = Math.min(255, r * 0.18 + cl.r * 0.82);
-        p[i + 1] = Math.min(255, g * 0.18 + cl.g * 0.82);
-        p[i + 2] = Math.min(255, b * 0.18 + cl.b * 0.82);
-      }
-    }
-    ctx.putImageData(data, 0, 0);
-    var out = new THREE.CanvasTexture(cvs);
-    out.flipY = !!tex.flipY;
-    out.encoding = tex.encoding;
-    out.needsUpdate = true;
-    C.maps[key] = out;
-    return out;
-  }
-
   function clothColor(name, side, spec) {
     var n = String(name || '').toLowerCase();
     var sand = !!(spec && spec.sand);
-    if (n.indexOf('face') >= 0 || n.indexOf('skin') >= 0) return (spec && spec.skin) || '#d9a77a';
+    if (n.indexOf('face') >= 0 || n.indexOf('skin') >= 0 || n.indexOf('hair') >= 0) return (spec && spec.skin) || '#d9a77a';
     if (side === 'ally') {
-      if (n.indexOf('helmet') >= 0) return '#1e3a16';
+      if (n.indexOf('helmet') >= 0 || n.indexOf('officer') >= 0) return '#1e3a16';
       if (n.indexOf('black') >= 0 || n.indexOf('belt') >= 0) return '#1a2414';
       if (n.indexOf('pants') >= 0) return '#2a401c';
       if (n.indexOf('darkgreen') >= 0) return '#1f3d16';
@@ -175,109 +106,224 @@
     if (n.indexOf('grey') >= 0 || n.indexOf('gray') >= 0) return '#4a5564';
     return '#3e5168';
   }
-  function camoMap(baseHex) {
-    var key = 'camo|' + baseHex;
-    if (C.maps[key]) return C.maps[key];
-    var cvs = document.createElement('canvas'); cvs.width = 64; cvs.height = 64;
-    var ctx = cvs.getContext('2d'), i, j;
-    var cl = hexRgb(baseHex), d = hexRgb('#163010'), l = hexRgb('#5a7a32');
-    var img = ctx.createImageData(64, 64), p = img.data;
-    for (j = 0; j < 64; j++) {
-      for (i = 0; i < 64; i++) {
-        var blob = Math.sin(i * 0.41) * Math.cos(j * 0.33) + Math.sin((i + j) * 0.17);
-        var c = blob > 0.42 ? l : (blob < -0.32 ? d : cl);
-        var o = (j * 64 + i) * 4;
-        p[o] = c.r; p[o + 1] = c.g; p[o + 2] = c.b; p[o + 3] = 255;
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-    var tex = new THREE.CanvasTexture(cvs);
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(3, 3);
-    tex.needsUpdate = true;
-    C.maps[key] = tex;
-    return tex;
-  }
 
   function dummy() { return { rotation: { x: 0, y: 0, z: 0 }, position: { x: 0, y: 0, z: 0 } }; }
 
-  function accMesh(geo, col, x, y, z, rx) {
-    var m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: col }));
-    m.position.set(x, y, z);
-    if (rx) m.rotation.x = rx;
-    return m;
+  function boneIndex(skeleton, names) {
+    if (!skeleton || !skeleton.bones) return 0;
+    var i, nm, k;
+    for (i = 0; i < skeleton.bones.length; i++) {
+      nm = (skeleton.bones[i].name || '').toLowerCase();
+      for (k = 0; k < names.length; k++) if (nm.indexOf(names[k]) >= 0) return i;
+    }
+    return 0;
   }
-  function addGear(g, spec, col, ys) {
+
+  function gearPieces(spec, col, ys) {
     ys = ys || 1;
     var acc = [];
+    function mesh(geo, c, x, y, z) {
+      var m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: c }));
+      m.position.set(x, y, z);
+      return m;
+    }
     if (spec.hat === 'cap') {
-      acc.push(accMesh(new THREE.CylinderGeometry(0.24, 0.26, 0.05, 10), col, 0, 1.70 * ys, 0.10));
-      acc.push(accMesh(new THREE.CylinderGeometry(0.17, 0.19, 0.13, 10), col, 0, 1.80 * ys, 0));
+      acc.push({ m: mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.05, 8), col, 0, 1.70 * ys, 0.10), bone: 'head' });
+      acc.push({ m: mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.13, 8), col, 0, 1.80 * ys, 0), bone: 'head' });
     }
     if (spec.helm === 'peak') {
-      acc.push(accMesh(new THREE.CylinderGeometry(0.20, 0.23, 0.22, 8), col, 0, 1.86 * ys, 0));
-      acc.push(accMesh(new THREE.BoxGeometry(0.28, 0.04, 0.22), col, 0, 1.76 * ys, 0.16));
+      acc.push({ m: mesh(new THREE.CylinderGeometry(0.20, 0.23, 0.20, 8), col, 0, 1.86 * ys, 0), bone: 'head' });
+      acc.push({ m: mesh(new THREE.BoxGeometry(0.28, 0.04, 0.20), col, 0, 1.76 * ys, 0.16), bone: 'head' });
     }
     if (spec.helm === 'slouch') {
-      acc.push(accMesh(new THREE.SphereGeometry(0.20, 8, 6), col, 0.04, 1.84 * ys, 0));
-      acc.push(accMesh(new THREE.CylinderGeometry(0.26, 0.28, 0.03, 8), col, 0, 1.72 * ys, 0.02));
+      acc.push({ m: mesh(new THREE.SphereGeometry(0.20, 8, 6), col, 0.04, 1.84 * ys, 0), bone: 'head' });
+      acc.push({ m: mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.03, 8), col, 0, 1.72 * ys, 0.02), bone: 'head' });
+    }
+    if (spec.helm === 'officer') {
+      acc.push({ m: mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.05, 10), col, 0, 1.74 * ys, 0.06), bone: 'head' });
+      acc.push({ m: mesh(new THREE.CylinderGeometry(0.18, 0.20, 0.16, 10), '#1a3014', 0, 1.86 * ys, 0), bone: 'head' });
+      acc.push({ m: mesh(new THREE.BoxGeometry(0.22, 0.03, 0.18), '#d2b25a', 0, 1.78 * ys, 0.20), bone: 'head' });
     }
     if (spec.hair === 'short' || spec.hair === 'buzz') {
       var hc = spec.hair === 'buzz' ? '#2a2218' : '#3a2a1c';
-      acc.push(accMesh(new THREE.SphereGeometry(0.20, 8, 6), hc, 0, 1.82 * ys, -0.02));
-      if (spec.hair === 'short') {
-        acc.push(accMesh(new THREE.BoxGeometry(0.16, 0.10, 0.08), hc, 0, 1.90 * ys, -0.10));
-      }
+      acc.push({ m: mesh(new THREE.SphereGeometry(0.20, 8, 6), hc, 0, 1.82 * ys, -0.02), bone: 'head' });
+      if (spec.hair === 'short') acc.push({ m: mesh(new THREE.BoxGeometry(0.16, 0.10, 0.08), hc, 0, 1.90 * ys, -0.10), bone: 'head' });
     }
-    if (spec.pack) acc.push(accMesh(new THREE.BoxGeometry(0.30, 0.36, 0.18), col, 0, 1.18 * ys, -0.24));
-    if (spec.vest) acc.push(accMesh(new THREE.BoxGeometry(0.44, 0.30, 0.24), col, 0, 1.22 * ys, 0.05));
-    if (!acc.length) return;
-    acc.forEach(function (m) { g.add(m); });
-    mergeAcc(g, acc);
+    if (spec.pack) acc.push({ m: mesh(new THREE.BoxGeometry(0.30, 0.36, 0.18), col, 0, 1.18 * ys, -0.24), bone: 'spine' });
+    if (spec.vest) acc.push({ m: mesh(new THREE.BoxGeometry(0.44, 0.30, 0.24), col, 0, 1.22 * ys, 0.05), bone: 'spine' });
+    return acc;
   }
-  function mergeAcc(g, meshes) {
-    if (!meshes.length) return;
-    g.updateMatrixWorld(true);
-    var pos = [], nrm = [], col = [], idx = [], off = 0;
-    var v = new THREE.Vector3(), vn = new THREE.Vector3(), nmat = new THREE.Matrix3(), rel = new THREE.Matrix4();
-    var inv = new THREE.Matrix4().copy(g.matrixWorld);
-    if (inv.invert) inv.invert(); else if (inv.getInverse) inv.getInverse(g.matrixWorld);
+
+  function appendColored(buf, mesh, rgb, skeleton, boneHint, relMat) {
+    mesh.updateMatrixWorld(true);
+    var g = mesh.geometry, p = g.attributes.position, n = g.attributes.normal;
+    var skinI = g.attributes.skinIndex, skinW = g.attributes.skinWeight, ix = g.index;
+    var v = new THREE.Vector3(), vn = new THREE.Vector3(), nmat = new THREE.Matrix3();
+    nmat.getNormalMatrix(relMat);
+    var bi = boneHint ? boneIndex(skeleton, boneHint === 'head' ? ['head'] : ['spine', 'chest', 'torso', 'hip']) : 0;
+    var vi, cr = rgb.r / 255, cg = rgb.g / 255, cb = rgb.b / 255;
+    for (vi = 0; vi < p.count; vi++) {
+      v.fromBufferAttribute(p, vi).applyMatrix4(relMat);
+      buf.pos.push(v.x, v.y, v.z);
+      if (n) { vn.fromBufferAttribute(n, vi).applyMatrix3(nmat).normalize(); buf.nrm.push(vn.x, vn.y, vn.z); }
+      else buf.nrm.push(0, 1, 0);
+      buf.col.push(cr, cg, cb);
+      if (skinI) buf.si.push(skinI.getX(vi), skinI.getY(vi), skinI.getZ(vi), skinI.getW(vi));
+      else buf.si.push(bi, 0, 0, 0);
+      if (skinW) buf.sw.push(skinW.getX(vi), skinW.getY(vi), skinW.getZ(vi), skinW.getW(vi));
+      else buf.sw.push(1, 0, 0, 0);
+    }
+    if (ix) for (vi = 0; vi < ix.count; vi++) buf.idx.push(ix.getX(vi) + buf.off);
+    else for (vi = 0; vi < p.count; vi++) buf.idx.push(vi + buf.off);
+    buf.off += p.count;
+  }
+
+  function finishSkinned(buf, skeleton, bind, parent) {
+    var ng = new THREE.BufferGeometry();
+    ng.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3));
+    ng.setAttribute('normal', new THREE.Float32BufferAttribute(buf.nrm, 3));
+    ng.setAttribute('color', new THREE.Float32BufferAttribute(buf.col, 3));
+    ng.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(buf.si, 4));
+    ng.setAttribute('skinWeight', new THREE.Float32BufferAttribute(buf.sw, 4));
+    ng.setIndex(buf.idx);
+    var mat = new THREE.MeshLambertMaterial({ skinning: !!skeleton });
+    mat.vertexColors = (THREE.VertexColors != null) ? THREE.VertexColors : true;
+    var out = skeleton && THREE.SkinnedMesh ? new THREE.SkinnedMesh(ng, mat) : new THREE.Mesh(ng, mat);
+    if (skeleton) {
+      try { out.bind(skeleton, bind || out.bindMatrix); } catch (e) { /* keep */ }
+    }
+    out.frustumCulled = false;
+    (parent || new THREE.Group()).add(out);
+    return out;
+  }
+
+  function mergeBody(rootObj, spec, side) {
+    var meshes = [];
+    rootObj.traverse(function (m) {
+      if (m.isMesh && m.geometry && m.geometry.attributes && m.geometry.attributes.position) meshes.push(m);
+    });
+    if (!meshes.length) return null;
+    var buf = { pos: [], nrm: [], col: [], si: [], sw: [], idx: [], off: 0 };
+    var skeleton = null, parent = meshes[0].parent, bind = meshes[0].bindMatrix;
+    var inv = new THREE.Matrix4(), rel = new THREE.Matrix4();
+    rootObj.updateMatrixWorld(true);
+    inv.copy(rootObj.matrixWorld);
+    if (inv.invert) inv.invert(); else if (inv.getInverse) inv.getInverse(rootObj.matrixWorld);
     meshes.forEach(function (m) {
+      if (m.skeleton) skeleton = m.skeleton;
       m.updateMatrixWorld(true);
       rel.multiplyMatrices(inv, m.matrixWorld);
-      nmat.getNormalMatrix(rel);
-      var geo = m.geometry, p = geo.attributes.position, n = geo.attributes.normal, ix = geo.index, vi;
-      var c = m.material && m.material.color, cr = c ? c.r : 1, cg = c ? c.g : 1, cb = c ? c.b : 1;
-      for (vi = 0; vi < p.count; vi++) {
-        v.fromBufferAttribute(p, vi).applyMatrix4(rel);
-        pos.push(v.x, v.y, v.z);
-        if (n) { vn.fromBufferAttribute(n, vi).applyMatrix3(nmat).normalize(); nrm.push(vn.x, vn.y, vn.z); }
-        col.push(cr, cg, cb);
-      }
-      if (ix) for (vi = 0; vi < ix.count; vi++) idx.push(ix.getX(vi) + off);
-      else for (vi = 0; vi < p.count; vi++) idx.push(vi + off);
-      off += p.count;
+      var rgb = hexRgb(clothColor((m.material && m.material.name) || m.name, side, spec));
+      appendColored(buf, m, rgb, skeleton, null, rel);
       if (m.parent) m.parent.remove(m);
     });
+    return finishSkinned(buf, skeleton, bind, rootObj);
+  }
+
+  function bakeGear(skinned, spec, side, ys) {
+    if (!skinned) return;
+    var cap = CAP[C.tier] || 3000;
+    var used = 0;
+    if (skinned.geometry) {
+      if (skinned.geometry.index) used = skinned.geometry.index.count / 3;
+      else if (skinned.geometry.attributes && skinned.geometry.attributes.position) used = skinned.geometry.attributes.position.count / 3;
+    }
+    if (used + 50 > cap) return;
+    var accCol = side === 'enemy' ? (spec.sand ? '#8a7340' : '#2a3544') : '#243d18';
+    var pieces = gearPieces(spec, accCol, ys);
+    if (!pieces.length) return;
+    var tmp = new THREE.Group();
+    pieces.forEach(function (p) { tmp.add(p.m); });
+    var holder = skinned.parent || skinned;
+    holder.add(tmp);
+    holder.updateMatrixWorld(true);
+    var inv = new THREE.Matrix4().copy(skinned.matrixWorld);
+    if (inv.invert) inv.invert(); else if (inv.getInverse) inv.getInverse(skinned.matrixWorld);
+    var g = skinned.geometry;
+    var pos = Array.prototype.slice.call(g.attributes.position.array);
+    var nrm = Array.prototype.slice.call(g.attributes.normal.array);
+    var col = Array.prototype.slice.call(g.attributes.color.array);
+    var si = Array.prototype.slice.call(g.attributes.skinIndex.array);
+    var sw = Array.prototype.slice.call(g.attributes.skinWeight.array);
+    var idx = Array.prototype.slice.call(g.index.array);
+    var off = g.attributes.position.count;
+    var rel = new THREE.Matrix4(), nmat = new THREE.Matrix3();
+    var v = new THREE.Vector3(), vn = new THREE.Vector3();
+    pieces.forEach(function (p) {
+      p.m.updateMatrixWorld(true);
+      rel.multiplyMatrices(inv, p.m.matrixWorld);
+      nmat.getNormalMatrix(rel);
+      var geo = p.m.geometry, pa = geo.attributes.position, na = geo.attributes.normal, ix = geo.index, vi;
+      var rgb = hexRgb((p.m.material && p.m.material.color) ? '#' + p.m.material.color.getHexString() : accCol);
+      var bi = boneIndex(skinned.skeleton, p.bone === 'head' ? ['head'] : ['spine', 'chest', 'torso', 'hip']);
+      for (vi = 0; vi < pa.count; vi++) {
+        v.fromBufferAttribute(pa, vi).applyMatrix4(rel);
+        pos.push(v.x, v.y, v.z);
+        if (na) { vn.fromBufferAttribute(na, vi).applyMatrix3(nmat).normalize(); nrm.push(vn.x, vn.y, vn.z); }
+        else nrm.push(0, 1, 0);
+        col.push(rgb.r / 255, rgb.g / 255, rgb.b / 255);
+        si.push(bi, 0, 0, 0);
+        sw.push(1, 0, 0, 0);
+      }
+      if (ix) for (vi = 0; vi < ix.count; vi++) idx.push(ix.getX(vi) + off);
+      else for (vi = 0; vi < pa.count; vi++) idx.push(vi + off);
+      off += pa.count;
+    });
+    if (tmp.parent) tmp.parent.remove(tmp);
     var ng = new THREE.BufferGeometry();
     ng.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    if (nrm.length) ng.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+    ng.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
     ng.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    ng.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+    ng.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
     ng.setIndex(idx);
-    var mat = new THREE.MeshLambertMaterial();
-    mat.vertexColors = (THREE.VertexColors != null) ? THREE.VertexColors : true;
-    var merged = new THREE.Mesh(ng, mat);
-    merged.userData.part = 'gear';
-    g.add(merged);
+    var old = skinned.geometry;
+    skinned.geometry = ng;
+    if (old && old.dispose) old.dispose();
   }
-  function addArrow(g, ys) {
+
+  function placeArrow(g) {
+    var arrow = g.userData && g.userData.arrow;
+    var rootObj = g.userData && g.userData.root;
+    if (!arrow || !rootObj) return;
+    g.updateMatrixWorld(true);
+    var box = new THREE.Box3().setFromObject(rootObj);
+    var c = box.getCenter(new THREE.Vector3());
+    var inv = new THREE.Matrix4().copy(g.matrixWorld);
+    if (inv.invert) inv.invert(); else if (inv.getInverse) inv.getInverse(g.matrixWorld);
+    var top = new THREE.Vector3(c.x, box.max.y + 0.18, c.z).applyMatrix4(inv);
+    arrow.position.copy(top);
+  }
+
+  function addArrow(g) {
     var mat = new THREE.MeshBasicMaterial({ color: '#3d8bfd', depthTest: false });
-    var cone = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.20, 7), mat);
-    cone.rotation.x = Math.PI; cone.position.set(0, 2.26 * (ys || 1), 0); cone.renderOrder = 20;
+    var cone = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.18, 7), mat);
+    cone.rotation.x = Math.PI;
+    cone.renderOrder = 20;
     cone.userData.iff = 'arrow';
     cone.userData.noMerge = true;
+    cone.frustumCulled = false;
     g.add(cone);
     return cone;
+  }
+
+  function disposeNode(obj) {
+    if (!obj) return;
+    obj.traverse(function (m) {
+      if (m.geometry && m.geometry.dispose) m.geometry.dispose();
+      var mats = m.material ? (Array.isArray(m.material) ? m.material : [m.material]) : [];
+      mats.forEach(function (mat) {
+        if (!mat) return;
+        if (mat.map && mat.map.userData && mat.map.userData.owned && mat.map.dispose) mat.map.dispose();
+        if (mat.dispose) mat.dispose();
+      });
+    });
+  }
+
+  function forget(g) {
+    var i = C.live.indexOf(g);
+    if (i >= 0) C.live.splice(i, 1);
+    if (g && g.userData) g.userData.dead = true;
   }
 
   function bindAnim(rootObj, clips) {
@@ -313,97 +359,170 @@
     return { mixer: mixer, setAnim: setAnim, acts: acts };
   }
 
-  function instantiate(model, spec, side) {
+  function buildRoot(model, spec, side) {
     spec = spec || {};
-    var url = fileFor(model);
+    var url = fileFor(model, C.tier);
     var gltf = C.gltfs[url];
     if (!gltf || !THREE.SkeletonUtils) return null;
     var rootObj = THREE.SkeletonUtils.clone(gltf.scene);
-    var cloth = side === 'enemy' ? (spec.sand ? '#d0a85c' : '#3e5168') : '#2a5a1c';
-    var skin = spec.skin || '#d9a77a';
-    var cap = CAP[C.tier] || CAP.mid;
-    var camo = side === 'ally';
-    if (C.tier !== 'high') limitRoot(rootObj, cap);
-    rootObj.traverse(function (m) {
-      if (!m.isMesh) return;
-      var matName = (m.material && m.material.name) || m.name || '';
-      var isFace = /face|skin/i.test(matName);
-      var col = clothColor(matName, side, spec);
-      var src = m.material && m.material.map;
-      var map = (src && src.image) ? tintTexture(src, cloth, skin, camo && !isFace) : null;
-      if (!map && camo && !isFace) map = camoMap(col);
-      m.material = new THREE.MeshLambertMaterial({
-        map: map, color: map ? '#ffffff' : col, skinning: !!(m.skeleton || (m.material && m.material.skinning))
-      });
-      m.frustumCulled = false;
-      m.userData.side = side;
-      m.userData.part = (m.name || '').toLowerCase().indexOf('head') >= 0 ? 'head' : 'body';
-    });
+    var skin = mergeBody(rootObj, spec, side);
     var box = new THREE.Box3().setFromObject(rootObj);
     var h = Math.max(0.3, box.max.y - box.min.y);
     var ys = spec.scale || 1;
     var s = (1.72 * ys) / h;
     rootObj.scale.setScalar(s);
     if (box.min.y) rootObj.position.y -= box.min.y * s;
+    rootObj.updateMatrixWorld(true);
+    if (skin) {
+      skin.userData.side = side;
+      skin.userData.part = 'body';
+      bakeGear(skin, spec, side, ys);
+    }
     var anim = bindAnim(rootObj, gltf.animations || []);
+    return { root: rootObj, skin: skin, anim: anim, ys: ys };
+  }
+
+  function instantiate(model, spec, side) {
+    var built = buildRoot(model, spec, side);
+    if (!built) return null;
     var g = new THREE.Group();
-    g.add(rootObj);
-    var accCol = side === 'enemy' ? (spec.sand ? '#8a7340' : '#2a3544') : '#243d18';
-    addGear(g, spec, accCol, ys);
+    g.add(built.root);
     var arrow = null;
-    if (side === 'ally') arrow = addArrow(g, ys);
-    var muzzle = new THREE.Object3D(); muzzle.position.set(0.16, 1.28 * ys, 0.42); g.add(muzzle);
+    if (side === 'ally') arrow = addArrow(g);
+    var muzzle = new THREE.Object3D(); muzzle.position.set(0.16, 1.28 * built.ys, 0.42); g.add(muzzle);
+    var gun = makeWorldGun(spec.gun || 't91', built.ys);
+    if (gun) {
+      gun.traverse(function (m) { if (m.isMesh) m.userData.side = side; });
+      g.add(gun);
+    }
     var hit = [];
     g.traverse(function (m) {
       if (m.isMesh && !m.userData.iff) { m.userData.side = side; hit.push(m); }
     });
+    var tri = countTris(g);
+    noteTris(tri);
     g.userData = {
-      mixer: anim.mixer, setAnim: anim.setAnim, model: true, side: side, tri: countTris(rootObj),
-      muzzle: muzzle, hit: hit, arrow: arrow, nameSpr: null, noMerge: true,
-      legL: dummy(), legR: dummy(), armL: dummy(), armR: dummy()
+      mixer: built.anim.mixer, setAnim: built.anim.setAnim, model: true, modelKey: model, spec: spec, side: side,
+      tri: tri, muzzle: muzzle, hit: hit, arrow: arrow, nameSpr: null, noMerge: true,
+      root: built.root, skin: built.skin, gun: gun,
+      legL: dummy(), legR: dummy(), armL: dummy(), armR: dummy(),
+      dispose: function () {
+        forget(g);
+        disposeNode(g);
+      }
     };
+    if (arrow) placeArrow(g);
+    C.live.push(g);
     return g;
   }
 
-  function loadTier(tier) {
-    C.tier = tier || (root.Gfx && Gfx.applied && Gfx.applied()) || 'mid';
-    if (!THREE || !THREE.GLTFLoader) return Promise.reject(new Error('no-gltf'));
-    var keys = Object.keys(MODELS), i, jobs = [];
-    for (i = 0; i < keys.length; i++) jobs.push(loadGltf(fileFor(keys[i])));
-    Object.keys(GUNS).forEach(function (k) { jobs.push(loadGltf(BASE + GUNS[k])); });
-    return Promise.all(jobs).then(function () {
-      var mx = 0, cap = CAP[C.tier] || CAP.mid;
-      keys.forEach(function (k) {
-        var g = C.gltfs[fileFor(k)];
-        if (g) mx = Math.max(mx, countTris(g.scene));
-      });
-      C.tri.high = mx;
-      C.tri.mid = Math.min(mx, CAP.mid);
-      C.tri.low = Math.min(mx, CAP.low);
-      C.ready = true;
+  function swapLiveLod(g) {
+    if (!g || !g.userData || !g.userData.model || g.userData.dead) return;
+    var built = buildRoot(g.userData.modelKey, g.userData.spec, g.userData.side);
+    if (!built) return;
+    var old = g.userData.root;
+    if (old && old.parent) old.parent.remove(old);
+    disposeNode(old);
+    g.add(built.root);
+    g.userData.root = built.root;
+    g.userData.skin = built.skin;
+    g.userData.mixer = built.anim.mixer;
+    g.userData.setAnim = built.anim.setAnim;
+    var hit = [];
+    g.traverse(function (m) {
+      if (m.isMesh && !m.userData.iff) { m.userData.side = g.userData.side; hit.push(m); }
     });
+    g.userData.hit = hit;
+    g.userData.tri = countTris(g);
+    noteTris(g.userData.tri);
+    placeArrow(g);
+  }
+
+  function loadAll() {
+    if (!THREE || !THREE.GLTFLoader) return Promise.reject(new Error('no-gltf'));
+    var jobs = [], keys = Object.keys(MODELS), i, t;
+    for (i = 0; i < keys.length; i++) {
+      for (t = 0; t < TIERS.length; t++) jobs.push(loadGltf(fileFor(keys[i], TIERS[t])));
+    }
+    Object.keys(GUNS).forEach(function (k) { jobs.push(loadGltf(BASE + GUNS[k])); });
+    return Promise.all(jobs);
   }
 
   function start() {
     if (!THREE || !THREE.GLTFLoader) { done(new Error('no-gltf')); return; }
-    var tier = (root.Gfx && Gfx.applied && Gfx.applied()) || 'mid';
-    loadTier(tier).then(function () { done(null); }).catch(function (e) { done(e); });
+    C.tier = (root.Gfx && Gfx.applied && Gfx.applied()) || 'mid';
+    loadAll().then(function () { C.ready = true; done(null); }).catch(function (e) { done(e); });
+  }
+
+  function pickAllySpec(spec) {
+    spec = spec || {};
+    var named = NAMED[spec.preset];
+    if (named) return named;
+    return ALLY_MIX[(C.ai++) % ALLY_MIX.length];
   }
 
   function makeAlly(spec) {
-    spec = spec || {};
-    var named = NAMED[spec.preset];
-    var v = named ? named : ALLY_MIX[(C.ai++) % ALLY_MIX.length];
-    if (spec.preset && !named) v = ALLY_MIX[(Math.abs(String(spec.preset).length) + C.ai) % ALLY_MIX.length];
+    var v = Object.assign({}, pickAllySpec(spec));
+    v.gun = (spec && spec.gun) || 't91';
     return instantiate(v.model, v, 'ally');
   }
-
-  function makeEnemy(type, seed) {
+  function makeEnemy(type) {
     var i = (C.ei++) % ENEMY_MIX.length;
     if (type === 'commander') i = 2;
     if (type === 'sniper' || type === 'scout') i = 1;
-    var v = ENEMY_MIX[i];
+    var v = Object.assign({}, ENEMY_MIX[i]);
+    v.gun = type === 'gunner' ? 't75' : (type === 'sniper' ? 't65' : (type === 'scout' ? 'm9' : 't91'));
     return instantiate(v.model, v, 'enemy');
+  }
+
+  function mergeStatic(src, hex) {
+    var meshes = [];
+    src.updateMatrixWorld(true);
+    src.traverse(function (m) {
+      if (m.isMesh && m.geometry && m.geometry.attributes && m.geometry.attributes.position) meshes.push(m);
+    });
+    if (!meshes.length) return src;
+    var buf = { pos: [], nrm: [], col: [], idx: [], off: 0 };
+    var inv = new THREE.Matrix4().copy(src.matrixWorld);
+    if (inv.invert) inv.invert(); else if (inv.getInverse) inv.getInverse(src.matrixWorld);
+    var rel = new THREE.Matrix4(), nmat = new THREE.Matrix3();
+    var v = new THREE.Vector3(), vn = new THREE.Vector3();
+    var rgb = hexRgb(hex);
+    meshes.forEach(function (m) {
+      m.updateMatrixWorld(true);
+      rel.multiplyMatrices(inv, m.matrixWorld);
+      nmat.getNormalMatrix(rel);
+      var geo = m.geometry, p = geo.attributes.position, n = geo.attributes.normal, ix = geo.index, vi;
+      for (vi = 0; vi < p.count; vi++) {
+        v.fromBufferAttribute(p, vi).applyMatrix4(rel);
+        buf.pos.push(v.x, v.y, v.z);
+        if (n) { vn.fromBufferAttribute(n, vi).applyMatrix3(nmat).normalize(); buf.nrm.push(vn.x, vn.y, vn.z); }
+        else buf.nrm.push(0, 1, 0);
+        buf.col.push(rgb.r / 255, rgb.g / 255, rgb.b / 255);
+      }
+      if (ix) for (vi = 0; vi < ix.count; vi++) buf.idx.push(ix.getX(vi) + buf.off);
+      else for (vi = 0; vi < p.count; vi++) buf.idx.push(vi + buf.off);
+      buf.off += p.count;
+      if (m.parent) m.parent.remove(m);
+    });
+    var ng = new THREE.BufferGeometry();
+    ng.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3));
+    ng.setAttribute('normal', new THREE.Float32BufferAttribute(buf.nrm, 3));
+    ng.setAttribute('color', new THREE.Float32BufferAttribute(buf.col, 3));
+    ng.setIndex(buf.idx);
+    var mat = new THREE.MeshLambertMaterial({ color: hex });
+    mat.vertexColors = (THREE.VertexColors != null) ? THREE.VertexColors : true;
+    var out = new THREE.Mesh(ng, mat);
+    out.frustumCulled = false;
+    src.add(out);
+    return src;
+  }
+
+  function gunColor(id) {
+    if (id === 't75') return '#3a3228';
+    if (id === 't65') return '#1e2420';
+    if (id === 'm9') return '#2a2c28';
+    return '#2c2f2a';
   }
 
   function makeGun(id) {
@@ -411,17 +530,34 @@
     var gltf = C.gltfs[url];
     if (!gltf) return null;
     var g = gltf.scene.clone(true);
+    mergeStatic(g, gunColor(id));
     g.traverse(function (m) {
       if (!m.isMesh) return;
-      var col = id === 'm9' ? '#2a2c28' : '#2c2f2a';
-      m.material = new THREE.MeshLambertMaterial({
-        map: m.material && m.material.map, color: col
-      });
       m.frustumCulled = false;
+      m.userData.iff = 'gun';
+      m.userData.part = 'gun';
     });
+    g.userData.iff = 'gun';
+    g.userData.part = 'gun';
+    g.userData.gunId = id;
     return g;
   }
 
+  function makeWorldGun(id, ys) {
+    var g = makeGun(id);
+    if (!g) return null;
+    var box = new THREE.Box3().setFromObject(g);
+    var size = box.getSize(new THREE.Vector3());
+    var longest = Math.max(size.x, size.y, size.z) || 1;
+    var len = { t91: 0.72, t75: 0.88, t65: 0.98, m9: 0.26 };
+    g.rotation.set(0, Math.PI / 2, 0);
+    g.scale.setScalar((len[id] || 0.7) / longest);
+    g.updateMatrixWorld(true);
+    box.setFromObject(g);
+    var c = box.getCenter(new THREE.Vector3());
+    g.position.set(0.22 - c.x, 1.16 * (ys || 1) - c.y, 0.34 - c.z);
+    return g;
+  }
   function makeViewmodel() {
     var vm = new THREE.Group();
     var hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.045, 0.08), new THREE.MeshLambertMaterial({ color: '#3f6a2c' }));
@@ -446,6 +582,15 @@
     return vm;
   }
 
+  function charCalls(g) {
+    var n = 0;
+    if (!g) return 0;
+    g.traverse(function (m) {
+      if (m.isMesh && m.visible !== false && !m.userData.iff) n++;
+    });
+    return n;
+  }
+
   if (THREE) start();
 
   root.Chars = {
@@ -455,16 +600,21 @@
     cap: function (tier) { return CAP[tier || C.tier]; },
     whenReady: function (fn) { if (C.ready || C.err) fn(C.err); else C.wait.push(fn); },
     setTier: function (tier) {
-      C.tier = tier || C.tier || 'mid';
-      if (root.World && root.World.onCharsReady) root.World.onCharsReady();
-      if (root.Combat && root.Combat.onCharsReady) root.Combat.onCharsReady();
+      var next = tier || C.tier || 'mid';
+      if (next === C.tier) return Promise.resolve();
+      C.tier = next;
+      C.live.forEach(swapLiveLod);
       return Promise.resolve();
     },
     makeAlly: makeAlly,
     makeEnemy: makeEnemy,
     makeGun: makeGun,
+    makeWorldGun: makeWorldGun,
     makeViewmodel: makeViewmodel,
     countTris: countTris,
+    charCalls: charCalls,
+    forget: forget,
+    live: function () { return C.live.slice(); },
     models: function () { return Object.keys(MODELS); }
   };
 })(typeof self !== 'undefined' ? self : this);

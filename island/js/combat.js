@@ -75,10 +75,26 @@
       j['sg' + side] = sg; j['el' + side] = el;
     });
     var gun = new T.Group(); gun.position.set(0.02, 0.38, 0.28); torso.add(gun); j.gun = gun;
-    var glen = type === 'gunner' ? 0.85 : 0.68;
-    mesh(gun, geo('box', 0.05, 0.08, glen), '#222421', 0, 0, 0, 'limb');
-    var brl = mesh(gun, geo('cyl', 0.014, 0.014, 0.4, 6), '#151614', 0, 0.015, glen / 2 + 0.18, 'limb'); brl.rotation.x = Math.PI / 2;
-    j.muzzle = new T.Object3D(); j.muzzle.position.set(0, 0.015, glen / 2 + 0.4); gun.add(j.muzzle);
+    var gid = type === 'gunner' ? 't75' : (type === 'sniper' ? 't65' : (type === 'scout' ? 'm9' : 't91'));
+    if (root.Chars && Chars.makeGun) {
+      var wg = Chars.makeGun(gid);
+      if (wg) {
+        var box = new T.Box3().setFromObject(wg);
+        var size = box.getSize(new T.Vector3());
+        var longest = Math.max(size.x, size.y, size.z) || 1;
+        var glenFit = type === 'gunner' ? 0.85 : (type === 'sniper' ? 0.95 : 0.68);
+        wg.rotation.y = Math.PI / 2;
+        wg.scale.setScalar(glenFit / longest);
+        gun.add(wg);
+        j.muzzle = new T.Object3D(); j.muzzle.position.set(0, 0.015, glenFit * 0.55); gun.add(j.muzzle);
+      }
+    }
+    if (!j.muzzle) {
+      var glen = type === 'gunner' ? 0.85 : 0.68;
+      mesh(gun, geo('box', 0.05, 0.08, glen), '#222421', 0, 0, 0, 'limb');
+      var brl = mesh(gun, geo('cyl', 0.014, 0.014, 0.4, 6), '#151614', 0, 0.015, glen / 2 + 0.18, 'limb'); brl.rotation.x = Math.PI / 2;
+      j.muzzle = new T.Object3D(); j.muzzle.position.set(0, 0.015, glen / 2 + 0.4); gun.add(j.muzzle);
+    }
     var outline = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(0.7, 1.9, 0.5)), new T.LineBasicMaterial({ color: '#d7e6ff' }));
     outline.position.y = 1.0; outline.visible = false; g.add(outline);
     return { group: g, hit: hit, joints: j, outline: outline };
@@ -227,7 +243,10 @@
     var live = [];
     A.enemies.forEach(function (e) {
       if (keep && e.state !== 'dead') live.push(e);
-      else if (e.group && e.group.parent) e.group.parent.remove(e.group);
+      else if (e.group) {
+        if (e.group.userData && e.group.userData.dispose) e.group.userData.dispose();
+        if (e.group.parent) e.group.parent.remove(e.group);
+      }
     });
     A.combat = true; A.ended = false; A.hpZero = false; A.gatherMode = false;
     A.queue = []; A.enemies = live;
@@ -260,9 +279,65 @@
     if (!A) return;
     A.combat = false; A.firing = false; A.buddyGunner = false;
     hideSnip();
-    A.enemies.forEach(function (e) { if (e.group.parent) e.group.parent.remove(e.group); });
+    A.enemies.forEach(disposeEnemy);
     A.enemies = []; A.queue = [];
     $('#waveTop').hidden = true;
+  };
+
+  function disposeEnemy(e) {
+    if (!e || !e.group) return;
+    if (e.group.userData && e.group.userData.dispose) e.group.userData.dispose();
+    else if (root.Chars && Chars.forget) Chars.forget(e.group);
+    if (e.group.parent) e.group.parent.remove(e.group);
+  }
+  Cbt.clearFoes = function () {
+    if (!A) return;
+    (A.enemies || []).forEach(disposeEnemy);
+    A.enemies = [];
+    A.queue = [];
+  };
+  Cbt.spawnBudget = function (bag) {
+    if (!A) Cbt.begin(Cbt.newLoadout());
+    Cbt.clearFoes();
+    A.combat = true;
+    A.ended = false;
+    A.gatherMode = true;
+    A.queue = [];
+    A.spawnT = 99;
+    var p = W.pos ? W.pos() : { x: 0, z: 0 };
+    var yaw = (W.S && W.S.yaw) || Math.PI;
+    var n = 0;
+    Object.keys(bag || {}).forEach(function (k) { n += bag[k] || 0; });
+    var i = 0;
+    Object.keys(bag || {}).forEach(function (k) {
+      for (var j = 0; j < (bag[k] || 0); j++) {
+        var a = yaw + (i - (n - 1) / 2) * 0.16;
+        var dist = 7 + (i % 4) * 1.4;
+        var x = p.x - Math.sin(a) * dist;
+        var z = p.z - Math.cos(a) * dist;
+        A.enemies.push(spawnEnemy(k, x, z));
+        i++;
+      }
+    });
+    A.total = A.enemies.length;
+    return A.enemies.length;
+  };
+  Cbt.syncHits = function () {
+    if (!A || !A.enemies) return;
+    A.enemies.forEach(function (e) {
+      if (!e || !e.group || !e.group.userData) return;
+      var ud = e.group.userData;
+      if (ud.hit) {
+        e.hit = ud.hit;
+        e.hit.forEach(function (m) { m.userData.enemy = e; m.userData.part = m.userData.part || 'body'; });
+      }
+      if (ud.mixer) e.mixer = ud.mixer;
+      if (ud.setAnim) e.setAnim = ud.setAnim;
+      if (ud.muzzle) {
+        e.j = e.j || {};
+        e.j.muzzle = ud.muzzle;
+      }
+    });
   };
 
   function banner(t) {
@@ -397,22 +472,38 @@
     }
     return false;
   }
-  function hoverKind() {
+  var hoverCache = { t: 0, kind: null }, hoverFr = new T.Frustum(), hoverMat = new T.Matrix4(), hoverPt = new T.Vector3();
+  function inFrustum(obj) {
+    var cam = W.camera();
+    if (!cam || !obj) return false;
+    cam.updateMatrixWorld();
+    hoverMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    hoverFr.setFromProjectionMatrix(hoverMat);
+    obj.getWorldPosition(hoverPt);
+    hoverPt.y += 1.1;
+    return hoverFr.containsPoint(hoverPt);
+  }
+  function hoverKind(force) {
     if (!A || !W.camera) return null;
+    var now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (!force && now - hoverCache.t < 100) return hoverCache.kind;
+    hoverCache.t = now;
     var ad = aimDir(), p = W.pos(), F = W.S;
     rc.set(new T.Vector3(p.x, F.eye, p.z), new T.Vector3(ad.d[0], ad.d[1], ad.d[2]));
     rc.far = 70;
-    var allies = (W.allyMeshes && W.allyMeshes()) || [];
+    var allies = ((W.allyMeshes && W.allyMeshes()) || []).filter(function (m) { return inFrustum(m); });
     var foes = [];
     (A.enemies || []).forEach(function (e) {
-      if (e && e.state !== 'dead' && e.hit) foes = foes.concat(e.hit);
+      if (e && e.state !== 'dead' && e.hit && e.group && inFrustum(e.group)) foes = foes.concat(e.hit);
     });
     var ha = allies.length ? rc.intersectObjects(allies, false) : [];
     var hf = foes.length ? rc.intersectObjects(foes, false) : [];
     var da = ha[0] ? ha[0].distance : 1e9, df = hf[0] ? hf[0].distance : 1e9;
-    if (da < df && da < 70) return 'ally';
-    if (df < 70) return 'enemy';
-    return null;
+    var kind = null;
+    if (da < df && da < 70) kind = 'ally';
+    else if (df < 70) kind = 'enemy';
+    hoverCache.kind = kind;
+    return kind;
   }
   function canShoot() {
     if (!A || !A.active || A.reload > 0) return false;
@@ -425,7 +516,7 @@
   }
   function tryFire(first) {
     if (!canShoot() || A.cd > 0) return;
-    if (hoverKind() === 'ally') {
+    if (hoverKind(true) === 'ally') {
       Cbt.msg('友軍，不能開槍', 1400);
       return;
     }
@@ -671,7 +762,7 @@
         e.group.rotation.x = -k * 1.45;
       }
       if (e.mixer) e.mixer.update(dt);
-      if (e.dieT > 3.2 && e.group.parent) { e.group.parent.remove(e.group); e.gone = true; }
+      if (e.dieT > 3.2 && e.group.parent) { disposeEnemy(e); e.gone = true; }
       return;
     }
     e.t += dt; e.fireCd -= dt; e.relocT -= dt; e.flinch = Math.max(0, e.flinch - dt);
@@ -948,6 +1039,7 @@
     if (!A || !A.enemies) return;
     A.enemies.forEach(function (e) {
       if (!e || e.state === 'dead') return;
+      if (e.group && e.group.userData && e.group.userData.model) return;
       var old = e.group;
       var m = buildEnemy(e.type, e);
       e.group = m.group; e.hit = m.hit; e.j = m.joints; e.outline = m.outline;
@@ -957,6 +1049,7 @@
       if (old && old.parent) { old.parent.add(e.group); old.parent.remove(old); }
       else if (scene) scene.add(e.group);
     });
+    Cbt.syncHits();
   };
 
   root.Combat = Cbt;
