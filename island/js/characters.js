@@ -375,22 +375,25 @@
 
   function makeViewmodel() {
     var vm = new THREE.Group();
-    var hand = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.1), new THREE.MeshLambertMaterial({ color: '#3f6a2c' }));
-    hand.position.set(0.02, -0.05, -0.16); vm.add(hand);
-    var guns = {};
+    var hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.045, 0.08), new THREE.MeshLambertMaterial({ color: '#3f6a2c' }));
+    hand.position.set(0.04, -0.08, -0.22); vm.add(hand);
+    var guns = {}, len = { t91: 0.38, t75: 0.42, t65: 0.46, m9: 0.20 };
     ['t91', 't75', 't65', 'm9'].forEach(function (id) {
       var g = makeGun(id);
       if (!g) return;
-      g.rotation.y = Math.PI;
-      if (id === 'm9') { g.scale.setScalar(0.55); g.position.set(0.02, -0.02, -0.18); }
-      else if (id === 't65') { g.scale.setScalar(0.42); g.position.set(0.04, -0.04, -0.28); }
-      else if (id === 't75') { g.scale.setScalar(0.40); g.position.set(0.05, -0.05, -0.30); }
-      else { g.scale.setScalar(0.45); g.position.set(0.04, -0.04, -0.26); }
+      var box = new THREE.Box3().setFromObject(g);
+      var size = box.getSize(new THREE.Vector3());
+      var longest = Math.max(size.x, size.y, size.z) || 1;
+      g.rotation.set(0, -Math.PI / 2, 0);
+      g.scale.setScalar((len[id] || 0.36) / longest);
+      g.updateMatrixWorld(true);
+      box.setFromObject(g);
+      var c = box.getCenter(new THREE.Vector3());
+      g.position.set(-c.x + 0.12, -c.y - 0.12, -c.z - 0.28);
       g.visible = id === 't91';
       vm.add(g); guns[id] = g;
     });
     vm.userData.guns = guns;
-    vm.scale.setScalar(1);
     return vm;
   }
 
