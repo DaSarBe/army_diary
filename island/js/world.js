@@ -561,8 +561,18 @@
   function clearSky() {
     if (!skyG || !scene) return;
     scene.remove(skyG);
+    var seen = [];
     skyG.traverse(function (m) {
       if (m.geometry && m.geometry.dispose) m.geometry.dispose();
+      var mats = m.material ? (Array.isArray(m.material) ? m.material : [m.material]) : [];
+      mats.forEach(function (mat) {
+        if (!mat) return;
+        ['map', 'alphaMap', 'emissiveMap'].forEach(function (k) {
+          var tex = mat[k];
+          if (tex && tex.dispose && seen.indexOf(tex) < 0) { seen.push(tex); tex.dispose(); }
+        });
+        if (mat.dispose) mat.dispose();
+      });
     });
     skyG = null; skyMat = null; sunSpr = null; haloSpr = null; haze = null; clouds = [];
   }

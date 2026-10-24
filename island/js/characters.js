@@ -586,7 +586,9 @@
     var n = 0;
     if (!g) return 0;
     g.traverse(function (m) {
-      if (m.isMesh && m.visible !== false && !m.userData.iff) n++;
+      if (!m.isMesh || m.visible === false) return;
+      if (m.userData.iff === 'gun' || m.userData.part === 'gun') return;
+      n++;
     });
     return n;
   }
