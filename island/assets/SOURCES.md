@@ -7,7 +7,7 @@
 | Ultimate Animated Character Pack | Quaternius | https://quaternius.com/packs/ultimatedanimatedcharacter.html ；OpenGameArt https://opengameart.org/content/animated-characters-pack | CC0 1.0 | `soldier_male`（我軍頭盔）、`blue_soldier_male`（敵軍不同頭盔）、`casual_bald`（具名隊友／便帽輪廓）、`ninja_sand`（敵軍頭巾／沙色）。含 Idle／Walk／Shoot／RecieveHit／Defeat。 |
 | Ultimate Guns Pack | Quaternius | https://quaternius.com/packs/ultimategun.html ；OpenGameArt https://opengameart.org/content/low-poly-guns-pack | CC0 1.0 | `rifle_t91`←AssaultRifle_1、`rifle_t75`←AssaultRifle2_1（機槍近似）、`rifle_t65`←SniperRifle_1（精確步槍近似）、`pistol_m9`←Pistol_1。 |
 
-未使用真實國家或政權的旗幟、徽章、臂章。我軍材質改成綠色迷彩、敵軍改成灰藍或沙色，色差拉開。頭盔／便帽／頭巾輪廓不同；友軍頭上有藍色箭頭，靠近才顯示名字。中／低檔用執行期減面（保留皮膚權重頂點、抽三角面）對照 1500／600，高檔用原模 ≤3000。
+未使用真實國家或政權的旗幟、徽章、臂章。我軍材質改成綠色迷彩、敵軍改成灰藍或沙色，色差拉開。頭盔／便帽／頭巾輪廓不同；友軍頭上有藍色箭頭，靠近才顯示名字。FBX 以 Blender 3.6 轉 GLB（不套用骨架、動畫掛 NLA），單角原模 ≤3000。中／低檔用執行期抽三角面對照 1500／600。
 
 ## 缺件（Quaternius 找不到，沿用現有程式方塊）
 
