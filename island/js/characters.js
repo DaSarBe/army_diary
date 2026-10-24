@@ -37,8 +37,11 @@
     C.err = err || null;
     C.ready = !err;
     var q = C.wait.splice(0, C.wait.length), i;
-    for (i = 0; i < q.length; i++) q[i](C.err);
-    if (root.World && root.World.onCharsReady) root.World.onCharsReady();
+    for (i = 0; i < q.length; i++) {
+      try { q[i](C.err); } catch (e2) { /* listener */ }
+    }
+    try { if (root.World && root.World.onCharsReady) root.World.onCharsReady(); } catch (e2) { /* world 尚未 init */ }
+    try { if (root.Combat && root.Combat.onCharsReady) root.Combat.onCharsReady(); } catch (e2) { /* combat 尚未 init */ }
   }
 
   function countTris(rootObj) {

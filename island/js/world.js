@@ -827,6 +827,7 @@
   }
 
   function buildViewmodel() {
+    if (!cam) return;
     if (vm && vm.parent) vm.parent.remove(vm);
     if (root.Chars && Chars.ready() && Chars.makeViewmodel) {
       vm = Chars.makeViewmodel();
@@ -878,6 +879,7 @@
     cur = mkTone(); tg = mkTone(); setTone('dawn', true);
     buildSky(root.Gfx && Gfx.spec());
     buildViewmodel();
+    if (root.Chars && Chars.ready()) W.onCharsReady();
     bindInput();
     window.addEventListener('resize', resize); resize();
     cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); lost = true; if (W.cb.onLost) W.cb.onLost(); }, false);
@@ -1182,7 +1184,8 @@
     } catch (e) { /* ignore */ }
   };
   W.onCharsReady = function () {
-    if (!S || !CG) { buildViewmodel(); return; }
+    if (!cam) return;
+    if (!CG) { buildViewmodel(); return; }
     Object.keys(S.npcs).forEach(function (id) {
       var n = S.npcs[id];
       if (!n || !n.g) return;
